@@ -76,13 +76,14 @@ in-flight work from the database rather than losing it.
 | `engine` — `Orchestrator`, `TaskService`, `Reconciler` | D1 process |
 | `web` — Thymeleaf + htmx dashboard, JSON API, markdown report | D1 process |
 | state store — H2 file (demo) or PostgreSQL (prod), same schema | alongside D1 |
-| remediation itself | Devin cloud — one session per issue, D1 never runs the fix |
+| remediation itself | Devin cloud (API v3, `POST/GET /v3/organizations/{org_id}/sessions`) — one session per issue, D1 never runs the fix |
 | pull requests, comments, labels | GitHub |
 
 ## Running it
 
 ```bash
-export DEVIN_API_KEY=apk_...      # service-user key; never committed
+export DEVIN_API_KEY=cog_...      # service-user key; never committed
+export DEVIN_ORG_ID=org-...       # org the service user belongs to; scopes every v3 session route
 export GITHUB_TOKEN=ghp_...       # needs issues:write and pull_requests:read on the target repo
 export D1_REPO=udaysagarn/superset
 mvn spring-boot:run
@@ -97,8 +98,11 @@ mvn spring-boot:run
 | `/webhooks/github` | GitHub `issues.labeled` events |
 
 Configuration is environment-driven (`src/main/resources/application.yml`): ACU caps, concurrency, attempt and
-nudge budgets, confidence threshold, label names, poll and reconcile intervals. With no `DEVIN_API_KEY` the
-control plane still runs and the gate still rejects, it just cannot create sessions.
+nudge budgets, confidence threshold, label names, poll and reconcile intervals. Without `DEVIN_API_KEY` and
+`DEVIN_ORG_ID` the control plane still runs and the gate still rejects, it just cannot create sessions.
+
+Session creation is not idempotent at the API level; D1 gets idempotency from the unique `(repo,
+issue_number)` task row, so a replayed webhook or an overlapping poll never opens a second session.
 
 ## Monitoring view
 

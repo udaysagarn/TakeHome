@@ -41,6 +41,7 @@ d1:
   devin:
     base-url: ${DEVIN_API_URL:https://api.devin.ai}
     api-key: ${DEVIN_API_KEY:}
+    org-id: ${DEVIN_ORG_ID:}
     criteria-acu-limit: ${D1_CRITERIA_ACU:3}
     remediation-acu-limit: ${D1_REMEDIATION_ACU:10}
   github:

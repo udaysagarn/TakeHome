@@ -27,7 +27,9 @@ class DevinApiClientTest {
     @BeforeEach
     void setUp() {
         D1Properties props = new D1Properties();
-        props.getDevin().setApiKey("apk_test");
+        props.getDevin().setApiKey("cog_test");
+        props.getDevin().setOrgId("org-1");
+        props.getGithub().setRepo("o/r");
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
         client = new DevinApiClient(builder, new ObjectMapper(), props);
@@ -35,20 +37,23 @@ class DevinApiClientTest {
 
     @Test
     void createSessionSendsSnakeCaseFieldsAndAuthenticates() {
-        server.expect(requestTo("https://api.devin.ai/v1/sessions"))
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions"))
                 .andExpect(method(HttpMethod.POST))
-                .andExpect(header("Authorization", "Bearer apk_test"))
+                .andExpect(header("Authorization", "Bearer cog_test"))
                 .andExpect(jsonPath("$.prompt").value("fix it"))
                 .andExpect(jsonPath("$.max_acu_limit").value(10))
-                .andExpect(jsonPath("$.idempotent").value(true))
+                .andExpect(jsonPath("$.repos[0]").value("o/r"))
+                .andExpect(jsonPath("$.structured_output_required").value(true))
                 .andExpect(jsonPath("$.structured_output_schema.type").value("object"))
                 .andRespond(withSuccess(
                         """
-                        {"session_id":"devin-abc","url":"https://app.devin.ai/sessions/abc","is_new_session":true}
+                        {"session_id":"devin-abc","url":"https://app.devin.ai/sessions/abc",
+                         "status":"new","org_id":"org-1","acus_consumed":0.0,
+                         "created_at":1788000000,"updated_at":1788000000,"tags":[],"pull_requests":[]}
                         """,
                         MediaType.APPLICATION_JSON));
 
-        DevinDtos.CreateSessionResponse response =
+        DevinDtos.SessionDetails response =
                 client.createSession("fix it", "t", List.of("d1"), 10, SuccessCriteria.JSON_SCHEMA);
 
         assertThat(response.sessionId()).isEqualTo("devin-abc");
@@ -58,13 +63,15 @@ class DevinApiClientTest {
 
     @Test
     void sessionDetailsExposeStatusStructuredOutputAndPullRequest() {
-        server.expect(requestTo("https://api.devin.ai/v1/sessions/devin-abc"))
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions/devin-abc"))
                 .andRespond(withSuccess(
                         """
                         {
                           "session_id": "devin-abc",
-                          "status_enum": "blocked",
-                          "pull_request": {"url": "https://github.com/o/r/pull/7"},
+                          "status": "running",
+                          "status_detail": "waiting_for_user",
+                          "acus_consumed": 2.5,
+                          "pull_requests": [{"pr_url": "https://github.com/o/r/pull/7", "pr_state": "open"}],
                           "structured_output": {"remediated": true}
                         }
                         """,
@@ -73,6 +80,8 @@ class DevinApiClientTest {
         DevinDtos.SessionDetails details = client.getSession("devin-abc").orElseThrow();
 
         assertThat(details.isBlocked()).isTrue();
+        assertThat(details.isWorking()).isFalse();
+        assertThat(details.acusConsumed()).isEqualTo(2.5);
         assertThat(details.pullRequestUrl()).isEqualTo("https://github.com/o/r/pull/7");
         assertThat(details.structuredOutput().path("remediated").asBoolean()).isTrue();
         server.verify();
@@ -80,7 +89,7 @@ class DevinApiClientTest {
 
     @Test
     void messagesAreSentToTheSessionEndpoint() {
-        server.expect(requestTo("https://api.devin.ai/v1/sessions/devin-abc/message"))
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions/devin-abc/messages"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"message\":\"CI is red\"}"))
                 .andRespond(withSuccess());

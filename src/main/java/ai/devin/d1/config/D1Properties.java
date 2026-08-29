@@ -50,6 +50,7 @@ public class D1Properties {
     public static class Devin {
         private String baseUrl = "https://api.devin.ai";
         private String apiKey = "";
+        private String orgId = "";
         private Duration timeout = Duration.ofSeconds(30);
         private Integer criteriaAcuLimit = 3;
         private Integer remediationAcuLimit = 10;
@@ -57,6 +58,15 @@ public class D1Properties {
 
         public String getBaseUrl() {
             return baseUrl;
+        }
+
+        /** Owning organisation of the service user; every v3 session route is scoped to it. */
+        public String getOrgId() {
+            return orgId;
+        }
+
+        public void setOrgId(String orgId) {
+            this.orgId = orgId;
         }
 
         public void setBaseUrl(String baseUrl) {

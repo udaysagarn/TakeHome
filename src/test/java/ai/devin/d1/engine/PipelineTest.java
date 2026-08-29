@@ -194,22 +194,27 @@ class PipelineTest {
 
     private void stubCreateSession(String sessionId) {
         when(devin.createSession(anyString(), anyString(), anyList(), any(), any()))
-                .thenReturn(new DevinDtos.CreateSessionResponse(
-                        sessionId, "https://app.devin.ai/sessions/" + sessionId, true));
+                .thenReturn(session(sessionId, "working", null, null));
     }
 
-    private void stubSession(String sessionId, String status, String prUrl, JsonNode structuredOutput) {
-        when(devin.getSession(sessionId))
-                .thenReturn(Optional.of(new DevinDtos.SessionDetails(
-                        sessionId,
-                        status,
-                        status,
-                        "title",
-                        List.of(),
-                        structuredOutput,
-                        prUrl == null ? null : new DevinDtos.PullRequestInfo(prUrl),
-                        null,
-                        null)));
+    private void stubSession(String sessionId, String statusDetail, String prUrl, JsonNode structuredOutput) {
+        when(devin.getSession(sessionId)).thenReturn(Optional.of(session(sessionId, statusDetail, prUrl, structuredOutput)));
+    }
+
+    private DevinDtos.SessionDetails session(
+            String sessionId, String statusDetail, String prUrl, JsonNode structuredOutput) {
+        return new DevinDtos.SessionDetails(
+                sessionId,
+                "https://app.devin.ai/sessions/" + sessionId,
+                "running",
+                statusDetail,
+                "title",
+                List.of(),
+                structuredOutput,
+                prUrl == null ? List.of() : List.of(new DevinDtos.PullRequestInfo(prUrl, "open")),
+                0.0,
+                null,
+                null);
     }
 
     private JsonNode criteriaJson(

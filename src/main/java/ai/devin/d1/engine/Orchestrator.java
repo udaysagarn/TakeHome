@@ -136,7 +136,7 @@ public class Orchestrator {
             return;
         }
 
-        DevinDtos.CreateSessionResponse session = devin.createSession(
+        DevinDtos.SessionDetails session = devin.createSession(
                 prompts.scopingPrompt(task.getRepo(), issue.number(), issue.title(), issue.body()),
                 "D1 scoping — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("d1", "criteria", task.getRepo()),
@@ -218,7 +218,7 @@ public class Orchestrator {
         SuccessCriteria criteria = criteriaService.fromJson(task.getCriteriaJson());
         int acu = props.getDevin().getRemediationAcuLimit();
 
-        DevinDtos.CreateSessionResponse session = devin.createSession(
+        DevinDtos.SessionDetails session = devin.createSession(
                 prompts.remediationPrompt(task.getRepo(), issue.number(), issue.title(), issue.body(), criteria),
                 "D1 remediation — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("d1", "remediation", task.getRepo(), "criteria:" + task.getCriteriaHash()),
