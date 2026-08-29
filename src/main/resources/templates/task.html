@@ -21,7 +21,9 @@
         <a class="btn" th:href="@{/}">← Pipeline</a>
         <a class="btn" th:href="${t.issueUrl}" target="_blank">Issue</a>
         <a class="btn" th:if="${t.prUrl}" th:href="${t.prUrl}" target="_blank">Pull request</a>
-        <button class="btn" onclick="cycleTheme()">Theme</button>
+        <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
+          Theme: <span data-theme-label>Light</span>
+        </button>
       </header>
 
       <h2 class="section">Status</h2>
