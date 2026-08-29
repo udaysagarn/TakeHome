@@ -81,7 +81,8 @@
         <tbody>
           <tr th:each="t : ${view.rows}">
             <td>
-              <a th:href="${t.issueUrl}" target="_blank" th:text="'#' + ${t.issueNumber}">#0</a>
+              <a th:href="${t.issueUrl}" target="_blank"
+                 th:text="${view.selectedRepo == null} ? ${t.repo} + '#' + ${t.issueNumber} : '#' + ${t.issueNumber}">#0</a>
               <a class="note" th:href="@{'/tasks/' + ${t.id}}" th:text="${t.title}">title</a>
             </td>
             <td><span class="pill" th:classappend="${t.bucket}" th:text="${t.state}">STATE</span></td>

@@ -2,10 +2,12 @@ package ai.devin.mend.web;
 
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.RemediationTask;
+import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.SuccessCriteria;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
@@ -50,17 +52,73 @@ public class DashboardService {
 
     private final TaskRepository tasks;
     private final TaskEventRepository events;
+    private final RepositoryService repositories;
     private final ObjectMapper json;
 
-    public DashboardService(TaskRepository tasks, TaskEventRepository events, ObjectMapper json) {
+    public DashboardService(
+            TaskRepository tasks,
+            TaskEventRepository events,
+            RepositoryService repositories,
+            ObjectMapper json) {
         this.tasks = tasks;
         this.events = events;
+        this.repositories = repositories;
         this.json = json;
     }
 
     public DashboardView view() {
+        return view(null);
+    }
+
+    /** The board for one repository, or for every watched repository when {@code repo} is null. */
+    public DashboardView view(String repo) {
+        String selected = repo == null || repo.isBlank() ? null : repo.trim();
+        List<RemediationTask> all = selected == null
+                ? tasks.findAllByOrderByUpdatedAtDesc()
+                : tasks.findByRepoOrderByUpdatedAtDesc(selected);
+        return new DashboardView(
+                kpis(all),
+                board(all),
+                rows(all),
+                exclusions(all),
+                recentEvents(selected),
+                repoCards(),
+                selected,
+                Instant.now());
+    }
+
+    /**
+     * One card per watched repository: its access and profile health next to the work menD has done
+     * on it, which is what makes the multi-repository view worth switching between.
+     */
+    public List<RepoCard> repoCards() {
         List<RemediationTask> all = tasks.findAllByOrderByUpdatedAtDesc();
-        return new DashboardView(kpis(all), board(all), rows(all), exclusions(all), recentEvents(), Instant.now());
+        return repositories.all().stream().map(r -> card(r, all)).toList();
+    }
+
+    private RepoCard card(Repository repository, List<RemediationTask> all) {
+        List<RemediationTask> mine = all.stream()
+                .filter(t -> repository.slug().equalsIgnoreCase(t.getRepo()))
+                .toList();
+        Kpis kpis = kpis(mine);
+        return new RepoCard(
+                repository.getId(),
+                repository.slug(),
+                repository.htmlUrl(),
+                repository.getDefaultBranch(),
+                repository.getAccessState().name(),
+                repository.getAccessError(),
+                repository.getIndexState().name(),
+                repository.getIndexedAt(),
+                repository.getIndexedSha(),
+                repository.getCommitsSinceIndex(),
+                repository.isEnabled(),
+                repositories.triggerLabel(repository),
+                kpis,
+                mine.stream()
+                        .map(RemediationTask::getUpdatedAt)
+                        .max(Comparator.naturalOrder())
+                        .orElse(null));
     }
 
     public Kpis kpis(List<RemediationTask> all) {
@@ -122,7 +180,12 @@ public class DashboardService {
     }
 
     public List<EventRow> recentEvents() {
+        return recentEvents(null);
+    }
+
+    public List<EventRow> recentEvents(String repo) {
         return events.findAllByOrderByOccurredAtDesc(PageRequest.of(0, 40)).stream()
+                .filter(e -> repo == null || e.getTaskKey() == null || e.getTaskKey().startsWith(repo + "#"))
                 .map(e -> new EventRow(
                         TIME.format(e.getOccurredAt()),
                         e.getTaskKey(),
@@ -204,6 +267,7 @@ public class DashboardService {
     private TaskRow row(RemediationTask t) {
         return new TaskRow(
                 t.getId(),
+                t.getRepo(),
                 t.getIssueNumber(),
                 t.getIssueTitle(),
                 t.getIssueUrl(),
@@ -242,7 +306,26 @@ public class DashboardService {
             List<TaskRow> rows,
             List<TaskRow> exclusions,
             List<EventRow> events,
+            List<RepoCard> repositories,
+            String selectedRepo,
             Instant generatedAt) {}
+
+    /** A watched repository plus the work menD has done on it. */
+    public record RepoCard(
+            Long id,
+            String slug,
+            String htmlUrl,
+            String defaultBranch,
+            String accessState,
+            String accessError,
+            String indexState,
+            Instant indexedAt,
+            String indexedSha,
+            int commitsSinceIndex,
+            boolean enabled,
+            String triggerLabel,
+            Kpis kpis,
+            Instant lastActivityAt) {}
 
     public record Kpis(
             int total,
@@ -294,6 +377,7 @@ public class DashboardService {
 
     public record TaskRow(
             Long id,
+            String repo,
             int issueNumber,
             String title,
             String issueUrl,

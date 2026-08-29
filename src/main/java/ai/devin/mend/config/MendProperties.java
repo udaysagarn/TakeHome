@@ -265,6 +265,17 @@ public class MendProperties {
         private String installationId = "";
         private String privateKey = "";
 
+        /** The app's URL slug, used to link an operator straight at its settings pages. */
+        private String slug = "mend-bot-uday-demo";
+
+        public String getSlug() {
+            return slug;
+        }
+
+        public void setSlug(String slug) {
+            this.slug = slug;
+        }
+
         public String getAppId() {
             return appId;
         }
