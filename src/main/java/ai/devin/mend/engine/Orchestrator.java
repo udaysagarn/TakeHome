@@ -325,6 +325,8 @@ public class Orchestrator {
                     failOrRetry(task, "The session did not assert every acceptance criterion as satisfied.");
                     return;
                 }
+                task.setLastError(null);
+                task = taskService.save(task);
                 task = taskService.transition(
                         task,
                         IssueState.SUCCEEDED,
