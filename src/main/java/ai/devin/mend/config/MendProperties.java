@@ -1,6 +1,7 @@
 package ai.devin.mend.config;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -119,6 +120,9 @@ public class MendProperties {
         private String token = "";
         private App app = new App();
         private String repo = "udaysagarn/superset";
+
+        /** Repositories registered at startup, so a fresh container comes up with a working demo. */
+        private List<String> repos = new ArrayList<>(List.of("udaysagarn/superset"));
         private String webhookSecret = "";
         private boolean pollingEnabled = true;
         private Duration pollInterval = Duration.ofSeconds(30);
@@ -157,6 +161,14 @@ public class MendProperties {
 
         public String getRepo() {
             return repo;
+        }
+
+        public List<String> getRepos() {
+            return repos;
+        }
+
+        public void setRepos(List<String> repos) {
+            this.repos = repos;
         }
 
         public void setRepo(String repo) {

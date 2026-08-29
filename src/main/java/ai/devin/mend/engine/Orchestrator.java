@@ -72,8 +72,7 @@ public class Orchestrator {
     }
 
     /** Entry point for every trigger: webhook, poller or manual dashboard action. */
-    public RemediationTask onTriggerLabel(GitHubDtos.Issue issue) {
-        String repo = github.repo();
+    public RemediationTask onTriggerLabel(String repo, GitHubDtos.Issue issue) {
         Optional<RemediationTask> existing = tasks.findByRepoAndIssueNumber(repo, issue.number());
         if (existing.isPresent()) {
             RemediationTask task = existing.get();
@@ -110,7 +109,8 @@ public class Orchestrator {
     // ---------------------------------------------------------------- triage
 
     private void triage(RemediationTask task) {
-        GitHubDtos.Issue issue = github.getIssue(task.getIssueNumber()).orElse(null);
+        GitHubDtos.Issue issue =
+                github.getIssue(task.getRepo(), task.getIssueNumber()).orElse(null);
         if (issue == null) {
             task = taskService.transition(task, IssueState.CANCELLED, "issue no longer accessible", ACTOR);
             return;
@@ -212,7 +212,8 @@ public class Orchestrator {
             log.debug("dispatch of {} deferred: {} sessions already active", task.key(), active);
             return;
         }
-        GitHubDtos.Issue issue = github.getIssue(task.getIssueNumber()).orElse(null);
+        GitHubDtos.Issue issue =
+                github.getIssue(task.getRepo(), task.getIssueNumber()).orElse(null);
         if (issue == null) {
             task = taskService.transition(task, IssueState.CANCELLED, "issue no longer accessible", ACTOR);
             return;
@@ -314,7 +315,7 @@ public class Orchestrator {
             escalate(task, "The pull request URL reported by the session could not be parsed: " + task.getPrUrl());
             return;
         }
-        GitHubDtos.CiVerdict verdict = github.ciVerdict(pullNumber);
+        GitHubDtos.CiVerdict verdict = github.ciVerdict(task.getRepo(), pullNumber);
         task.setCiStatus(verdict.name());
         task = taskService.save(task);
 

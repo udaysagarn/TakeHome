@@ -45,6 +45,8 @@ import org.springframework.test.context.TestPropertySource;
         })
 class PipelineTest {
 
+    private static final String REPO = "acme/superset";
+
     private static final String BODY =
             """
             `npm audit` reports a high severity advisory for nth-check reachable from
@@ -74,7 +76,7 @@ class PipelineTest {
     void setUp() {
         tasks.deleteAll();
         events.deleteAll();
-        when(github.repo()).thenReturn("acme/superset");
+        when(github.defaultRepo()).thenReturn(REPO);
         when(github.isConfigured()).thenReturn(true);
     }
 
@@ -82,13 +84,13 @@ class PipelineTest {
     void anIssueWithoutAVerifiableDefinitionOfDoneNeverReachesADevinSession() {
         stubIssue(1, "Test Bug", "Some bug", List.of());
 
-        RemediationTask task = orchestrator.onTriggerLabel(issue(1, "Test Bug", "Some bug", List.of()));
+        RemediationTask task = orchestrator.onTriggerLabel(REPO, issue(1, "Test Bug", "Some bug", List.of()));
         orchestrator.advance(reload(task));
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.NOT_A_CANDIDATE);
         assertThat(reload(task).getExclusionReason()).isNotBlank();
         verify(devin, never()).createSession(anyString(), anyString(), anyList(), anyInt(), anyString());
-        verify(github).addLabels(eq(1), anyList());
+        verify(github).addLabels(eq(REPO), eq(1), anyList());
     }
 
     @Test
@@ -97,7 +99,8 @@ class PipelineTest {
         stubCreateSession("devin-scope");
         stubSession("devin-scope", "finished", null, criteriaJson(false, 0.9, List.of(), List.of()));
 
-        RemediationTask task = orchestrator.onTriggerLabel(issue(2, "Redesign the chart picker", BODY, List.of()));
+        RemediationTask task =
+                orchestrator.onTriggerLabel(REPO, issue(2, "Redesign the chart picker", BODY, List.of()));
         orchestrator.advance(reload(task));
         assertThat(reload(task).getState()).isEqualTo(IssueState.CRITERIA_PENDING);
 
@@ -117,7 +120,7 @@ class PipelineTest {
                 criteriaJson(true, 0.92, List.of("npm audit reports no high advisory"),
                         List.of("npm audit --audit-level=high")));
 
-        RemediationTask task = orchestrator.onTriggerLabel(issue(3, "chore: bump nth-check", BODY, List.of()));
+        RemediationTask task = orchestrator.onTriggerLabel(REPO, issue(3, "chore: bump nth-check", BODY, List.of()));
         orchestrator.advance(reload(task)); // DISCOVERED -> CRITERIA_PENDING
         orchestrator.advance(reload(task)); // criteria accepted -> READY
         assertThat(reload(task).getState()).isEqualTo(IssueState.READY);
@@ -133,7 +136,7 @@ class PipelineTest {
         assertThat(reload(task).getPrUrl()).endsWith("/pull/9");
 
         orchestrator.advance(reload(task)); // -> VERIFYING
-        when(github.ciVerdict(9)).thenReturn(GitHubDtos.CiVerdict.PASSED);
+        when(github.ciVerdict(REPO, 9)).thenReturn(GitHubDtos.CiVerdict.PASSED);
         orchestrator.advance(reload(task)); // -> SUCCEEDED
 
         RemediationTask done = reload(task);
@@ -153,7 +156,7 @@ class PipelineTest {
                 "finished",
                 null,
                 criteriaJson(true, 0.92, List.of("audit clean"), List.of("npm audit")));
-        RemediationTask task = orchestrator.onTriggerLabel(issue(4, "chore: bump nth-check", BODY, List.of()));
+        RemediationTask task = orchestrator.onTriggerLabel(REPO, issue(4, "chore: bump nth-check", BODY, List.of()));
         orchestrator.advance(reload(task));
         orchestrator.advance(reload(task));
         stubCreateSession("devin-fix");
@@ -162,7 +165,7 @@ class PipelineTest {
         orchestrator.advance(reload(task));
         orchestrator.advance(reload(task)); // -> VERIFYING
 
-        when(github.ciVerdict(10)).thenReturn(GitHubDtos.CiVerdict.FAILED);
+        when(github.ciVerdict(REPO, 10)).thenReturn(GitHubDtos.CiVerdict.FAILED);
         orchestrator.advance(reload(task));
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.RUNNING);
@@ -189,7 +192,7 @@ class PipelineTest {
     }
 
     private void stubIssue(int number, String title, String body, List<String> labels) {
-        when(github.getIssue(number)).thenReturn(Optional.of(issue(number, title, body, labels)));
+        when(github.getIssue(REPO, number)).thenReturn(Optional.of(issue(number, title, body, labels)));
     }
 
     private void stubCreateSession(String sessionId) {
