@@ -63,3 +63,7 @@ mend:
     reconcile-interval: ${MEND_RECONCILE_INTERVAL:PT15S}
     max-concurrent-sessions: ${MEND_MAX_CONCURRENT:4}
     max-attempts: ${MEND_MAX_ATTEMPTS:2}
+    lease-duration: ${MEND_LEASE_DURATION:PT2M}
+    heartbeat-interval: ${MEND_HEARTBEAT_INTERVAL:PT30S}
+    criteria-eta: ${MEND_CRITERIA_ETA:PT15M}
+    verify-eta: ${MEND_VERIFY_ETA:PT30M}

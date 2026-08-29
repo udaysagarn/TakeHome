@@ -33,6 +33,11 @@
           <div class="value" th:classappend="${k.escalated > 0} ? 'red'" th:text="${k.escalated}">0</div>
         </div>
         <div class="kpi">
+          <div class="label">Engineer-hours avoided</div>
+          <div class="value green" th:text="${#numbers.formatDecimal(k.engineerHoursAvoided, 1, 1)}">0.0</div>
+          <div class="hint">2.5h per remediation, conservative</div>
+        </div>
+        <div class="kpi">
           <div class="label">ACU per remediation</div>
           <div class="value" th:text="${k.acuPerSuccess == null} ? '—'
                 : ${#numbers.formatDecimal(k.acuPerSuccess, 1, 1)}">—</div>
@@ -47,11 +52,12 @@
             <span th:text="${col.name}">Column</span>
             <span th:text="${col.count}">0</span>
           </div>
-          <div class="card" th:each="t : ${col.tasks}">
+          <a class="card" th:each="t : ${col.tasks}" th:href="@{'/tasks/' + ${t.id}}">
             <div class="num" th:text="'#' + ${t.issueNumber}">#0</div>
             <div class="title" th:text="${t.title}">title</div>
             <span class="pill" th:classappend="${t.bucket}" th:text="${t.state}">STATE</span>
-          </div>
+            <span class="pill red" th:if="${t.overdue}">overdue</span>
+          </a>
           <div class="empty" th:if="${col.tasks.isEmpty()}" style="padding: 4px 2px; font-size: 12px">—</div>
         </div>
       </section>
@@ -68,13 +74,14 @@
             <th>Conf.</th>
             <th>Att.</th>
             <th>To PR</th>
+            <th>Owner · ETA</th>
             <th>Note</th>
           </tr>
         </thead>
         <tbody>
           <tr th:each="t : ${view.rows}">
             <td>
-              <a th:href="${t.issueUrl}" th:text="'#' + ${t.issueNumber}" target="_blank">#0</a>
+              <a th:href="@{'/tasks/' + ${t.id}}" th:text="'#' + ${t.issueNumber}">#0</a>
               <div class="note" th:text="${t.title}">title</div>
             </td>
             <td><span class="pill" th:classappend="${t.bucket}" th:text="${t.state}">STATE</span></td>
@@ -91,10 +98,17 @@
                   : ${#numbers.formatDecimal(t.confidence, 1, 2)}">—</td>
             <td class="muted" th:text="${t.attempts}">0</td>
             <td class="muted" th:text="${t.minutesToPr == null} ? '—' : ${t.minutesToPr} + 'm'">—</td>
+            <td class="muted">
+              <span th:if="${t.ownerId}" class="mono" th:text="${t.ownerId}">worker</span>
+              <span th:unless="${t.ownerId}">—</span>
+              <div class="note" th:if="${t.etaAt}"
+                   th:classappend="${t.overdue} ? 'red'"
+                   th:text="(${t.overdue} ? 'overdue since ' : 'due ') + ${t.etaAt}"></div>
+            </td>
             <td class="note" th:text="${t.note}"></td>
           </tr>
           <tr th:if="${view.rows.isEmpty()}">
-            <td colspan="9" class="empty">
+            <td colspan="10" class="empty">
               No issues ingested yet. Apply the trigger label to an issue, or POST /api/issues/{n}/ingest.
             </td>
           </tr>
@@ -112,7 +126,7 @@
         </thead>
         <tbody>
           <tr th:each="t : ${view.exclusions}">
-            <td><a th:href="${t.issueUrl}" th:text="'#' + ${t.issueNumber}" target="_blank">#0</a></td>
+            <td><a th:href="@{'/tasks/' + ${t.id}}" th:text="'#' + ${t.issueNumber}">#0</a></td>
             <td><span class="pill" th:classappend="${t.bucket}" th:text="${t.state}">STATE</span></td>
             <td class="note" th:text="${t.note}"></td>
           </tr>

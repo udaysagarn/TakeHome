@@ -2,9 +2,12 @@ package ai.devin.mend.web;
 
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.RemediationTask;
+import ai.devin.mend.domain.SuccessCriteria;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -15,6 +18,7 @@ import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -41,12 +45,17 @@ public class DashboardService {
     private static final DateTimeFormatter TIME =
             DateTimeFormatter.ofPattern("MMM dd HH:mm:ss").withZone(ZoneOffset.UTC);
 
+    /** Conservative estimate of the engineer time one merged remediation would otherwise consume. */
+    public static final double ENGINEER_HOURS_PER_FIX = 2.5;
+
     private final TaskRepository tasks;
     private final TaskEventRepository events;
+    private final ObjectMapper json;
 
-    public DashboardService(TaskRepository tasks, TaskEventRepository events) {
+    public DashboardService(TaskRepository tasks, TaskEventRepository events, ObjectMapper json) {
         this.tasks = tasks;
         this.events = events;
+        this.json = json;
     }
 
     public DashboardView view() {
@@ -76,7 +85,7 @@ public class DashboardService {
 
         return new Kpis(
                 all.size(), inFlight, prsOpened, succeeded, excluded, escalated, successRate, medianToPr,
-                acu, acuPerSuccess, exclusionRate);
+                acu, acuPerSuccess, exclusionRate, succeeded * ENGINEER_HOURS_PER_FIX);
     }
 
     public List<BoardColumn> board(List<RemediationTask> all) {
@@ -127,6 +136,71 @@ public class DashboardService {
         return events.findByTaskIdOrderByOccurredAtAsc(taskId);
     }
 
+    /**
+     * Everything persisted about one task, including the criteria contract Devin was held to and the
+     * lease its worker holds — the view an engineer opens when they want to audit a decision.
+     */
+    public Optional<TaskDetail> detail(long taskId) {
+        return tasks.findById(taskId).map(t -> {
+            Instant now = Instant.now();
+            return new TaskDetail(
+                    row(t),
+                    criteria(t),
+                    t.getCriteriaJson(),
+                    t.getCriteriaHash(),
+                    t.getCriteriaSessionUrl(),
+                    t.getSessionUrl(),
+                    t.getSessionId(),
+                    t.getNudges(),
+                    t.getLastError(),
+                    t.getExclusionReason(),
+                    t.getCreatedAt(),
+                    t.getReadyAt(),
+                    t.getDispatchedAt(),
+                    t.getPrOpenedAt(),
+                    t.getCompletedAt(),
+                    lease(t, now),
+                    timeline(taskId));
+        });
+    }
+
+    private SuccessCriteria criteria(RemediationTask t) {
+        if (t.getCriteriaJson() == null || t.getCriteriaJson().isBlank()) {
+            return null;
+        }
+        try {
+            return json.readValue(t.getCriteriaJson(), SuccessCriteria.class);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
+    }
+
+    private static Lease lease(RemediationTask t, Instant now) {
+        boolean held = t.isLeased(now);
+        String status;
+        if (t.getState().isTerminal()) {
+            status = "released";
+        } else if (held) {
+            status = "held";
+        } else if (t.getOwnerId() != null) {
+            status = "expired";
+        } else {
+            status = "unclaimed";
+        }
+        Long secondsLeft = t.getLeaseExpiresAt() == null || !held
+                ? null
+                : Duration.between(now, t.getLeaseExpiresAt()).toSeconds();
+        return new Lease(
+                status,
+                t.getOwnerId(),
+                t.getLeaseAcquiredAt(),
+                t.getLeaseExpiresAt(),
+                secondsLeft,
+                t.getEtaAt(),
+                t.isOverdue(now),
+                t.getLeaseTakeovers());
+    }
+
     private TaskRow row(RemediationTask t) {
         return new TaskRow(
                 t.getId(),
@@ -144,7 +218,10 @@ public class DashboardService {
                 t.getExclusionReason() != null ? t.getExclusionReason() : t.getLastError(),
                 t.timeToPr() == null ? null : t.timeToPr().toMinutes(),
                 t.elapsed().toMinutes(),
-                t.getUpdatedAt());
+                t.getUpdatedAt(),
+                t.getOwnerId(),
+                t.getEtaAt(),
+                t.isOverdue(Instant.now()));
     }
 
     private static long count(List<RemediationTask> all, IssueState state) {
@@ -178,7 +255,38 @@ public class DashboardService {
             Long medianMinutesToPr,
             int acuBudgeted,
             Double acuPerSuccess,
-            Double exclusionRatePct) {}
+            Double exclusionRatePct,
+            double engineerHoursAvoided) {}
+
+    /** Who owns a task right now and what they promised. */
+    public record Lease(
+            String status,
+            String ownerId,
+            Instant acquiredAt,
+            Instant expiresAt,
+            Long secondsRemaining,
+            Instant etaAt,
+            boolean overdue,
+            int takeovers) {}
+
+    public record TaskDetail(
+            TaskRow task,
+            SuccessCriteria criteria,
+            String criteriaJson,
+            String criteriaHash,
+            String criteriaSessionUrl,
+            String remediationSessionUrl,
+            String remediationSessionId,
+            int nudges,
+            String lastError,
+            String exclusionReason,
+            Instant createdAt,
+            Instant readyAt,
+            Instant dispatchedAt,
+            Instant prOpenedAt,
+            Instant completedAt,
+            Lease lease,
+            List<TaskEvent> timeline) {}
 
     public record BoardColumn(String name, int count, List<TaskRow> tasks) {}
 
@@ -200,7 +308,10 @@ public class DashboardService {
             String note,
             Long minutesToPr,
             long ageMinutes,
-            Instant updatedAt) {}
+            Instant updatedAt,
+            String ownerId,
+            Instant etaAt,
+            boolean overdue) {}
 
     /** Convenience for the markdown report. */
     public String csvLabels(List<TaskRow> rows) {

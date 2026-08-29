@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="'menD · #' + ${detail.task.issueNumber}">menD · task</title>
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="stylesheet" th:href="@{/css/devin.css}" />
+    <script th:src="@{/js/theme.js}"></script>
+  </head>
+  <body>
+    <div class="shell" th:with="t=${detail.task}, c=${detail.criteria}, l=${detail.lease}">
+      <header class="topbar">
+        <div class="brand">
+          <span class="mark">menD</span>
+          <span th:text="'#' + ${t.issueNumber}">#0</span>
+        </div>
+        <span class="subtitle" th:text="${t.title}">title</span>
+        <span class="spacer"></span>
+        <a class="btn" th:href="@{/}">← Pipeline</a>
+        <a class="btn" th:href="${t.issueUrl}" target="_blank">Issue</a>
+        <a class="btn" th:if="${t.prUrl}" th:href="${t.prUrl}" target="_blank">Pull request</a>
+        <button class="btn" onclick="cycleTheme()">Theme</button>
+      </header>
+
+      <h2 class="section">Status</h2>
+      <table class="grid kv">
+        <tbody>
+          <tr>
+            <th>State</th>
+            <td><span class="pill" th:classappend="${t.bucket}" th:text="${t.state}">STATE</span></td>
+            <th>CI</th>
+            <td class="muted" th:text="${t.ciStatus} ?: '—'">—</td>
+          </tr>
+          <tr>
+            <th>Attempts</th>
+            <td class="muted" th:text="${t.attempts}">0</td>
+            <th>Nudges</th>
+            <td class="muted" th:text="${detail.nudges}">0</td>
+          </tr>
+          <tr>
+            <th>ACU budget</th>
+            <td class="muted" th:text="${t.acu} ?: '—'">—</td>
+            <th>Time to PR</th>
+            <td class="muted" th:text="${t.minutesToPr == null} ? '—' : ${t.minutesToPr} + 'm'">—</td>
+          </tr>
+          <tr>
+            <th>Scoping session</th>
+            <td>
+              <a th:if="${detail.criteriaSessionUrl}" th:href="${detail.criteriaSessionUrl}"
+                 target="_blank" class="mono">Devin scoping session</a>
+              <span th:unless="${detail.criteriaSessionUrl}" class="muted">—</span>
+            </td>
+            <th>Remediation session</th>
+            <td>
+              <a th:if="${detail.remediationSessionUrl}" th:href="${detail.remediationSessionUrl}"
+                 target="_blank" class="mono" th:text="${detail.remediationSessionId}">session</a>
+              <span th:unless="${detail.remediationSessionUrl}" class="muted">—</span>
+            </td>
+          </tr>
+          <tr th:if="${detail.lastError}">
+            <th>Last error</th>
+            <td colspan="3" class="note" th:text="${detail.lastError}"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section">Worker lease</h2>
+      <table class="grid kv">
+        <tbody>
+          <tr>
+            <th>Lease</th>
+            <td>
+              <span class="pill" th:classappend="${l.overdue} ? 'red' : (${l.status} == 'held' ? 'blue' : '')"
+                    th:text="${l.status}">status</span>
+              <span class="muted" th:if="${l.secondsRemaining != null}"
+                    th:text="' expires in ' + ${l.secondsRemaining} + 's'"></span>
+            </td>
+            <th>Owner</th>
+            <td class="mono" th:text="${l.ownerId} ?: '—'">—</td>
+          </tr>
+          <tr>
+            <th>Predicted completion</th>
+            <td class="muted" th:text="${l.etaAt} ?: '—'">—</td>
+            <th>Takeovers from dead workers</th>
+            <td class="muted" th:text="${l.takeovers}">0</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section">Criteria contract</h2>
+      <div class="empty" th:if="${c == null}">
+        No criteria were established — this issue was never sent to a remediation session.
+        <span th:if="${detail.exclusionReason}" th:text="' ' + ${detail.exclusionReason}"></span>
+      </div>
+      <table class="grid kv" th:if="${c != null}">
+        <tbody>
+          <tr>
+            <th>Candidate</th>
+            <td th:text="${c.isCandidate} ? 'yes' : 'no'">yes</td>
+            <th>Confidence</th>
+            <td th:text="${#numbers.formatDecimal(c.confidence, 1, 2)}">0.00</td>
+          </tr>
+          <tr>
+            <th>Risk</th>
+            <td class="muted" th:text="${c.risk} ?: '—'">—</td>
+            <th>Contract hash</th>
+            <td class="mono muted" th:text="${detail.criteriaHash} ?: '—'">—</td>
+          </tr>
+          <tr>
+            <th>Problem</th>
+            <td colspan="3" class="note" th:text="${c.problemRestatement}"></td>
+          </tr>
+          <tr>
+            <th>Acceptance criteria</th>
+            <td colspan="3">
+              <ul class="contract">
+                <li th:each="a : ${c.acceptanceCriteria}" th:text="${a}"></li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <th>Verification commands</th>
+            <td colspan="3">
+              <ul class="contract mono">
+                <li th:each="v : ${c.verificationCommands}" th:text="${v}"></li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <th>Files in scope</th>
+            <td colspan="3">
+              <ul class="contract mono">
+                <li th:each="f : ${c.filesInScope}" th:text="${f}"></li>
+              </ul>
+            </td>
+          </tr>
+          <tr th:if="${!c.blockingUnknowns.isEmpty()}">
+            <th>Blocking unknowns</th>
+            <td colspan="3">
+              <ul class="contract">
+                <li th:each="u : ${c.blockingUnknowns}" th:text="${u}"></li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <th>Rationale</th>
+            <td colspan="3" class="note" th:text="${c.rationale}"></td>
+          </tr>
+        </tbody>
+      </table>
+      <details th:if="${detail.criteriaJson}">
+        <summary class="muted">Raw contract as persisted</summary>
+        <pre class="mono raw" th:text="${detail.criteriaJson}"></pre>
+      </details>
+
+      <h2 class="section">Audit trail</h2>
+      <div class="events">
+        <div class="event" th:each="e : ${detail.timeline}">
+          <span class="when mono" th:text="${e.occurredAt}">time</span>
+          <span class="mono" th:text="${e.actor}">actor</span>
+          <span>
+            <span class="muted" th:text="${e.fromState} + ' → '">FROM →</span>
+            <strong th:text="${e.toState}">TO</strong>
+            <span class="muted" th:text="${e.reason} ? ' · ' + ${e.reason} : ''"></span>
+          </span>
+        </div>
+        <div class="empty" th:if="${detail.timeline.isEmpty()}" style="padding-left: 12px">No transitions yet.</div>
+      </div>
+    </div>
+  </body>
+</html>
