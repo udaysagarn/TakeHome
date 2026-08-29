@@ -130,6 +130,10 @@
               </ul>
             </td>
           </tr>
+          <tr th:if="${c.testPlan != null and !c.testPlan.isBlank()}">
+            <th>Test plan</th>
+            <td colspan="3" class="note" th:text="${c.testPlan}"></td>
+          </tr>
           <tr>
             <th>Files in scope</th>
             <td colspan="3">

@@ -85,6 +85,9 @@ public class SuccessCriteriaService {
         if (criteria.verificationCommands().isEmpty()) {
             failures.add("No verification commands could be derived, so a fix could not be proven.");
         }
+        if (criteria.testPlan() == null || criteria.testPlan().isBlank()) {
+            failures.add("No test plan was stated, so there is no agreement on which test proves the fix.");
+        }
         if (!criteria.blockingUnknowns().isEmpty()) {
             failures.add("Blocking unknowns require a human answer: " + String.join("; ", criteria.blockingUnknowns()));
         }

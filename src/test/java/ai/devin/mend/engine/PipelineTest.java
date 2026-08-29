@@ -89,7 +89,7 @@ class PipelineTest {
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.NOT_A_CANDIDATE);
         assertThat(reload(task).getExclusionReason()).isNotBlank();
-        verify(devin, never()).createSession(anyString(), anyString(), anyList(), anyInt(), anyString());
+        verify(devin, never()).createSession(anyString(), anyString(), anyList(), anyInt(), anyString(), anyString());
         verify(github).addLabels(eq(REPO), eq(1), anyList());
     }
 
@@ -106,7 +106,7 @@ class PipelineTest {
 
         orchestrator.advance(reload(task));
         assertThat(reload(task).getState()).isEqualTo(IssueState.NOT_A_CANDIDATE);
-        verify(devin).createSession(anyString(), anyString(), anyList(), anyInt(), anyString());
+        verify(devin).createSession(anyString(), anyString(), anyList(), anyInt(), anyString(), anyString());
     }
 
     @Test
@@ -196,7 +196,7 @@ class PipelineTest {
     }
 
     private void stubCreateSession(String sessionId) {
-        when(devin.createSession(anyString(), anyString(), anyList(), any(), any()))
+        when(devin.createSession(anyString(), anyString(), anyList(), any(), any(), anyString()))
                 .thenReturn(session(sessionId, "working", null, null));
     }
 
@@ -229,6 +229,7 @@ class PipelineTest {
         node.set("acceptance_criteria", mapper.valueToTree(acceptance));
         node.set("verification_commands", mapper.valueToTree(commands));
         node.set("files_in_scope", mapper.valueToTree(List.of("superset-frontend/package-lock.json")));
+        node.put("test_plan", "no test change: lockfile pin, proven by the existing npm audit check");
         node.put("risk", "low");
         node.set("blocking_unknowns", mapper.valueToTree(List.of()));
         node.put("rationale", candidate ? "isolated lockfile change" : "requires a product decision");
@@ -246,6 +247,8 @@ class PipelineTest {
         result.put("satisfied", satisfied);
         result.put("evidence", "npm audit --audit-level=high exits 0");
         node.set("criteria_results", mapper.createArrayNode().add(result));
+        node.set("tests_changed", mapper.valueToTree(List.of()));
+        node.put("test_evidence", "lockfile pin; npm audit is the existing check that proves it");
         node.set("commands_run", mapper.valueToTree(List.of("npm audit --audit-level=high")));
         node.put("confidence", 0.9);
         node.put("blocked_reason", "");

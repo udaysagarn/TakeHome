@@ -4,12 +4,15 @@ import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.engine.Orchestrator;
 import ai.devin.mend.github.GitHubDtos;
+import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
@@ -31,13 +34,19 @@ public class WebhookController {
 
     private final Orchestrator orchestrator;
     private final RepositoryService registry;
+    private final ContextService context;
     private final ObjectMapper mapper;
     private final MendProperties props;
 
     public WebhookController(
-            Orchestrator orchestrator, RepositoryService registry, ObjectMapper mapper, MendProperties props) {
+            Orchestrator orchestrator,
+            RepositoryService registry,
+            ContextService context,
+            ObjectMapper mapper,
+            MendProperties props) {
         this.orchestrator = orchestrator;
         this.registry = registry;
+        this.context = context;
         this.mapper = mapper;
         this.props = props;
     }
@@ -80,9 +89,9 @@ public class WebhookController {
     }
 
     /**
-     * A push to the default branch ages the repository profile. Only the commit count is recorded
-     * here; the profile refresh itself happens on menD's own schedule so a busy repository cannot
-     * drive Devin sessions from webhook traffic.
+     * A push to the default branch ages only the profile slices whose files it touched. The refresh
+     * itself happens on menD's own schedule, so a busy repository cannot drive Devin sessions from
+     * webhook traffic.
      */
     private String notePush(JsonNode root, Repository repository) {
         String ref = root.path("ref").asText();
@@ -90,9 +99,15 @@ public class WebhookController {
         if (!defaultRef.equals(ref)) {
             return "ignored: push to " + ref;
         }
-        int commits = root.path("commits").size();
-        registry.notePush(repository, commits);
-        return "noted %d commit(s) on %s".formatted(commits, repository.slug());
+        JsonNode commits = root.path("commits");
+        List<String> paths = new ArrayList<>();
+        for (JsonNode commit : commits) {
+            for (String field : List.of("added", "modified", "removed")) {
+                commit.path(field).forEach(path -> paths.add(path.asText()));
+            }
+        }
+        context.onPush(repository, commits.size(), paths, root.path("after").asText());
+        return "noted %d commit(s), %d changed path(s) on %s".formatted(commits.size(), paths.size(), repository.slug());
     }
 
     private boolean signatureValid(byte[] payload, String signature) {

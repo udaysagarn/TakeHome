@@ -21,6 +21,7 @@ public record SuccessCriteria(
         List<String> acceptanceCriteria,
         List<String> verificationCommands,
         List<String> filesInScope,
+        String testPlan,
         String risk,
         List<String> blockingUnknowns,
         String rationale) {
@@ -39,7 +40,8 @@ public record SuccessCriteria(
               "type": "object",
               "additionalProperties": false,
               "required": ["is_candidate", "confidence", "problem_restatement", "acceptance_criteria",
-                           "verification_commands", "files_in_scope", "risk", "blocking_unknowns", "rationale"],
+                           "verification_commands", "files_in_scope", "test_plan", "risk",
+                           "blocking_unknowns", "rationale"],
               "properties": {
                 "is_candidate": {
                   "type": "boolean",
@@ -58,6 +60,10 @@ public record SuccessCriteria(
                   "description": "Commands runnable in the repository that prove the acceptance criteria."
                 },
                 "files_in_scope": {"type": "array", "items": {"type": "string"}},
+                "test_plan": {
+                  "type": "string",
+                  "description": "Which automated test proves the fix: the test file and case to add or change, following the repository's existing test conventions. If no test change is warranted (e.g. a dependency pin proven by an audit command), say so and name the existing check that covers it."
+                },
                 "risk": {"type": "string", "enum": ["low", "medium", "high"]},
                 "blocking_unknowns": {
                   "type": "array",

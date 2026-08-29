@@ -151,11 +151,14 @@ public class RepositoryService {
         return repositories.save(repository);
     }
 
-    /** Marks the profile stale and counts the commits that made it so. */
+    /**
+     * Counts commits against the profile, and ages it only when the push actually touched something
+     * the profile describes — ordinary source commits leave a good profile alone.
+     */
     @Transactional
-    public void notePush(Repository repository, int commits) {
+    public void notePush(Repository repository, int commits, boolean agesProfile) {
         repository.setCommitsSinceIndex(repository.getCommitsSinceIndex() + Math.max(commits, 1));
-        if (repository.getIndexState() == IndexState.INDEXED) {
+        if (agesProfile && repository.getIndexState() == IndexState.INDEXED) {
             repository.setIndexState(IndexState.STALE);
         }
         repository.setUpdatedAt(Instant.now());

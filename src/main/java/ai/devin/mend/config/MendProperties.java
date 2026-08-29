@@ -337,6 +337,9 @@ public class MendProperties {
         private boolean enabled = true;
         private Duration reconcileInterval = Duration.ofSeconds(15);
 
+        /** Profiling is background work; it runs on a slower loop than remediation. */
+        private Duration contextInterval = Duration.ofSeconds(60);
+
         private int maxConcurrentSessions = 4;
         private int maxAttempts = 2;
         private int maxNudges = 3;
@@ -367,6 +370,14 @@ public class MendProperties {
 
         public void setReconcileInterval(Duration reconcileInterval) {
             this.reconcileInterval = reconcileInterval;
+        }
+
+        public Duration getContextInterval() {
+            return contextInterval;
+        }
+
+        public void setContextInterval(Duration contextInterval) {
+            this.contextInterval = contextInterval;
         }
 
         public int getMaxConcurrentSessions() {

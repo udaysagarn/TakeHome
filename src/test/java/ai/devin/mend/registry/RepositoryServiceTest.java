@@ -123,11 +123,24 @@ class RepositoryServiceTest {
         repository.setIndexState(IndexState.INDEXED);
         Repository indexed = service.save(repository);
 
-        service.notePush(indexed, 3);
+        service.notePush(indexed, 3, true);
 
         Repository reloaded = service.find(SLUG).orElseThrow();
         assertThat(reloaded.getIndexState()).isEqualTo(IndexState.STALE);
         assertThat(reloaded.getCommitsSinceIndex()).isEqualTo(3);
+    }
+
+    @Test
+    void aPushThatTouchesNothingTheProfileDescribesLeavesItIndexed() {
+        Repository repository = service.register(SLUG);
+        repository.setIndexState(IndexState.INDEXED);
+        Repository indexed = service.save(repository);
+
+        service.notePush(indexed, 2, false);
+
+        Repository reloaded = service.find(SLUG).orElseThrow();
+        assertThat(reloaded.getIndexState()).isEqualTo(IndexState.INDEXED);
+        assertThat(reloaded.getCommitsSinceIndex()).isEqualTo(2);
     }
 
     private static GitHubDtos.Repo repo(String slug, String defaultBranch, boolean archived, boolean hasIssues) {

@@ -55,9 +55,20 @@ public class DevinApiClient {
 
     public DevinDtos.SessionDetails createSession(
             String prompt, String title, List<String> tags, Integer maxAcuLimit, String structuredOutputSchema) {
+        return createSession(prompt, title, tags, maxAcuLimit, structuredOutputSchema, props.getGithub().getRepo());
+    }
+
+    /** Same, but scoped to the repository the work is for, so the session clones the right code. */
+    public DevinDtos.SessionDetails createSession(
+            String prompt,
+            String title,
+            List<String> tags,
+            Integer maxAcuLimit,
+            String structuredOutputSchema,
+            String repo) {
         JsonNode schema = parseSchema(structuredOutputSchema);
         DevinDtos.CreateSessionRequest request = new DevinDtos.CreateSessionRequest(
-                prompt, title, tags, maxAcuLimit, schema, schema != null, repos(), null);
+                prompt, title, tags, maxAcuLimit, schema, schema != null, repos(repo), null);
         return withRetries(
                 "createSession",
                 () -> http.post()
@@ -93,8 +104,7 @@ public class DevinApiClient {
         return props.getDevin().getOrgId();
     }
 
-    private List<String> repos() {
-        String repo = props.getGithub().getRepo();
+    private static List<String> repos(String repo) {
         return repo == null || repo.isBlank() ? null : List.of(repo);
     }
 

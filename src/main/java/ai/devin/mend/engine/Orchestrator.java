@@ -11,6 +11,7 @@ import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
 import ai.devin.mend.metrics.MendMetrics;
+import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.triage.PreFilter;
 import ai.devin.mend.triage.SuccessCriteriaService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,6 +43,7 @@ public class Orchestrator {
     private final SuccessCriteriaService criteriaService;
     private final PromptBuilder prompts;
     private final Notifier notifier;
+    private final ContextService context;
     private final MendMetrics metrics;
     private final ObjectMapper mapper;
     private final MendProperties props;
@@ -55,6 +57,7 @@ public class Orchestrator {
             SuccessCriteriaService criteriaService,
             PromptBuilder prompts,
             Notifier notifier,
+            ContextService context,
             MendMetrics metrics,
             ObjectMapper mapper,
             MendProperties props) {
@@ -66,6 +69,7 @@ public class Orchestrator {
         this.criteriaService = criteriaService;
         this.prompts = prompts;
         this.notifier = notifier;
+        this.context = context;
         this.metrics = metrics;
         this.mapper = mapper;
         this.props = props;
@@ -137,11 +141,17 @@ public class Orchestrator {
         }
 
         DevinDtos.SessionDetails session = devin.createSession(
-                prompts.scopingPrompt(task.getRepo(), issue.number(), issue.title(), issue.body()),
+                prompts.scopingPrompt(
+                        task.getRepo(),
+                        issue.number(),
+                        issue.title(),
+                        issue.body(),
+                        context.profileFor(task.getRepo())),
                 "menD scoping — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("mend", "criteria", task.getRepo()),
                 props.getDevin().getCriteriaAcuLimit(),
-                SuccessCriteria.JSON_SCHEMA);
+                SuccessCriteria.JSON_SCHEMA,
+                task.getRepo());
         task.setCriteriaSessionId(session.sessionId());
         task.setCriteriaSessionUrl(session.url());
         task = taskService.save(task);
@@ -222,11 +232,18 @@ public class Orchestrator {
         int acu = props.getDevin().getRemediationAcuLimit();
 
         DevinDtos.SessionDetails session = devin.createSession(
-                prompts.remediationPrompt(task.getRepo(), issue.number(), issue.title(), issue.body(), criteria),
+                prompts.remediationPrompt(
+                        task.getRepo(),
+                        issue.number(),
+                        issue.title(),
+                        issue.body(),
+                        criteria,
+                        context.profileFor(task.getRepo())),
                 "menD remediation — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("mend", "remediation", task.getRepo(), "criteria:" + task.getCriteriaHash()),
                 acu,
-                RemediationOutcome.JSON_SCHEMA);
+                RemediationOutcome.JSON_SCHEMA,
+                task.getRepo());
 
         task.setSessionId(session.sessionId());
         task.setSessionUrl(session.url());
