@@ -1,0 +1,110 @@
+package ai.devin.d1.web;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import ai.devin.d1.domain.IssueState;
+import ai.devin.d1.domain.RemediationTask;
+import ai.devin.d1.domain.TaskRepository;
+import ai.devin.d1.engine.TaskService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+
+/** Renders the monitoring view against populated state so template errors fail the build. */
+@SpringBootTest
+@AutoConfigureMockMvc
+@TestPropertySource(
+        properties = {
+            "d1.engine.enabled=false",
+            "d1.github.polling-enabled=false",
+            "spring.datasource.url=jdbc:h2:mem:dashboard;DB_CLOSE_DELAY=-1",
+            "spring.jpa.hibernate.ddl-auto=create-drop"
+        })
+class DashboardRenderTest {
+
+    @Autowired
+    private MockMvc mvc;
+
+    @Autowired
+    private TaskRepository tasks;
+
+    @Autowired
+    private TaskService taskService;
+
+    @BeforeEach
+    void seed() {
+        tasks.deleteAll();
+        RemediationTask succeeded = task(101, "chore(frontend): bump vulnerable transitive dependency");
+        succeeded.setConfidence(0.92);
+        succeeded.setSessionUrl("https://app.devin.ai/sessions/abc");
+        succeeded.setPrUrl("https://github.com/acme/superset/pull/9");
+        succeeded.setCiStatus("PASSED");
+        succeeded = taskService.save(succeeded);
+        succeeded = taskService.transition(succeeded, IssueState.CRITERIA_PENDING, "scoping", "test");
+        succeeded = taskService.transition(succeeded, IssueState.READY, "criteria established", "test");
+        succeeded = taskService.transition(succeeded, IssueState.DISPATCHED, "session", "test");
+        succeeded = taskService.transition(succeeded, IssueState.PR_OPEN, "pr", "test");
+        succeeded = taskService.transition(succeeded, IssueState.VERIFYING, "ci", "test");
+        taskService.transition(succeeded, IssueState.SUCCEEDED, "CI green", "test");
+
+        RemediationTask excluded = task(102, "Rethink the chart picker");
+        excluded.setExclusionReason("No verification commands could be derived, so a fix could not be proven.");
+        taskService.transition(taskService.save(excluded), IssueState.NOT_A_CANDIDATE, "gate failed", "test");
+
+        RemediationTask running = task(103, "fix(sqllab): stop swallowing driver errors");
+        running.setSessionUrl("https://app.devin.ai/sessions/def");
+        running = taskService.save(running);
+        running = taskService.transition(running, IssueState.READY, "criteria in body", "test");
+        running = taskService.transition(running, IssueState.DISPATCHED, "session", "test");
+        taskService.transition(running, IssueState.RUNNING, "working", "test");
+    }
+
+    private RemediationTask task(int number, String title) {
+        return new RemediationTask(
+                "acme/superset", number, title, "https://github.com/acme/superset/issues/" + number, "bug");
+    }
+
+    @Test
+    void theMonitoringViewRendersEveryPanel() throws Exception {
+        mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("chore(frontend): bump")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Rethink the chart picker")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/devin.css")));
+    }
+
+    @Test
+    void theLiveFragmentRendersForHtmxPolling() throws Exception {
+        String html = mvc.perform(get("/fragments/live"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).contains("SUCCEEDED", "NOT_A_CANDIDATE", "RUNNING");
+    }
+
+    @Test
+    void theSummaryApiCountsOutcomes() throws Exception {
+        mvc.perform(get("/api/summary"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"succeeded\":1")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"excluded\":1")));
+    }
+
+    @Test
+    void theMarkdownReportIsGeneratedForLeadership() throws Exception {
+        String report = mvc.perform(get("/api/report"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(report).contains("# Autonomous remediation report", "Remediated (green CI)", "issues/101");
+    }
+}

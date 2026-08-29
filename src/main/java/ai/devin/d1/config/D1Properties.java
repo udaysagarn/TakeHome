@@ -1,0 +1,332 @@
+package ai.devin.d1.config;
+
+import java.time.Duration;
+import java.util.List;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * All tunables of the control plane. Bound from the {@code d1.*} prefix.
+ */
+@ConfigurationProperties(prefix = "d1")
+public class D1Properties {
+
+    private Devin devin = new Devin();
+    private Github github = new Github();
+    private Triage triage = new Triage();
+    private Engine engine = new Engine();
+
+    public Devin getDevin() {
+        return devin;
+    }
+
+    public void setDevin(Devin devin) {
+        this.devin = devin;
+    }
+
+    public Github getGithub() {
+        return github;
+    }
+
+    public void setGithub(Github github) {
+        this.github = github;
+    }
+
+    public Triage getTriage() {
+        return triage;
+    }
+
+    public void setTriage(Triage triage) {
+        this.triage = triage;
+    }
+
+    public Engine getEngine() {
+        return engine;
+    }
+
+    public void setEngine(Engine engine) {
+        this.engine = engine;
+    }
+
+    public static class Devin {
+        private String baseUrl = "https://api.devin.ai";
+        private String apiKey = "";
+        private Duration timeout = Duration.ofSeconds(30);
+        private Integer criteriaAcuLimit = 3;
+        private Integer remediationAcuLimit = 10;
+        private boolean dryRun = false;
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+
+        public String getApiKey() {
+            return apiKey;
+        }
+
+        public void setApiKey(String apiKey) {
+            this.apiKey = apiKey;
+        }
+
+        public Duration getTimeout() {
+            return timeout;
+        }
+
+        public void setTimeout(Duration timeout) {
+            this.timeout = timeout;
+        }
+
+        public Integer getCriteriaAcuLimit() {
+            return criteriaAcuLimit;
+        }
+
+        public void setCriteriaAcuLimit(Integer criteriaAcuLimit) {
+            this.criteriaAcuLimit = criteriaAcuLimit;
+        }
+
+        public Integer getRemediationAcuLimit() {
+            return remediationAcuLimit;
+        }
+
+        public void setRemediationAcuLimit(Integer remediationAcuLimit) {
+            this.remediationAcuLimit = remediationAcuLimit;
+        }
+
+        public boolean isDryRun() {
+            return dryRun;
+        }
+
+        public void setDryRun(boolean dryRun) {
+            this.dryRun = dryRun;
+        }
+    }
+
+    public static class Github {
+        private String apiUrl = "https://api.github.com";
+        private String token = "";
+        private String repo = "udaysagarn/superset";
+        private String webhookSecret = "";
+        private boolean pollingEnabled = true;
+        private Duration pollInterval = Duration.ofSeconds(30);
+        private String triggerLabel = "devin:fix";
+        private String inProgressLabel = "devin:in-progress";
+        private String prOpenLabel = "devin:pr-open";
+        private String notCandidateLabel = "devin:not-a-candidate";
+        private String doneLabel = "devin:done";
+        private String needsHumanLabel = "devin:needs-human";
+        private boolean commentsEnabled = true;
+
+        public String getApiUrl() {
+            return apiUrl;
+        }
+
+        public void setApiUrl(String apiUrl) {
+            this.apiUrl = apiUrl;
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        public String getRepo() {
+            return repo;
+        }
+
+        public void setRepo(String repo) {
+            this.repo = repo;
+        }
+
+        public String getWebhookSecret() {
+            return webhookSecret;
+        }
+
+        public void setWebhookSecret(String webhookSecret) {
+            this.webhookSecret = webhookSecret;
+        }
+
+        public boolean isPollingEnabled() {
+            return pollingEnabled;
+        }
+
+        public void setPollingEnabled(boolean pollingEnabled) {
+            this.pollingEnabled = pollingEnabled;
+        }
+
+        public Duration getPollInterval() {
+            return pollInterval;
+        }
+
+        public void setPollInterval(Duration pollInterval) {
+            this.pollInterval = pollInterval;
+        }
+
+        public String getTriggerLabel() {
+            return triggerLabel;
+        }
+
+        public void setTriggerLabel(String triggerLabel) {
+            this.triggerLabel = triggerLabel;
+        }
+
+        public String getInProgressLabel() {
+            return inProgressLabel;
+        }
+
+        public void setInProgressLabel(String inProgressLabel) {
+            this.inProgressLabel = inProgressLabel;
+        }
+
+        public String getPrOpenLabel() {
+            return prOpenLabel;
+        }
+
+        public void setPrOpenLabel(String prOpenLabel) {
+            this.prOpenLabel = prOpenLabel;
+        }
+
+        public String getNotCandidateLabel() {
+            return notCandidateLabel;
+        }
+
+        public void setNotCandidateLabel(String notCandidateLabel) {
+            this.notCandidateLabel = notCandidateLabel;
+        }
+
+        public String getDoneLabel() {
+            return doneLabel;
+        }
+
+        public void setDoneLabel(String doneLabel) {
+            this.doneLabel = doneLabel;
+        }
+
+        public String getNeedsHumanLabel() {
+            return needsHumanLabel;
+        }
+
+        public void setNeedsHumanLabel(String needsHumanLabel) {
+            this.needsHumanLabel = needsHumanLabel;
+        }
+
+        public boolean isCommentsEnabled() {
+            return commentsEnabled;
+        }
+
+        public void setCommentsEnabled(boolean commentsEnabled) {
+            this.commentsEnabled = commentsEnabled;
+        }
+    }
+
+    public static class Triage {
+        private double minConfidence = 0.7;
+        private int minBodyLength = 60;
+        private List<String> labelDenylist = List.of("question", "discussion", "epic", "wontfix", "invalid");
+        private int maxFilesInScope = 25;
+
+        public double getMinConfidence() {
+            return minConfidence;
+        }
+
+        public void setMinConfidence(double minConfidence) {
+            this.minConfidence = minConfidence;
+        }
+
+        public int getMinBodyLength() {
+            return minBodyLength;
+        }
+
+        public void setMinBodyLength(int minBodyLength) {
+            this.minBodyLength = minBodyLength;
+        }
+
+        public List<String> getLabelDenylist() {
+            return labelDenylist;
+        }
+
+        public void setLabelDenylist(List<String> labelDenylist) {
+            this.labelDenylist = labelDenylist;
+        }
+
+        public int getMaxFilesInScope() {
+            return maxFilesInScope;
+        }
+
+        public void setMaxFilesInScope(int maxFilesInScope) {
+            this.maxFilesInScope = maxFilesInScope;
+        }
+    }
+
+    public static class Engine {
+        private boolean enabled = true;
+        private Duration reconcileInterval = Duration.ofSeconds(15);
+
+        private int maxConcurrentSessions = 4;
+        private int maxAttempts = 2;
+        private int maxNudges = 3;
+        private Duration nudgeAfter = Duration.ofMinutes(10);
+        private Duration sessionTimeout = Duration.ofHours(3);
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public Duration getReconcileInterval() {
+            return reconcileInterval;
+        }
+
+        public void setReconcileInterval(Duration reconcileInterval) {
+            this.reconcileInterval = reconcileInterval;
+        }
+
+        public int getMaxConcurrentSessions() {
+            return maxConcurrentSessions;
+        }
+
+        public void setMaxConcurrentSessions(int maxConcurrentSessions) {
+            this.maxConcurrentSessions = maxConcurrentSessions;
+        }
+
+        public int getMaxAttempts() {
+            return maxAttempts;
+        }
+
+        public void setMaxAttempts(int maxAttempts) {
+            this.maxAttempts = maxAttempts;
+        }
+
+        public int getMaxNudges() {
+            return maxNudges;
+        }
+
+        public void setMaxNudges(int maxNudges) {
+            this.maxNudges = maxNudges;
+        }
+
+        public Duration getNudgeAfter() {
+            return nudgeAfter;
+        }
+
+        public void setNudgeAfter(Duration nudgeAfter) {
+            this.nudgeAfter = nudgeAfter;
+        }
+
+        public Duration getSessionTimeout() {
+            return sessionTimeout;
+        }
+
+        public void setSessionTimeout(Duration sessionTimeout) {
+            this.sessionTimeout = sessionTimeout;
+        }
+    }
+}

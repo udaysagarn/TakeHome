@@ -1,0 +1,33 @@
+# Event relay for the target repository (copy to .github/workflows/d1-dispatch.yml in udaysagarn/superset).
+#
+# Only needed when D1 is not directly reachable by GitHub. It forwards the issue event to D1's ingest
+# endpoint with the same HMAC-SHA256 signature scheme GitHub itself uses, so the receiving code path is
+# identical. Requires two repository secrets: D1_INGEST_URL and D1_INGEST_SECRET.
+#
+# With no public ingress at all, skip this file: D1's poller picks the label up within 30 seconds.
+name: d1-dispatch
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  relay:
+    if: github.event.label.name == 'devin:fix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forward the event to D1
+        env:
+          D1_INGEST_URL: ${{ secrets.D1_INGEST_URL }}
+          D1_INGEST_SECRET: ${{ secrets.D1_INGEST_SECRET }}
+          PAYLOAD: ${{ toJSON(github.event) }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$PAYLOAD" > payload.json
+          signature="sha256=$(openssl dgst -sha256 -hmac "$D1_INGEST_SECRET" payload.json | awk '{print $2}')"
+          curl --fail --silent --show-error \
+            -X POST "$D1_INGEST_URL/webhooks/github" \
+            -H "Content-Type: application/json" \
+            -H "X-GitHub-Event: issues" \
+            -H "X-Hub-Signature-256: $signature" \
+            --data-binary @payload.json

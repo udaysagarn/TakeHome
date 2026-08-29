@@ -1,2 +1,125 @@
-# TakeHome
-Takehome assignment
+# D1 — event-driven issue remediation control plane
+
+D1 turns a GitHub label into a merged pull request. It watches `udaysagarn/superset` for issues labelled
+`devin:fix`, refuses to spend anything on issues that have no machine-checkable definition of done, dispatches
+one Devin session per issue that survives that gate, supervises the session until a pull request has green CI,
+and reports throughput, success rate and ACU cost on a live dashboard.
+
+Devin is the execution engine. D1 is the control plane around it: candidacy, budgets, retries, verification and
+the audit trail.
+
+```
+GitHub issue labelled devin:fix
+        │  webhook  ·  or 30s poller (no ingress required)
+        ▼
+   Orchestrator ── deterministic pre-filter (free) ────────────► NOT_A_CANDIDATE
+        │                                                        (labelled + explained on the issue)
+        ├─ criteria in the issue body?  ──► gate
+        └─ otherwise read-only Devin scoping session ──► gate ──► NOT_A_CANDIDATE
+                                                          │
+                                                        READY
+                                                          ▼
+                                        Devin remediation session (criteria in the prompt)
+                                                          ▼
+                                          PR_OPEN ──► VERIFYING ──► SUCCEEDED
+                                                       CI red ──► nudge session ──► retry ──► NEEDS_HUMAN
+```
+
+## Why the criteria gate exists
+
+An automation that opens a pull request for every issue is a liability. Before any remediation session is
+created, an issue must have: a non-placeholder body, no denylisted label, bounded file scope, at least one
+acceptance criterion, at least one verification command, no blocking unknowns, and confidence ≥ 0.7.
+
+Criteria come from a fenced block a human wrote in the issue:
+
+````markdown
+```devin-criteria
+{
+  "is_candidate": true,
+  "confidence": 0.9,
+  "problem_restatement": "...",
+  "acceptance_criteria": ["..."],
+  "verification_commands": ["..."],
+  "files_in_scope": ["..."],
+  "risk": "low",
+  "blocking_unknowns": [],
+  "rationale": "..."
+}
+```
+````
+
+or, when absent, from a short read-only Devin *scoping* session with a tight ACU cap that returns the same
+schema as structured output. If the gate fails, the issue is moved to `NOT_A_CANDIDATE`, labelled
+`devin:not-a-candidate`, and commented on with the exact reasons and what a human would need to add. Adding
+that detail and re-applying `devin:fix` re-enters the pipeline, so the gate teaches the team how to write
+automatable issues rather than silently dropping them.
+
+The accepted criteria then become the contract: they are embedded in the remediation prompt, the session's
+structured output must assert each one with evidence, and CI is the independent check.
+
+## Issue state machine
+
+`DISCOVERED → CRITERIA_PENDING → READY → DISPATCHED → RUNNING/BLOCKED → PR_OPEN → VERIFYING → SUCCEEDED`,
+with `NOT_A_CANDIDATE`, `FAILED`, `NEEDS_HUMAN` and `CANCELLED` as the other outcomes. The table in
+`IssueState.canTransitionTo` is the single authority; `TaskService` is the only writer, and every transition is
+persisted, audited in `task_event`, logged and metered. The reconciler is level-triggered, so a restart resumes
+in-flight work from the database rather than losing it.
+
+## Components and where they run
+
+| Component | Runs in |
+|---|---|
+| `ingest` — `POST /webhooks/github` (HMAC-SHA256 verified) | D1 process |
+| `ingest` — 30s issue poller, used when GitHub cannot reach D1 | D1 process |
+| `triage` — `PreFilter`, `SuccessCriteriaService` (the gate) | D1 process, calls the Devin API |
+| `engine` — `Orchestrator`, `TaskService`, `Reconciler` | D1 process |
+| `web` — Thymeleaf + htmx dashboard, JSON API, markdown report | D1 process |
+| state store — H2 file (demo) or PostgreSQL (prod), same schema | alongside D1 |
+| remediation itself | Devin cloud — one session per issue, D1 never runs the fix |
+| pull requests, comments, labels | GitHub |
+
+## Running it
+
+```bash
+export DEVIN_API_KEY=apk_...      # service-user key; never committed
+export GITHUB_TOKEN=ghp_...       # needs issues:write and pull_requests:read on the target repo
+export D1_REPO=udaysagarn/superset
+mvn spring-boot:run
+```
+
+| Endpoint | Purpose |
+|---|---|
+| `/` | monitoring view |
+| `/api/summary`, `/api/tasks`, `/api/tasks/{id}/events` | JSON read model |
+| `/api/report` | markdown report for a leadership audience |
+| `/actuator/prometheus` | `d1_issues{state}`, `d1_sessions_active`, `d1_time_to_pr`, `d1_transitions`, `d1_acu_budget` |
+| `/webhooks/github` | GitHub `issues.labeled` events |
+
+Configuration is environment-driven (`src/main/resources/application.yml`): ACU caps, concurrency, attempt and
+nudge budgets, confidence threshold, label names, poll and reconcile intervals. With no `DEVIN_API_KEY` the
+control plane still runs and the gate still rejects, it just cannot create sessions.
+
+## Monitoring view
+
+The stylesheet reproduces Devin's own design tokens — `--bg-page`, `--bg-elevated`, `--text-primary`,
+`--bg-accent-primary`, `--text-green/red/orange`, the `--shadow-L*` elevation scale — under Devin's
+`.light` / `.dark` / `.high-contrast` class scheme, so the view is recognisably part of the product rather than
+an approximation of it. It shows the KPI strip, the pipeline board, the run table (issue → criteria → session →
+PR → CI), the exclusion panel with reasons, and the live state-transition stream.
+
+The three numbers a VP should look at: **success rate of attempted issues**, **median time from label to pull
+request**, and **ACU per successful remediation**. The exclusion panel is the honesty surface — it shows the
+system declining work it cannot verify.
+
+## Tests
+
+```bash
+mvn test
+```
+
+covers the transition table, the candidacy gate (placeholder bodies, denylisted labels, low confidence,
+blocking unknowns, missing verification commands, human-authored criteria), the Devin API wire format against a
+mock server, webhook signature verification, dashboard/report rendering, and the full pipeline against a mocked
+Devin and GitHub — including the property that matters most: an issue only reaches a remediation session after
+the criteria gate has passed.
