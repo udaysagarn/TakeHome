@@ -163,13 +163,13 @@ public class Orchestrator {
             reject(task, List.of("The scoping session expired before it could establish criteria."), session.sessionId());
             return;
         }
-        if (!session.isFinished() && session.structuredOutput() == null) {
+        if (!session.isFinished() && !session.hasStructuredOutput()) {
             if (olderThan(task.getCriteriaStartedAt(), props.getEngine().getSessionTimeout())) {
                 escalate(task, "The scoping session exceeded its time budget.");
             }
             return;
         }
-        if (session.structuredOutput() == null) {
+        if (!session.hasStructuredOutput()) {
             reject(task, List.of("The scoping session finished without returning structured criteria."), session.sessionId());
             return;
         }
@@ -178,12 +178,14 @@ public class Orchestrator {
         List<String> failures = criteriaService.gate(criteria);
         if (failures.isEmpty()) {
             accept(task, criteria, IssueState.CRITERIA_PENDING, "criteria established by scoping session");
-        } else {
+            return;
+        }
+        if (criteria != null) {
             task.setCriteriaJson(criteriaService.toJson(criteria));
             task.setConfidence(criteria.confidence());
             task = taskService.save(task);
-            reject(task, failures, task.getCriteriaSessionUrl());
         }
+        reject(task, failures, task.getCriteriaSessionUrl());
     }
 
     private void accept(RemediationTask task, SuccessCriteria criteria, IssueState from, String reason) {
@@ -377,7 +379,7 @@ public class Orchestrator {
     }
 
     private RemediationOutcome readOutcome(DevinDtos.SessionDetails session) {
-        if (session.structuredOutput() == null || session.structuredOutput().isNull()) {
+        if (!session.hasStructuredOutput()) {
             return null;
         }
         try {

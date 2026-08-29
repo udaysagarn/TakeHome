@@ -84,6 +84,22 @@ class DevinApiClientTest {
         assertThat(details.acusConsumed()).isEqualTo(2.5);
         assertThat(details.pullRequestUrl()).isEqualTo("https://github.com/o/r/pull/7");
         assertThat(details.structuredOutput().path("remediated").asBoolean()).isTrue();
+        assertThat(details.hasStructuredOutput()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void jsonNullStructuredOutputCountsAsAbsent() {
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions/devin-abc"))
+                .andRespond(withSuccess(
+                        """
+                        {"session_id": "devin-abc", "status": "running", "structured_output": null}
+                        """,
+                        MediaType.APPLICATION_JSON));
+
+        DevinDtos.SessionDetails details = client.getSession("devin-abc").orElseThrow();
+
+        assertThat(details.hasStructuredOutput()).isFalse();
         server.verify();
     }
 

@@ -43,15 +43,28 @@ public class GitHubClient {
         return props.getGithub().getRepo();
     }
 
+    /**
+     * {@code owner} and {@code name} are expanded as separate template variables: a single
+     * {@code {repo}} variable holding {@code owner/name} is percent-encoded to {@code owner%2Fname},
+     * which GitHub answers with 404.
+     */
+    private String owner() {
+        return repo().substring(0, repo().indexOf('/'));
+    }
+
+    private String repoName() {
+        return repo().substring(repo().indexOf('/') + 1);
+    }
+
     /** Open issues carrying the trigger label. Pull requests are filtered out. */
     public List<GitHubDtos.Issue> listIssuesWithLabel(String label) {
         GitHubDtos.Issue[] issues = http.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/repos/{repo}/issues")
+                        .path("/repos/{owner}/{name}/issues")
                         .queryParam("labels", label)
                         .queryParam("state", "open")
                         .queryParam("per_page", 100)
-                        .build(repo()))
+                        .build(owner(), repoName()))
                 .retrieve()
                 .body(GitHubDtos.Issue[].class);
         return issues == null
@@ -62,7 +75,7 @@ public class GitHubClient {
     public Optional<GitHubDtos.Issue> getIssue(int number) {
         try {
             return Optional.ofNullable(http.get()
-                    .uri("/repos/{repo}/issues/{n}", repo(), number)
+                    .uri("/repos/{owner}/{name}/issues/{n}", owner(), repoName(), number)
                     .retrieve()
                     .body(GitHubDtos.Issue.class));
         } catch (HttpClientErrorException.NotFound e) {
@@ -76,7 +89,7 @@ public class GitHubClient {
             return;
         }
         http.post()
-                .uri("/repos/{repo}/issues/{n}/comments", repo(), issueNumber)
+                .uri("/repos/{owner}/{name}/issues/{n}/comments", owner(), repoName(), issueNumber)
                 .body(Map.of("body", body))
                 .retrieve()
                 .toBodilessEntity();
@@ -84,7 +97,7 @@ public class GitHubClient {
 
     public void addLabels(int issueNumber, List<String> labels) {
         http.post()
-                .uri("/repos/{repo}/issues/{n}/labels", repo(), issueNumber)
+                .uri("/repos/{owner}/{name}/issues/{n}/labels", owner(), repoName(), issueNumber)
                 .body(Map.of("labels", labels))
                 .retrieve()
                 .toBodilessEntity();
@@ -93,7 +106,7 @@ public class GitHubClient {
     public void removeLabel(int issueNumber, String label) {
         try {
             http.delete()
-                    .uri("/repos/{repo}/issues/{n}/labels/{label}", repo(), issueNumber, label)
+                    .uri("/repos/{owner}/{name}/issues/{n}/labels/{label}", owner(), repoName(), issueNumber, label)
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound e) {
@@ -105,7 +118,7 @@ public class GitHubClient {
     public void ensureLabel(String name, String color, String description) {
         try {
             http.post()
-                    .uri("/repos/{repo}/labels", repo())
+                    .uri("/repos/{owner}/{name}/labels", owner(), repoName())
                     .body(Map.of("name", name, "color", color, "description", description))
                     .retrieve()
                     .toBodilessEntity();
@@ -117,7 +130,7 @@ public class GitHubClient {
     public Optional<GitHubDtos.PullRequest> getPullRequest(int number) {
         try {
             return Optional.ofNullable(http.get()
-                    .uri("/repos/{repo}/pulls/{n}", repo(), number)
+                    .uri("/repos/{owner}/{name}/pulls/{n}", owner(), repoName(), number)
                     .retrieve()
                     .body(GitHubDtos.PullRequest.class));
         } catch (HttpClientErrorException.NotFound e) {
@@ -136,11 +149,11 @@ public class GitHubClient {
         }
         String sha = pr.get().head().sha();
         GitHubDtos.CheckRuns runs = http.get()
-                .uri("/repos/{repo}/commits/{sha}/check-runs", repo(), sha)
+                .uri("/repos/{owner}/{name}/commits/{sha}/check-runs", owner(), repoName(), sha)
                 .retrieve()
                 .body(GitHubDtos.CheckRuns.class);
         GitHubDtos.CombinedStatus status = http.get()
-                .uri("/repos/{repo}/commits/{sha}/status", repo(), sha)
+                .uri("/repos/{owner}/{name}/commits/{sha}/status", owner(), repoName(), sha)
                 .retrieve()
                 .body(GitHubDtos.CombinedStatus.class);
 

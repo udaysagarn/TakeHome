@@ -65,6 +65,11 @@ public final class DevinDtos {
             return "error".equals(status);
         }
 
+        /** A JSON {@code null} arrives as a {@link JsonNode} null literal, not a Java null. */
+        public boolean hasStructuredOutput() {
+            return structuredOutput != null && !structuredOutput.isNull() && !structuredOutput.isEmpty();
+        }
+
         public String pullRequestUrl() {
             if (pullRequests == null || pullRequests.isEmpty()) {
                 return null;
