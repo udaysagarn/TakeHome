@@ -36,8 +36,14 @@ public enum IssueState {
     /** CI is running against the pull request. */
     VERIFYING,
 
-    /** Terminal: PR open with green CI and acceptance criteria asserted. */
+    /** Terminal: PR open, acceptance criteria asserted, and an independent verifier agreed. */
     SUCCEEDED,
+
+    /**
+     * Terminal: a pull request exists and the criteria were asserted, but nothing independent of the
+     * remediation session could prove it. Deliberately not counted as a success.
+     */
+    UNVERIFIED,
 
     /** Terminal for this attempt: no PR, or CI red after the attempt budget is exhausted. */
     FAILED,
@@ -52,7 +58,7 @@ public enum IssueState {
     CANCELLED;
 
     private static final Set<IssueState> TERMINAL =
-            EnumSet.of(SUCCEEDED, FAILED, NOT_A_CANDIDATE, NEEDS_HUMAN, CANCELLED);
+            EnumSet.of(SUCCEEDED, UNVERIFIED, FAILED, NOT_A_CANDIDATE, NEEDS_HUMAN, CANCELLED);
 
     /**
      * True when the issue has an outcome and the reconciler stops driving it. {@link #FAILED} is
@@ -82,9 +88,10 @@ public enum IssueState {
             case DISPATCHED -> next == RUNNING || next == BLOCKED || next == PR_OPEN || next == FAILED;
             case RUNNING -> next == BLOCKED || next == PR_OPEN || next == FAILED;
             case BLOCKED -> next == RUNNING || next == PR_OPEN || next == NEEDS_HUMAN || next == FAILED;
-            case PR_OPEN -> next == VERIFYING || next == SUCCEEDED || next == FAILED;
-            case VERIFYING -> next == SUCCEEDED || next == FAILED || next == RUNNING;
+            case PR_OPEN -> next == VERIFYING || next == SUCCEEDED || next == UNVERIFIED || next == FAILED;
+            case VERIFYING -> next == SUCCEEDED || next == UNVERIFIED || next == FAILED || next == RUNNING;
             case FAILED -> next == DISPATCHED || next == NEEDS_HUMAN;
+            case UNVERIFIED -> next == VERIFYING || next == SUCCEEDED;
             case SUCCEEDED, NOT_A_CANDIDATE, NEEDS_HUMAN, CANCELLED -> false;
         };
     }
@@ -93,6 +100,9 @@ public enum IssueState {
     public String bucket() {
         if (this == SUCCEEDED) {
             return "succeeded";
+        }
+        if (this == UNVERIFIED) {
+            return "unverified";
         }
         if (this == FAILED || this == NEEDS_HUMAN) {
             return "failed";

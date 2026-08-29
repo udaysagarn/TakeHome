@@ -73,6 +73,21 @@ public class RemediationTask {
     @Lob
     private String outcomeJson;
 
+    /** How the fix was proven, if it was; null until verification produces a verdict. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_tier", length = 32)
+    private Verification.Tier verificationTier;
+
+    @Lob
+    @Column(name = "verification_json")
+    private String verificationJson;
+
+    private String verifierSessionId;
+    private String verifierSessionUrl;
+
+    /** When the repository's menD contract workflow was asked to run for this pull request. */
+    private Instant contractDispatchedAt;
+
     private int attempts;
     private int nudges;
     private Integer acuBudget;
@@ -273,6 +288,46 @@ public class RemediationTask {
 
     public void setLastError(String lastError) {
         this.lastError = lastError;
+    }
+
+    public Verification.Tier getVerificationTier() {
+        return verificationTier;
+    }
+
+    public void setVerificationTier(Verification.Tier verificationTier) {
+        this.verificationTier = verificationTier;
+    }
+
+    public String getVerificationJson() {
+        return verificationJson;
+    }
+
+    public void setVerificationJson(String verificationJson) {
+        this.verificationJson = verificationJson;
+    }
+
+    public String getVerifierSessionId() {
+        return verifierSessionId;
+    }
+
+    public void setVerifierSessionId(String verifierSessionId) {
+        this.verifierSessionId = verifierSessionId;
+    }
+
+    public String getVerifierSessionUrl() {
+        return verifierSessionUrl;
+    }
+
+    public void setVerifierSessionUrl(String verifierSessionUrl) {
+        this.verifierSessionUrl = verifierSessionUrl;
+    }
+
+    public Instant getContractDispatchedAt() {
+        return contractDispatchedAt;
+    }
+
+    public void setContractDispatchedAt(Instant contractDispatchedAt) {
+        this.contractDispatchedAt = contractDispatchedAt;
     }
 
     public String getOutcomeJson() {

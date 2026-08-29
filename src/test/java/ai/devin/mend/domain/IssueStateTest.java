@@ -8,10 +8,10 @@ import org.junit.jupiter.api.Test;
 class IssueStateTest {
 
     @Test
-    void terminalStatesOtherThanFailedAcceptNoTransitions() {
+    void terminalStatesOtherThanFailedAndUnverifiedAcceptNoTransitions() {
         Arrays.stream(IssueState.values())
                 .filter(IssueState::isTerminal)
-                .filter(state -> state != IssueState.FAILED)
+                .filter(state -> state != IssueState.FAILED && state != IssueState.UNVERIFIED)
                 .forEach(state -> Arrays.stream(IssueState.values())
                         .forEach(next -> assertThat(state.canTransitionTo(next))
                                 .as("%s -> %s", state, next)
@@ -57,6 +57,15 @@ class IssueStateTest {
     void retryGoesThroughFailedAndCiFailureCanReopenWork() {
         assertThat(IssueState.FAILED.canTransitionTo(IssueState.DISPATCHED)).isTrue();
         assertThat(IssueState.VERIFYING.canTransitionTo(IssueState.RUNNING)).isTrue();
+    }
+
+    @Test
+    void anUnverifiedFixIsNotASuccessButCanStillBeProvenLater() {
+        assertThat(IssueState.UNVERIFIED.isTerminal()).isTrue();
+        assertThat(IssueState.VERIFYING.canTransitionTo(IssueState.UNVERIFIED)).isTrue();
+        assertThat(IssueState.UNVERIFIED.canTransitionTo(IssueState.VERIFYING)).isTrue();
+        assertThat(IssueState.UNVERIFIED.canTransitionTo(IssueState.SUCCEEDED)).isTrue();
+        assertThat(IssueState.UNVERIFIED.bucket()).isNotEqualTo(IssueState.SUCCEEDED.bucket());
     }
 
     @Test
