@@ -12,9 +12,9 @@
   </parent>
 
   <groupId>ai.devin</groupId>
-  <artifactId>d1-orchestrator</artifactId>
+  <artifactId>mend-orchestrator</artifactId>
   <version>0.1.0</version>
-  <name>d1-orchestrator</name>
+  <name>mend-orchestrator</name>
   <description>Event-driven issue remediation control plane built on the Devin API</description>
 
   <properties>

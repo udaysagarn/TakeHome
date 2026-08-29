@@ -1,15 +1,15 @@
-# D1 — event-driven issue remediation control plane
+# menD — event-driven issue remediation control plane
 
-D1 turns a GitHub label into a merged pull request. It watches `udaysagarn/superset` for issues labelled
-`devin:fix`, refuses to spend anything on issues that have no machine-checkable definition of done, dispatches
+menD turns a GitHub label into a merged pull request. It watches `udaysagarn/superset` for issues labelled
+`menD:fix`, refuses to spend anything on issues that have no machine-checkable definition of done, dispatches
 one Devin session per issue that survives that gate, supervises the session until a pull request has green CI,
 and reports throughput, success rate and ACU cost on a live dashboard.
 
-Devin is the execution engine. D1 is the control plane around it: candidacy, budgets, retries, verification and
+Devin is the execution engine. menD is the control plane around it: candidacy, budgets, retries, verification and
 the audit trail.
 
 ```
-GitHub issue labelled devin:fix
+GitHub issue labelled menD:fix
         │  webhook  ·  or 30s poller (no ingress required)
         ▼
    Orchestrator ── deterministic pre-filter (free) ────────────► NOT_A_CANDIDATE
@@ -51,8 +51,8 @@ Criteria come from a fenced block a human wrote in the issue:
 
 or, when absent, from a short read-only Devin *scoping* session with a tight ACU cap that returns the same
 schema as structured output. If the gate fails, the issue is moved to `NOT_A_CANDIDATE`, labelled
-`devin:not-a-candidate`, and commented on with the exact reasons and what a human would need to add. Adding
-that detail and re-applying `devin:fix` re-enters the pipeline, so the gate teaches the team how to write
+`menD:not-a-candidate`, and commented on with the exact reasons and what a human would need to add. Adding
+that detail and re-applying `menD:fix` re-enters the pipeline, so the gate teaches the team how to write
 automatable issues rather than silently dropping them.
 
 The accepted criteria then become the contract: they are embedded in the remediation prompt, the session's
@@ -70,13 +70,13 @@ in-flight work from the database rather than losing it.
 
 | Component | Runs in |
 |---|---|
-| `ingest` — `POST /webhooks/github` (HMAC-SHA256 verified) | D1 process |
-| `ingest` — 30s issue poller, used when GitHub cannot reach D1 | D1 process |
-| `triage` — `PreFilter`, `SuccessCriteriaService` (the gate) | D1 process, calls the Devin API |
-| `engine` — `Orchestrator`, `TaskService`, `Reconciler` | D1 process |
-| `web` — Thymeleaf + htmx dashboard, JSON API, markdown report | D1 process |
-| state store — H2 file (demo) or PostgreSQL (prod), same schema | alongside D1 |
-| remediation itself | Devin cloud (API v3, `POST/GET /v3/organizations/{org_id}/sessions`) — one session per issue, D1 never runs the fix |
+| `ingest` — `POST /webhooks/github` (HMAC-SHA256 verified) | menD process |
+| `ingest` — 30s issue poller, used when GitHub cannot reach menD | menD process |
+| `triage` — `PreFilter`, `SuccessCriteriaService` (the gate) | menD process, calls the Devin API |
+| `engine` — `Orchestrator`, `TaskService`, `Reconciler` | menD process |
+| `web` — Thymeleaf + htmx dashboard, JSON API, markdown report | menD process |
+| state store — H2 file (demo) or PostgreSQL (prod), same schema | alongside menD |
+| remediation itself | Devin cloud (API v3, `POST/GET /v3/organizations/{org_id}/sessions`) — one session per issue, menD never runs the fix |
 | pull requests, comments, labels | GitHub |
 
 ## Running it
@@ -86,12 +86,12 @@ export DEVIN_API_KEY=cog_...      # service-user key; never committed
 export DEVIN_ORG_ID=org-...       # org the service user belongs to; scopes every v3 session route
 export GITHUB_APP_ID=...          # GitHub App installed on the target repo
 export GITHUB_APP_INSTALLATION_ID=...
-export GITHUB_APP_PRIVATE_KEY="$(cat d1-bot.private-key.pem)"
-export D1_REPO=udaysagarn/superset
+export GITHUB_APP_PRIVATE_KEY="$(cat mend-bot.private-key.pem)"
+export MEND_REPO=udaysagarn/superset
 mvn spring-boot:run
 ```
 
-D1 acts as a GitHub App rather than as a person: it signs an RS256 JWT with the app's private key, exchanges
+menD acts as a GitHub App rather than as a person: it signs an RS256 JWT with the app's private key, exchanges
 it for a one-hour installation token, and refreshes that token before it expires. Every label, comment and PR
 is therefore attributable to the bot identity in the audit log, and the permissions (Issues: write, Pull
 requests: write, Contents/Checks/Metadata: read) are scoped to the single installed repository. Both the
@@ -103,14 +103,14 @@ local development when no app is configured.
 | `/` | monitoring view |
 | `/api/summary`, `/api/tasks`, `/api/tasks/{id}/events` | JSON read model |
 | `/api/report` | markdown report for a leadership audience |
-| `/actuator/prometheus` | `d1_issues{state}`, `d1_sessions_active`, `d1_time_to_pr`, `d1_transitions`, `d1_acu_budget` |
+| `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
 | `/webhooks/github` | GitHub `issues.labeled` events |
 
 Configuration is environment-driven (`src/main/resources/application.yml`): ACU caps, concurrency, attempt and
 nudge budgets, confidence threshold, label names, poll and reconcile intervals. Without `DEVIN_API_KEY` and
 `DEVIN_ORG_ID` the control plane still runs and the gate still rejects, it just cannot create sessions.
 
-Session creation is not idempotent at the API level; D1 gets idempotency from the unique `(repo,
+Session creation is not idempotent at the API level; menD gets idempotency from the unique `(repo,
 issue_number)` task row, so a replayed webhook or an overlapping poll never opens a second session.
 
 ## Monitoring view
