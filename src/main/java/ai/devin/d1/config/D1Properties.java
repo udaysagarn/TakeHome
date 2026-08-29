@@ -117,6 +117,7 @@ public class D1Properties {
     public static class Github {
         private String apiUrl = "https://api.github.com";
         private String token = "";
+        private App app = new App();
         private String repo = "udaysagarn/superset";
         private String webhookSecret = "";
         private boolean pollingEnabled = true;
@@ -143,6 +144,15 @@ public class D1Properties {
 
         public void setToken(String token) {
             this.token = token;
+        }
+
+        /** GitHub App credentials; preferred over a personal access token when present. */
+        public App getApp() {
+            return app;
+        }
+
+        public void setApp(App app) {
+            this.app = app;
         }
 
         public String getRepo() {
@@ -231,6 +241,44 @@ public class D1Properties {
 
         public void setCommentsEnabled(boolean commentsEnabled) {
             this.commentsEnabled = commentsEnabled;
+        }
+    }
+
+    /**
+     * GitHub App identity. An installation token is minted on demand from the app's private key and
+     * expires after an hour, so nothing long-lived is held in the process.
+     */
+    public static class App {
+        private String appId = "";
+        private String installationId = "";
+        private String privateKey = "";
+
+        public String getAppId() {
+            return appId;
+        }
+
+        public void setAppId(String appId) {
+            this.appId = appId;
+        }
+
+        public String getInstallationId() {
+            return installationId;
+        }
+
+        public void setInstallationId(String installationId) {
+            this.installationId = installationId;
+        }
+
+        public String getPrivateKey() {
+            return privateKey;
+        }
+
+        public void setPrivateKey(String privateKey) {
+            this.privateKey = privateKey;
+        }
+
+        public boolean isConfigured() {
+            return !appId.isBlank() && !installationId.isBlank() && !privateKey.isBlank();
         }
     }
 

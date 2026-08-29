@@ -84,10 +84,19 @@ in-flight work from the database rather than losing it.
 ```bash
 export DEVIN_API_KEY=cog_...      # service-user key; never committed
 export DEVIN_ORG_ID=org-...       # org the service user belongs to; scopes every v3 session route
-export GITHUB_TOKEN=ghp_...       # needs issues:write and pull_requests:read on the target repo
+export GITHUB_APP_ID=...          # GitHub App installed on the target repo
+export GITHUB_APP_INSTALLATION_ID=...
+export GITHUB_APP_PRIVATE_KEY="$(cat d1-bot.private-key.pem)"
 export D1_REPO=udaysagarn/superset
 mvn spring-boot:run
 ```
+
+D1 acts as a GitHub App rather than as a person: it signs an RS256 JWT with the app's private key, exchanges
+it for a one-hour installation token, and refreshes that token before it expires. Every label, comment and PR
+is therefore attributable to the bot identity in the audit log, and the permissions (Issues: write, Pull
+requests: write, Contents/Checks/Metadata: read) are scoped to the single installed repository. Both the
+PKCS#1 key GitHub hands out and a PKCS#8 key are accepted. `GITHUB_TOKEN=ghp_...` remains as a fallback for
+local development when no app is configured.
 
 | Endpoint | Purpose |
 |---|---|

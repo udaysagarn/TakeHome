@@ -20,12 +20,15 @@ public class GitHubClient {
 
     private final RestClient http;
     private final D1Properties props;
+    private final GitHubCredentials credentials;
 
-    public GitHubClient(RestClient.Builder builder, D1Properties props) {
+    public GitHubClient(RestClient.Builder builder, D1Properties props, GitHubCredentials credentials) {
         this.props = props;
+        this.credentials = credentials;
         this.http = builder
                 .baseUrl(props.getGithub().getApiUrl())
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + props.getGithub().getToken())
+                .requestInitializer(request ->
+                        request.getHeaders().setBearerAuth(credentials.bearerToken()))
                 .defaultHeader(HttpHeaders.ACCEPT, "application/vnd.github+json")
                 .defaultHeader("X-GitHub-Api-Version", "2022-11-28")
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
@@ -33,7 +36,7 @@ public class GitHubClient {
     }
 
     public boolean isConfigured() {
-        return props.getGithub().getToken() != null && !props.getGithub().getToken().isBlank();
+        return credentials.isConfigured();
     }
 
     public String repo() {
