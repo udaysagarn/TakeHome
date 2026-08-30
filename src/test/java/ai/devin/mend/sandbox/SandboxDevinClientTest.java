@@ -1,8 +1,10 @@
 package ai.devin.mend.sandbox;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.devin.DevinCredentialMonitor;
 import ai.devin.mend.devin.DevinDtos;
 import ai.devin.mend.github.GitHubDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -19,7 +21,12 @@ class SandboxDevinClientTest {
     @BeforeEach
     void setUp() {
         hub = new SandboxHub();
-        client = new SandboxDevinClient(RestClient.builder(), new ObjectMapper(), new MendProperties(), hub);
+        client = new SandboxDevinClient(
+                RestClient.builder(),
+                new ObjectMapper(),
+                new MendProperties(),
+                hub,
+                mock(DevinCredentialMonitor.class));
     }
 
     @Test

@@ -88,7 +88,7 @@ Spring Boot 3.3 / Java 21 / Maven. Thymeleaf + htmx for the UI, no build step fo
 | `domain` | JPA entities and the state machine. `IssueState.canTransitionTo` is the single authority on legal transitions |
 | `engine` | `Orchestrator` (drives one task), `Reconciler` (the loop), `TaskService` (**the only writer**), `LeaseManager`, `PromptBuilder`, `Verifier`, `Notifier` |
 | `triage` | `PreFilter` (free, deterministic) and `SuccessCriteriaService` (the criteria contract + scoping session) |
-| `devin` | `DevinApiClient` — session create/poll/message, structured output, ACU limits |
+| `devin` | `DevinApiClient` — session create/poll/message, structured output, ACU limits; `DevinCredentialMonitor` turns a refused call into the verdict the alarm reads |
 | `github` | `GitHubClient`, `GitHubCredentials` (App JWT → installation token), DTOs |
 | `ingest` | `WebhookController` (HMAC verified) and `IssuePoller` (works with no ingress) |
 | `registry` | `RepositoryService` (registration + access validation), `ContextService`/`ContextReconciler` (repository profile, incrementally refreshed on push) |
@@ -224,14 +224,10 @@ arcs that do not start and end *at the labels* stop it reading as a wheel.
   `POST /api/issues/{number}/ingest`, is open to whoever reaches the port. Documented in
   `docs/SITEMAP.md` and the wiki; it is the single biggest gap before menD is exposed beyond a laptop
   or a private network.
-- **No Devin credential verdict is recorded anywhere.** GitHub access is interrogated per repository
-  at registration and the verdict stored on the row (`Repository.accessState`/`accessError`), which is
-  what the credential alarm reads. `DevinApiClient.isConfigured()` has no equivalent — it only checks
-  that `DEVIN_API_KEY` and `DEVIN_ORG_ID` are non-blank, so a revoked, mistyped or wrong-org key reads
-  as healthy on every page while every dispatch fails. Nothing claims a fix it cannot make (the task
-  stops in `DISPATCHED` and never reaches `SUCCEEDED`), so this is a diagnosis gap rather than a trust
-  gap. Closing it means deciding *when* menD may call the Devin API to find out: a probe at startup, a
-  periodic check, or persisting the outcome of the next real dispatch. Never from a page render.
+- **A Devin key is only judged once it is used.** `devin_credential` holds one row, written
+  when Devin refuses a call menD was already making (401/403) and cleared by the next call that
+  works; the credential alarm reads it. So a mistyped key reads as healthy until the first dispatch,
+  and a 404 or an outage is deliberately not a verdict. menD never calls the Devin API to ask.
 - **Lesson attribution is per repository, not per injected lesson** — good enough to retire bad
   advice, not precise enough to say which lesson helped.
 - **The contract workflow is a starter template**; a repo with an unusual toolchain must adapt its

@@ -1,11 +1,19 @@
 package ai.devin.mend.devin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import ai.devin.mend.config.MendProperties;
@@ -15,14 +23,17 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 class DevinApiClientTest {
 
     private MockRestServiceServer server;
     private DevinApiClient client;
+    private DevinCredentialMonitor credentials;
 
     @BeforeEach
     void setUp() {
@@ -32,7 +43,8 @@ class DevinApiClientTest {
         props.getGithub().setRepo("o/r");
         RestClient.Builder builder = RestClient.builder();
         server = MockRestServiceServer.bindTo(builder).build();
-        client = new DevinApiClient(builder, new ObjectMapper(), props);
+        credentials = mock(DevinCredentialMonitor.class);
+        client = new DevinApiClient(builder, new ObjectMapper(), props, credentials);
     }
 
     @Test
@@ -112,5 +124,40 @@ class DevinApiClientTest {
 
         client.sendMessage("devin-abc", "CI is red");
         server.verify();
+    }
+
+    @Test
+    void aRefusedKeyIsReportedSoTheDashboardCanSayWhyNothingIsDispatched() {
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions"))
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+
+        assertThatThrownBy(() -> client.createSession("fix it", "t", List.of(), 10, null))
+                .isInstanceOf(HttpClientErrorException.Unauthorized.class);
+
+        verify(credentials).refused(eq("createSession"), any(HttpClientErrorException.Unauthorized.class));
+        verify(credentials, never()).accepted();
+    }
+
+    @Test
+    void devinBeingDownIsNotACredentialProblem() {
+        for (int attempt = 0; attempt < 3; attempt++) {
+            server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions"))
+                    .andRespond(withServerError());
+        }
+
+        assertThatThrownBy(() -> client.createSession("fix it", "t", List.of(), 10, null))
+                .isInstanceOf(DevinApiClient.DevinApiException.class);
+
+        verify(credentials, never()).refused(any(), any());
+    }
+
+    @Test
+    void aCallThatWorksSaysTheCredentialIsGood() {
+        server.expect(requestTo("https://api.devin.ai/v3/organizations/org-1/sessions/devin-abc/messages"))
+                .andRespond(withSuccess());
+
+        client.sendMessage("devin-abc", "CI is red");
+
+        verify(credentials).accepted();
     }
 }

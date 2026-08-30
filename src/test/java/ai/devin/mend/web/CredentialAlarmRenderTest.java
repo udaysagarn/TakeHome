@@ -6,7 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import ai.devin.mend.devin.DevinApiClient;
+import ai.devin.mend.devin.DevinCredentialMonitor;
 import ai.devin.mend.domain.AccessState;
+import ai.devin.mend.domain.DevinCredentialVerdicts;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
@@ -20,8 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * A credential menD cannot use is invisible in the numbers — the board simply stays empty — so the
@@ -44,6 +48,12 @@ class CredentialAlarmRenderTest {
     @Autowired
     private RepositoryRegistry repositories;
 
+    @Autowired
+    private DevinCredentialMonitor devinCredential;
+
+    @Autowired
+    private DevinCredentialVerdicts devinVerdicts;
+
     @MockBean
     private GitHubClient github;
 
@@ -53,6 +63,7 @@ class CredentialAlarmRenderTest {
     @BeforeEach
     void setUp() {
         repositories.deleteAll();
+        devinVerdicts.deleteAll();
         when(github.isConfigured()).thenReturn(true);
         when(devin.isConfigured()).thenReturn(true);
     }
@@ -73,6 +84,30 @@ class CredentialAlarmRenderTest {
                     .contains("GitHub answered 401")
                     .contains("Re-validate");
         }
+    }
+
+    @Test
+    void aDevinKeyThatIsPresentButRefusedIsAnnouncedToo() throws Exception {
+        devinCredential.refused(
+                "createSession", HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "", null, null, null));
+
+        assertThat(html("/"))
+                .contains("Credentials failing")
+                .contains("Devin refused menD")
+                .contains("401")
+                // Nothing to re-validate: menD learns this from the next call it makes, not a probe.
+                .doesNotContain("Re-validate");
+    }
+
+    @Test
+    void aWorkingDevinKeyIsSilentEvenAfterAnEarlierRefusal() throws Exception {
+        devinCredential.refused(
+                "createSession", HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "", null, null, null));
+        assertThat(html("/")).contains("Devin refused menD");
+
+        devinCredential.accepted();
+
+        assertThat(html("/")).doesNotContain("Credentials failing");
     }
 
     @Test

@@ -37,10 +37,16 @@ public class DevinApiClient {
     private final RestClient http;
     private final ObjectMapper mapper;
     private final MendProperties props;
+    private final DevinCredentialMonitor credentials;
 
-    public DevinApiClient(RestClient.Builder builder, ObjectMapper mapper, MendProperties props) {
+    public DevinApiClient(
+            RestClient.Builder builder,
+            ObjectMapper mapper,
+            MendProperties props,
+            DevinCredentialMonitor credentials) {
         this.mapper = mapper;
         this.props = props;
+        this.credentials = credentials;
         this.http = builder
                 .baseUrl(props.getDevin().getBaseUrl())
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + props.getDevin().getApiKey())
@@ -125,13 +131,18 @@ public class DevinApiClient {
         RuntimeException last = null;
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
-                return call.get();
+                T answer = call.get();
+                credentials.accepted();
+                return answer;
             } catch (HttpClientErrorException.TooManyRequests | HttpServerErrorException | ResourceAccessException e) {
                 last = (RuntimeException) e;
                 Duration backoff = Duration.ofMillis(500L * (1L << (attempt - 1)));
                 log.warn("Devin API {} failed (attempt {}/{}), retrying in {}ms: {}",
                         operation, attempt, MAX_RETRIES, backoff.toMillis(), e.getMessage());
                 sleep(backoff);
+            } catch (RuntimeException e) {
+                credentials.refused(operation, e);
+                throw e;
             }
         }
         throw new DevinApiException("Devin API " + operation + " failed after " + MAX_RETRIES + " attempts", last);
