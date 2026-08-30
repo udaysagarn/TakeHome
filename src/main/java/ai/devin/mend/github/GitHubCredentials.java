@@ -172,6 +172,11 @@ public class GitHubCredentials {
     private static String pem(String configured) {
         String value = unquote(configured.strip()).replace("\\n", "\n");
         if (value.contains("PRIVATE KEY-----")) {
+            String unsupported = unsupportedFormat(value);
+            if (unsupported != null) {
+                throw new GitHubCredentialsException("GITHUB_APP_PRIVATE_KEY " + unsupported
+                        + " Generate a fresh key on the GitHub App's settings page and use that .pem.");
+            }
             return value;
         }
         String fromFile = readIfPath(value);
@@ -197,13 +202,18 @@ public class GitHubCredentials {
             return "it still contains an unexpanded shell substitution. A .env file is read literally"
                     + " by docker compose and by Spring, so \"$(cat key.pem)\" is never run.";
         }
-        if (value.contains("BEGIN OPENSSH PRIVATE KEY")) {
-            return "it is an OpenSSH key, not the RSA key a GitHub App issues.";
-        }
-        if (value.contains("ENCRYPTED PRIVATE KEY")) {
-            return "it is passphrase-encrypted; menD cannot decrypt it.";
-        }
         return "it has no -----BEGIN PRIVATE KEY----- header.";
+    }
+
+    /** PEM formats menD cannot use, named before the decoder blames their header for not being base64. */
+    private static String unsupportedFormat(String pem) {
+        if (pem.contains("BEGIN OPENSSH PRIVATE KEY")) {
+            return "holds an OpenSSH key, not the RSA key a GitHub App issues.";
+        }
+        if (pem.contains("ENCRYPTED PRIVATE KEY")) {
+            return "holds a passphrase-encrypted key, which menD cannot decrypt.";
+        }
+        return null;
     }
 
     private static String unquote(String value) {
@@ -224,7 +234,7 @@ public class GitHubCredentials {
             String contents = Files.readString(path, StandardCharsets.UTF_8);
             if (!contents.contains("PRIVATE KEY-----")) {
                 throw new GitHubCredentialsException(
-                        "GITHUB_APP_PRIVATE_KEY points at " + path + ", which is not a PEM private key.");
+                        "GITHUB_APP_PRIVATE_KEY names a file that is not a PEM private key.");
             }
             return contents;
         } catch (InvalidPathException | IOException e) {

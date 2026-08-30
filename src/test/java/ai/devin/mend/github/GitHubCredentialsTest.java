@@ -118,13 +118,7 @@ class GitHubCredentialsTest {
      */
     @Test
     void namesTheVariableAndTheUnexpandedSubstitutionInsteadOfComplainingAboutBase64() {
-        MendProperties props = new MendProperties();
-        props.getGithub().getApp().setAppId("12345");
-        props.getGithub().getApp().setInstallationId("67890");
-        props.getGithub().getApp().setPrivateKey("$(cat mend.private-key.pem)");
-        GitHubCredentials credentials = new GitHubCredentials(RestClient.builder(), props);
-
-        assertThatThrownBy(credentials::bearerToken)
+        assertThatThrownBy(() -> bearerTokenFor("$(cat mend.private-key.pem)"))
                 .isInstanceOf(GitHubCredentialsException.class)
                 .hasMessageContaining("GITHUB_APP_PRIVATE_KEY")
                 .hasMessageContaining("unexpanded shell substitution")
@@ -133,16 +127,44 @@ class GitHubCredentialsTest {
 
     @Test
     void rejectsAKeyThatIsNotAPemWithoutRepeatingTheValue() {
-        MendProperties props = new MendProperties();
-        props.getGithub().getApp().setAppId("12345");
-        props.getGithub().getApp().setInstallationId("67890");
-        props.getGithub().getApp().setPrivateKey("ghp_not_a_key_at_all");
-        GitHubCredentials credentials = new GitHubCredentials(RestClient.builder(), props);
-
-        assertThatThrownBy(credentials::bearerToken)
+        assertThatThrownBy(() -> bearerTokenFor("ghp_not_a_key_at_all"))
                 .isInstanceOf(GitHubCredentialsException.class)
                 .hasMessageContaining("no -----BEGIN PRIVATE KEY----- header")
                 .hasMessageNotContaining("ghp_not_a_key_at_all");
+    }
+
+    @Test
+    void namesTheFormatWhenTheKeyIsAPemMenDCannotUse() {
+        assertThatThrownBy(() -> bearerTokenFor(pem("OPENSSH PRIVATE KEY", "b3BlbnNz")))
+                .isInstanceOf(GitHubCredentialsException.class)
+                .hasMessageContaining("OpenSSH key")
+                .hasMessageNotContaining("base64");
+
+        assertThatThrownBy(() -> bearerTokenFor(pem("ENCRYPTED PRIVATE KEY", "MIIF")))
+                .isInstanceOf(GitHubCredentialsException.class)
+                .hasMessageContaining("passphrase-encrypted");
+    }
+
+    @Test
+    void aFileThatIsNotAKeyIsReportedWithoutEchoingItsPath(@TempDir Path dir) throws Exception {
+        Path notAKey = Files.writeString(dir.resolve("notes.txt"), "nothing secret here");
+
+        assertThatThrownBy(() -> bearerTokenFor(notAKey.toString()))
+                .isInstanceOf(GitHubCredentialsException.class)
+                .hasMessageContaining("names a file that is not a PEM private key")
+                .hasMessageNotContaining(notAKey.toString());
+    }
+
+    private static String pem(String label, String body) {
+        return "-----BEGIN " + label + "-----\n" + body + "\n-----END " + label + "-----\n";
+    }
+
+    private static String bearerTokenFor(String configuredKey) {
+        MendProperties props = new MendProperties();
+        props.getGithub().getApp().setAppId("12345");
+        props.getGithub().getApp().setInstallationId("67890");
+        props.getGithub().getApp().setPrivateKey(configuredKey);
+        return new GitHubCredentials(RestClient.builder(), props).bearerToken();
     }
 
     /** Mints one installation token with the configured key, asserting the JWT it signs. */
