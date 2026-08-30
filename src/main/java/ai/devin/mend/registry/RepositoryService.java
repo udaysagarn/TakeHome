@@ -6,6 +6,7 @@ import ai.devin.mend.domain.IndexState;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.github.GitHubCredentialsException;
 import ai.devin.mend.github.GitHubDtos;
 import java.time.Instant;
 import java.util.List;
@@ -94,8 +95,8 @@ public class RepositoryService {
 
     /**
      * Runs the access chain and stores the verdict on the repository. An error GitHub was not asked
-     * about — a rejected app credential, a network failure — is a verdict too: it is stored the same
-     * way, because a registry that lost the repository leaves an operator with nothing to fix.
+     * about — a private key menD cannot read, a network failure — is a verdict too: it is stored the
+     * same way, because a registry that lost the repository leaves an operator with nothing to fix.
      */
     @Transactional
     public Repository validate(Repository repository) {
@@ -135,7 +136,15 @@ public class RepositoryService {
                     "No GitHub credentials configured. Set the menD GitHub App or a token and re-validate.");
             return repositories.save(repository);
         }
+        try {
+            return runAccessChain(repository);
+        } catch (GitHubCredentialsException e) {
+            repository.markAccessFailure(AccessState.NO_ACCESS, e.getMessage());
+            return repositories.save(repository);
+        }
+    }
 
+    private Repository runAccessChain(Repository repository) {
         Optional<GitHubDtos.Repo> remote = github.getRepo(repository.slug());
         if (remote.isEmpty()) {
             repository.markAccessFailure(

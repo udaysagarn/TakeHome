@@ -9,6 +9,7 @@ import ai.devin.mend.domain.IndexState;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.github.GitHubCredentialsException;
 import ai.devin.mend.github.GitHubDtos;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -112,6 +113,17 @@ class RepositoryServiceTest {
         Repository repository = service.register(SLUG);
         assertThat(repository.getAccessState()).isEqualTo(AccessState.MISSING_PERMISSION);
         assertThat(repository.getAccessError()).contains("Issues are turned off");
+    }
+
+    @Test
+    void anUnusablePrivateKeyIsRecordedAsTheVerdictRatherThanThrownAtTheOperator() {
+        when(github.getRepo(SLUG))
+                .thenThrow(new GitHubCredentialsException("GITHUB_APP_PRIVATE_KEY does not hold a private key."));
+
+        Repository repository = service.register(SLUG);
+
+        assertThat(repository.getAccessState()).isEqualTo(AccessState.NO_ACCESS);
+        assertThat(repository.getAccessError()).contains("GITHUB_APP_PRIVATE_KEY");
     }
 
     @Test

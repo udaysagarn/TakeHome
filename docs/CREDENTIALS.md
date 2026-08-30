@@ -63,7 +63,7 @@ bot in the audit log, and the token is short-lived and repository-scoped.
    which is what a laptop behind NAT needs anyway.)
 5. **Create GitHub App**, then note the **App ID** → `GITHUB_APP_ID`.
 6. **Generate a private key** — the `.pem` downloads once → `GITHUB_APP_PRIVATE_KEY`. PKCS#1 and PKCS#8 are
-   both accepted.
+   both accepted, as is the path of the `.pem` or the file base64-encoded.
 7. **Install App** → pick the repositories you will demo (`your-org/superset`). The installation page URL ends
    in the installation id → `GITHUB_APP_INSTALLATION_ID`:
    `https://github.com/settings/installations/<INSTALLATION_ID>`.
@@ -101,6 +101,16 @@ Fill it in. The private key is multi-line, so paste it from the file rather than
   echo "GITHUB_APP_PRIVATE_KEY=\"$(cat ~/Downloads/mend-bot.private-key.pem)\""
   echo "MEND_REPO=your-org/superset"
 } >> .env
+```
+
+The `echo` matters: `.env` is read literally by docker compose and by Spring, so a line typed as
+`GITHUB_APP_PRIVATE_KEY="$(cat key.pem)"` reaches menD as those characters and registration answers
+`GITHUB_APP_PRIVATE_KEY does not hold a private key: it still contains an unexpanded shell substitution`. Two
+single-line alternatives, if pasting a multi-line value is awkward:
+
+```bash
+echo "GITHUB_APP_PRIVATE_KEY=$PWD/mend-bot.private-key.pem" >> .env   # a path, mounted into the container
+echo "GITHUB_APP_PRIVATE_KEY=$(base64 -w0 mend-bot.private-key.pem)" >> .env
 ```
 
 `.env` is in `.gitignore`. Keep it there: it is the one file in this project that must never be committed.
