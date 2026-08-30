@@ -6,7 +6,6 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-BASE=${BASE:-http://localhost:8080}
 ENV_FILE=${ENV_FILE:-.env}
 
 REQUIRED=(DEVIN_API_KEY DEVIN_ORG_ID GITHUB_APP_ID GITHUB_APP_INSTALLATION_ID
@@ -117,12 +116,23 @@ if [[ -n $gaps ]]; then
   exit 1
 fi
 
-docker compose up -d --build
+# Compose publishes ${PORT:-8080}, taking PORT from the environment or from $ENV_FILE, so the health
+# probe has to follow it rather than assume 8080.
+PORT=${PORT:-$(value_of PORT)}
+BASE=${BASE:-http://localhost:${PORT:-8080}}
+
+docker compose --env-file "$ENV_FILE" up -d --build
 
 printf 'waiting for menD'
 for _ in $(seq 1 90); do
-  if curl -sf "$BASE/actuator/health" >/dev/null; then echo " — up"; break; fi
+  if curl -sf "$BASE/actuator/health" >/dev/null; then
+    echo " — up"
+    echo "menD is running at $BASE"
+    exit 0
+  fi
   printf '.'; sleep 2
 done
 
-echo "menD is running at $BASE"
+echo " — menD never became healthy" >&2
+docker compose --env-file "$ENV_FILE" logs mend >&2
+exit 1
