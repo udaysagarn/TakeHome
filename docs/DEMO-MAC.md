@@ -98,7 +98,7 @@ repository or the database.
 ## Contributing
 
 ```bash
-mvn -B verify                                  # 116 tests
+mvn -B verify                                  # the full suite, with a coverage floor
 SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run
 curl -X POST localhost:8080/api/sandbox/issues/all
 ```

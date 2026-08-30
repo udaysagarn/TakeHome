@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,14 @@ public class Reconciler {
     private static final List<IssueState> ACTIVE =
             Arrays.stream(IssueState.values()).filter(IssueState::isActive).toList();
 
+    /**
+     * FAILED is terminal for one attempt but re-dispatchable while the budget allows, so the loop
+     * looks at it too: an inline retry the concurrency cap refused is picked up on a later tick
+     * instead of stranding the task.
+     */
+    private static final List<IssueState> DRIVEN =
+            Stream.concat(ACTIVE.stream(), Stream.of(IssueState.FAILED)).toList();
+
     private final TaskRepository tasks;
     private final Orchestrator orchestrator;
     private final LeaseManager leases;
@@ -49,7 +58,9 @@ public class Reconciler {
         if (!props.getEngine().isEnabled()) {
             return;
         }
-        List<RemediationTask> claimable = leases.claimable(ACTIVE);
+        List<RemediationTask> claimable = leases.claimable(DRIVEN).stream()
+                .filter(this::worthDriving)
+                .toList();
         if (claimable.isEmpty()) {
             return;
         }
@@ -67,6 +78,11 @@ public class Reconciler {
                 leases.release(task);
             }
         }
+    }
+
+    private boolean worthDriving(RemediationTask task) {
+        return task.getState() != IssueState.FAILED
+                || task.getAttempts() < props.getEngine().getMaxAttempts();
     }
 
     private void advanceUnderLease(RemediationTask candidate) {

@@ -239,7 +239,7 @@ to the database.
 
 ```bash
 mvn spring-boot:run          # needs the same environment variables
-mvn -B verify                # 116 tests
+mvn -B verify                # the full suite, with a coverage floor
 ```
 
 The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else
