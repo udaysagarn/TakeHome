@@ -46,8 +46,7 @@ import org.springframework.test.context.TestPropertySource;
             "mend.engine.max-nudges=2",
             "mend.engine.nudge-after=PT0S",
             "mend.engine.session-timeout=PT0S",
-            "spring.datasource.url=jdbc:h2:mem:orchestratorfailure;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:orchestratorfailure;DB_CLOSE_DELAY=-1"
         })
 class OrchestratorFailureTest {
 

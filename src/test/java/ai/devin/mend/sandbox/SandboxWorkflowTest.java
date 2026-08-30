@@ -11,8 +11,10 @@ import ai.devin.mend.domain.LearningRepository;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.engine.Reconciler;
+import ai.devin.mend.github.GitHubDtos;
 import ai.devin.mend.ingest.IssuePoller;
 import ai.devin.mend.learning.ReviewLoop;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,8 +38,7 @@ import org.springframework.test.web.servlet.MockMvc;
             "mend.github.polling-enabled=true",
             "mend.github.repo=acme/superset",
             "mend.github.repos=acme/superset",
-            "spring.datasource.url=jdbc:h2:mem:sandboxworkflow;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:sandboxworkflow;DB_CLOSE_DELAY=-1"
         })
 class SandboxWorkflowTest {
 
@@ -87,6 +88,7 @@ class SandboxWorkflowTest {
         RemediationTask task = taskFor(SandboxScenario.REVIEW_THEN_FIX);
         assertThat(task.getReviewRounds()).isPositive();
         assertThat(learnings.findAll()).isNotEmpty();
+        assertThat(labelsOn(task)).containsExactly("menD:done");
     }
 
     @Test
@@ -136,6 +138,12 @@ class SandboxWorkflowTest {
                 .filter(task -> scenario == hub.scenario(task.getRepo(), task.getIssueNumber()))
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("no task was created for " + scenario));
+    }
+
+    private List<String> labelsOn(RemediationTask task) {
+        return hub.issue(task.getRepo(), task.getIssueNumber()).orElseThrow().labels().stream()
+                .map(GitHubDtos.Label::name)
+                .toList();
     }
 
     private IssueState stateOf(SandboxScenario scenario) {

@@ -9,6 +9,7 @@ import ai.devin.mend.domain.Verification;
 import ai.devin.mend.github.GitHubClient;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -113,10 +114,7 @@ public class Notifier {
                                 sessionUrl == null ? "" : "\n\nScoping analysis: %s".formatted(sessionUrl),
                                 FOOTER);
         comment(task, body);
-        swapLabels(
-                task,
-                List.of(props.getGithub().getNotCandidateLabel()),
-                List.of(props.getGithub().getTriggerLabel(), props.getGithub().getInProgressLabel()));
+        settleLabel(task, props.getGithub().getNotCandidateLabel());
     }
 
     public void dispatched(RemediationTask task) {
@@ -158,10 +156,7 @@ public class Notifier {
 
                 Time from label to pull request: %s.%s"""
                         .formatted(task.getPrUrl(), evidence, testEvidence(outcome), humanDuration(task), FOOTER));
-        swapLabels(
-                task,
-                List.of(props.getGithub().getDoneLabel()),
-                List.of(props.getGithub().getPrOpenLabel(), props.getGithub().getInProgressLabel()));
+        settleLabel(task, props.getGithub().getDoneLabel());
     }
 
     /**
@@ -222,10 +217,7 @@ public class Notifier {
                                                 : outcome.commandsRun()),
                                 testEvidence(outcome),
                                 FOOTER));
-        swapLabels(
-                task,
-                List.of(props.getGithub().getUnverifiedLabel()),
-                List.of(props.getGithub().getInProgressLabel(), props.getGithub().getTriggerLabel()));
+        settleLabel(task, props.getGithub().getUnverifiedLabel());
     }
 
     private static String commandTable(Verification verification) {
@@ -295,10 +287,7 @@ public class Notifier {
                 task,
                 "### Escalated to a human\n\n%s\n\nSession: %s%s"
                         .formatted(reason, String.valueOf(task.getSessionUrl()), FOOTER));
-        swapLabels(
-                task,
-                List.of(props.getGithub().getNeedsHumanLabel()),
-                List.of(props.getGithub().getInProgressLabel(), props.getGithub().getTriggerLabel()));
+        settleLabel(task, props.getGithub().getNeedsHumanLabel());
     }
 
     public void failed(RemediationTask task, String reason) {
@@ -312,6 +301,26 @@ public class Notifier {
         } catch (RuntimeException e) {
             log.warn("failed to comment on {}: {}", task.key(), e.getMessage());
         }
+    }
+
+    /**
+     * Applies a terminal label and strips every other menD label, so an issue that went through a
+     * review round does not end up wearing both {@code changes-requested} and {@code done}.
+     */
+    private void settleLabel(RemediationTask task, String settled) {
+        MendProperties.Github cfg = props.getGithub();
+        List<String> stale = Stream.of(
+                        cfg.getTriggerLabel(),
+                        cfg.getInProgressLabel(),
+                        cfg.getPrOpenLabel(),
+                        cfg.getDoneLabel(),
+                        cfg.getNotCandidateLabel(),
+                        cfg.getNeedsHumanLabel(),
+                        cfg.getUnverifiedLabel(),
+                        cfg.getChangesRequestedLabel())
+                .filter(label -> !label.equals(settled))
+                .toList();
+        swapLabels(task, List.of(settled), stale);
     }
 
     private void swapLabels(RemediationTask task, List<String> add, List<String> remove) {

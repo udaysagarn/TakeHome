@@ -34,8 +34,9 @@ issue carrying the trigger label (default `menD:fix`). When testing:
 
 ## Fastest safe way to test (no credentials, no ACU spend)
 
+From the menD repo root:
+
 ```
-cd /home/ubuntu/repos/TakeHome
 MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false \
   java -jar target/mend-orchestrator-0.1.0.jar    # rebuild with `mvn -B -DskipTests package` if stale
 ```
@@ -50,10 +51,12 @@ one shell command can kill the shell before the restart runs.
 A fresh jar run starts with an empty DB, so pages are empty. Seed with the H2 console-less
 client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data/mend ...`)
 **while the app is stopped** — H2 file mode allows a single writer. Gotchas seen:
-- `ddl-auto: update` does NOT widen existing enum-backed VARCHAR columns; inserting a newer
-  state such as `UNVERIFIED` into `remediation_task.state` / `task_event.to_state` /
-  `task_event.from_state` can fail until those columns are widened manually. This is also a
-  real upgrade-path risk for the product itself.
+- The schema is owned by the Flyway migrations in `src/main/resources/db/migration/{vendor}`,
+  and Hibernate runs with `ddl-auto: validate`. The enum-backed columns
+  (`remediation_task.state`, `task_event.from_state`, `task_event.to_state`) are varchar(32)
+  with no CHECK constraint, so every state including `UNVERIFIED` and `CHANGES_REQUESTED`
+  inserts cleanly. Any schema change needs a new versioned migration — editing an entity alone
+  now fails startup instead of silently drifting.
 - Keep seeded timestamps consistent with the box clock (it may be set far in the future),
   otherwise ages, ETAs and "overdue" markers look nonsensical.
 - Registering a nonexistent repo through `/repositories/new` is a safe way to exercise

@@ -15,6 +15,8 @@ import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** One remediation attempt lifecycle for one GitHub issue. */
 @Entity
@@ -46,6 +48,7 @@ public class RemediationTask {
     private String issueLabels;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 32)
     private IssueState state = IssueState.DISCOVERED;
 
@@ -75,6 +78,7 @@ public class RemediationTask {
 
     /** How the fix was proven, if it was; null until verification produces a verdict. */
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "verification_tier", length = 32)
     private Verification.Tier verificationTier;
 

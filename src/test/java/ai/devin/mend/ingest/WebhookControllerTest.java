@@ -41,8 +41,7 @@ import org.springframework.test.web.servlet.MockMvc;
             "mend.github.polling-enabled=false",
             "mend.github.webhook-secret=s3cret",
             "mend.github.trigger-label=menD:fix",
-            "spring.datasource.url=jdbc:h2:mem:webhook;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:webhook;DB_CLOSE_DELAY=-1"
         })
 class WebhookControllerTest {
 

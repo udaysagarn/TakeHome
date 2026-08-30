@@ -44,8 +44,7 @@ import org.springframework.test.context.TestPropertySource;
             "mend.github.polling-enabled=false",
             "mend.github.repo=acme/superset",
             "mend.learning.max-review-rounds=2",
-            "spring.datasource.url=jdbc:h2:mem:reviewloop;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:reviewloop;DB_CLOSE_DELAY=-1"
         })
 class ReviewLoopTest {
 

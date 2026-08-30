@@ -29,8 +29,7 @@ import org.springframework.test.context.TestPropertySource;
             "mend.engine.enabled=true",
             "mend.github.polling-enabled=false",
             "mend.github.repo=acme/superset",
-            "spring.datasource.url=jdbc:h2:mem:reconciler;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:reconciler;DB_CLOSE_DELAY=-1"
         })
 class ReconcilerTest {
 
