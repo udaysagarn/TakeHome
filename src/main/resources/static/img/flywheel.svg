@@ -2,7 +2,7 @@
      font-family="Inter, ui-sans-serif, system-ui, sans-serif" role="img"
      aria-label="menD flywheel: connected repositories feed a candidacy gate, fixes land with independent evidence, human review produces signal, learnings compound, cost per fix falls, and more of the backlog becomes worth automating">
   <defs>
-    <marker id="spin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+    <marker id="spin" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 1 L 10 5 L 0 9 z" fill="rgb(49,124,255)"/>
     </marker>
     <style>
@@ -15,7 +15,7 @@
       .b6   { stroke: rgb(49,124,255); }
       .h    { font-size: 22px; font-weight: 600; fill: rgb(25,25,25); }
       .t    { font-size: 15px; font-weight: 600; fill: rgb(25,25,25); }
-      .s    { font-size: 12.5px; fill: #6b6b6b; }
+      .s    { font-size: 12px; fill: #6b6b6b; }
       .cap  { font-size: 13.5px; fill: #6b6b6b; }
       .spin { fill: none; stroke: rgb(49,124,255); stroke-width: 2.5; marker-end: url(#spin); }
       .hub  { fill: #ffffff; stroke: rgb(49,124,255); stroke-width: 1.5; stroke-dasharray: 6 6; }
@@ -28,12 +28,12 @@
   <text x="34" y="68" class="cap">Devin does the engineering. Every merged fix makes the next one cheaper — that compounding is the product.</text>
 
   <!-- the wheel turns clockwise; each arc is one push on it -->
-  <path class="spin" d="M 590.6 151.0 A 265 265 0 0 1 670.4 197.0"/>
-  <path class="spin" d="M 761.0 353.9 A 265 265 0 0 1 761.0 446.1"/>
-  <path class="spin" d="M 670.4 603.0 A 265 265 0 0 1 590.6 649.1"/>
-  <path class="spin" d="M 409.4 649.1 A 265 265 0 0 1 329.6 603.0"/>
-  <path class="spin" d="M 239.0 446.1 A 265 265 0 0 1 239.0 353.9"/>
-  <path class="spin" d="M 329.6 197.0 A 265 265 0 0 1 409.4 151.0"/>
+  <path class="spin" d="M 620.7 164.1 A 265 265 0 0 1 697.0 222.8"/>
+  <path class="spin" d="M 750.6 313.8 A 265 265 0 0 1 750.6 486.2"/>
+  <path class="spin" d="M 697.0 577.2 A 265 265 0 0 1 620.7 635.9"/>
+  <path class="spin" d="M 379.3 635.9 A 265 265 0 0 1 303.0 577.2"/>
+  <path class="spin" d="M 249.4 486.2 A 265 265 0 0 1 249.4 313.8"/>
+  <path class="spin" d="M 303.0 222.8 A 265 265 0 0 1 379.3 164.1"/>
 
   <circle cx="500" cy="400" r="118" class="hub"/>
   <text x="500" y="378" class="t" text-anchor="middle" font-size="20" fill="rgb(49,124,255)">menD</text>
@@ -42,37 +42,37 @@
   <text x="500" y="440" class="s" text-anchor="middle">review as the teacher</text>
 
   <!-- 1 · top -->
-  <rect x="400" y="92" width="200" height="86" rx="14" class="box b1"/>
+  <rect x="382" y="92" width="236" height="86" rx="14" class="box b1"/>
   <text x="500" y="119" class="t" text-anchor="middle">Repositories connect</text>
   <text x="500" y="140" class="s" text-anchor="middle">access validated, profile and</text>
   <text x="500" y="158" class="s" text-anchor="middle">repo rules read once, not per issue</text>
 
   <!-- 2 · upper right -->
-  <rect x="630" y="225" width="200" height="86" rx="14" class="box b2"/>
+  <rect x="612" y="225" width="236" height="86" rx="14" class="box b2"/>
   <text x="730" y="252" class="t" text-anchor="middle">Issues get judged</text>
   <text x="730" y="273" class="s" text-anchor="middle">capacity is spent only where</text>
   <text x="730" y="291" class="s" text-anchor="middle">“done” is checkable</text>
 
   <!-- 3 · lower right -->
-  <rect x="630" y="489" width="200" height="86" rx="14" class="box b3"/>
+  <rect x="612" y="489" width="236" height="86" rx="14" class="box b3"/>
   <text x="730" y="516" class="t" text-anchor="middle">Fixes land with proof</text>
   <text x="730" y="537" class="s" text-anchor="middle">verified by CI or a contract run,</text>
   <text x="730" y="555" class="s" text-anchor="middle">never by the session that wrote it</text>
 
   <!-- 4 · bottom -->
-  <rect x="400" y="622" width="200" height="86" rx="14" class="box b4"/>
+  <rect x="382" y="622" width="236" height="86" rx="14" class="box b4"/>
   <text x="500" y="649" class="t" text-anchor="middle">Humans review</text>
   <text x="500" y="670" class="s" text-anchor="middle">approvals, rejections and inline</text>
   <text x="500" y="688" class="s" text-anchor="middle">comments captured as signal</text>
 
   <!-- 5 · lower left -->
-  <rect x="170" y="489" width="200" height="86" rx="14" class="box b5"/>
+  <rect x="152" y="489" width="236" height="86" rx="14" class="box b5"/>
   <text x="270" y="516" class="t" text-anchor="middle">Learnings compound</text>
   <text x="270" y="537" class="s" text-anchor="middle">repo-specific and general lessons,</text>
   <text x="270" y="555" class="s" text-anchor="middle">reused in the next prompt</text>
 
   <!-- 6 · upper left -->
-  <rect x="170" y="225" width="200" height="86" rx="14" class="box b6"/>
+  <rect x="152" y="225" width="236" height="86" rx="14" class="box b6"/>
   <text x="270" y="252" class="t" text-anchor="middle">Cost per fix falls</text>
   <text x="270" y="273" class="s" text-anchor="middle">higher first-pass acceptance,</text>
   <text x="270" y="291" class="s" text-anchor="middle">fewer ACUs per merged fix</text>
