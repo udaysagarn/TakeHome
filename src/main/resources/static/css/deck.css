@@ -22,13 +22,21 @@ header.deck-bar {
   flex-wrap: nowrap;
   gap: 8px;
   padding: 10px 20px;
-  overflow-x: auto;
   background: rgb(var(--bg-elevated));
   border-bottom: 1px solid rgb(var(--border-primary));
 }
 
 header.deck-bar .nav {
   flex-wrap: nowrap;
+}
+
+/* The bar is one fixed row, so the title and the slide counter are what goes when a projector
+   or a phone runs out of width — the navigation itself never does. */
+@media (max-width: 820px) {
+  .deck-bar .brand span,
+  .deck-progress {
+    display: none;
+  }
 }
 
 .deck-bar .spacer {

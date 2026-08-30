@@ -25,7 +25,7 @@ curl -sf "$BASE/api/sandbox" | sed -n '1,40p' || true
 
 cat <<EOF
 
-Four issues are now in the pipeline. Watch them move at $BASE/pipeline (it refreshes itself):
+Four issues are now in the flow. Watch them move at $BASE/flows (it refreshes itself):
 
   CLEAN_FIX         DISCOVERED → READY → RUNNING → PR_OPEN → VERIFYING → SUCCEEDED
   NOT_A_CANDIDATE   DISCOVERED → NOT_A_CANDIDATE   (no remediation session is ever created)
@@ -34,7 +34,7 @@ Four issues are now in the pipeline. Watch them move at $BASE/pipeline (it refre
 
 The whole set settles in about a minute. Then look at:
 
-  $BASE/pipeline     the board, including the honest UNVERIFIED column
+  $BASE/flows     the board, including the honest UNVERIFIED column
   $BASE/learnings    what the simulated reviewer taught menD
   $BASE/api/sandbox  every label, comment, pull request and review menD wrote
 

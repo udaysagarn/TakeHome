@@ -31,7 +31,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * Exercises the pipeline end to end against a mocked Devin API and a mocked GitHub, which is the only
+ * Exercises the flow end to end against a mocked Devin API and a mocked GitHub, which is the only
  * way to assert the interesting property: an issue reaches a remediation session only after the
  * criteria gate has passed.
  */
@@ -41,9 +41,9 @@ import org.springframework.test.context.TestPropertySource;
             "mend.engine.enabled=false",
             "mend.github.polling-enabled=false",
             "mend.github.repo=acme/superset",
-            "spring.datasource.url=jdbc:h2:mem:pipeline;DB_CLOSE_DELAY=-1"
+            "spring.datasource.url=jdbc:h2:mem:flow;DB_CLOSE_DELAY=-1"
         })
-class PipelineTest {
+class FlowTest {
 
     private static final String REPO = "acme/superset";
 

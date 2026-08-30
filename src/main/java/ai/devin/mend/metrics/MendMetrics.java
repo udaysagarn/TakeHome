@@ -11,7 +11,7 @@ import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Component;
 
-/** Prometheus-facing instrumentation for the pipeline. */
+/** Prometheus-facing instrumentation for the flow. */
 @Component
 public class MendMetrics {
 

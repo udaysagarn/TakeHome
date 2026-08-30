@@ -9,6 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body>
     <div class="shell">
@@ -31,7 +32,7 @@
         <strong th:text="${registered.slug()}">owner/name</strong> is registered and validated
         (default branch <code th:text="${registered.defaultBranch}">main</code>). menD will build its
         repository profile on the next reconcile.
-        <a class="btn" th:href="@{/pipeline(repo=${registered.slug()})}">View its pipeline</a>
+        <a class="btn" th:href="@{/flows(repo=${registered.slug()})}">View its flows</a>
       </div>
       <div class="verdict bad" th:if="${registered != null and registered.accessState.name() != 'VALIDATED'}">
         <strong th:text="${registered.slug()}">owner/name</strong> was saved, but menD cannot work on
@@ -140,7 +141,7 @@
             </td>
             <td class="muted" th:text="${r.indexState}">INDEXED</td>
             <td><code th:text="${r.triggerLabel}">menD:fix</code></td>
-            <td><a th:href="@{/pipeline(repo=${r.slug})}" th:text="${r.kpis.total} + ' issues'">0 issues</a></td>
+            <td><a th:href="@{/flows(repo=${r.slug})}" th:text="${r.kpis.total} + ' issues'">0 issues</a></td>
           </tr>
         </tbody>
       </table>

@@ -123,7 +123,7 @@ class SandboxWorkflowTest {
 
     // ------------------------------------------------------------- stubbing
 
-    /** Turns both loops until the pipeline stops changing, standing in for the demo's wall clock. */
+    /** Turns both loops until the flow stops changing, standing in for the demo's wall clock. */
     private void settle() {
         for (int tick = 0; tick < 40; tick++) {
             poller.poll();

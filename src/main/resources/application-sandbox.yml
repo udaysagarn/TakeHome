@@ -1,4 +1,4 @@
-# Everything a contributor needs to watch the pipeline run with no credentials: the GitHub and Devin
+# Everything a contributor needs to watch the flow run with no credentials: the GitHub and Devin
 # clients are replaced by in-memory simulations, and the loops tick fast enough to watch.
 mend:
   github:

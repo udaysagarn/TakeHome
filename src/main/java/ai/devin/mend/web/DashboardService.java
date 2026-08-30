@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DashboardService {
 
-    /** Columns of the pipeline board, in flow order. */
+    /** Columns of the flow board, in flow order. */
     private static final Map<String, List<IssueState>> BOARD = new LinkedHashMap<>();
 
     static {

@@ -120,7 +120,7 @@ curl -s localhost:8080/api/repositories | jq '.[] | {owner, name, accessState, a
 `MISSING_PERMISSION` puts the exact permission in `accessError` — menD validates on registration rather than
 discovering it halfway through a demo.
 
-Then label one real issue `menD:fix` and watch `/pipeline`.
+Then label one real issue `menD:fix` and watch `/flows`.
 
 ## If something is wrong
 

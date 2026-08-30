@@ -10,11 +10,12 @@
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body>
     <div class="shell">
       <header class="topbar">
-        <div th:replace="~{fragments/nav :: heading('Pipeline')}"></div>
+        <div th:replace="~{fragments/nav :: heading('Flows')}"></div>
         <span class="subtitle">
           <span class="livedot"></span>
           <span th:text="${repo}">repo</span> ·
@@ -22,12 +23,12 @@
         </span>
         <span class="spacer"></span>
         <span class="repo-switch">
-          <a class="btn" th:classappend="${selectedRepo == null} ? 'primary'" th:href="@{/pipeline}">All</a>
+          <a class="btn" th:classappend="${selectedRepo == null} ? 'primary'" th:href="@{/flows}">All</a>
           <a class="btn" th:each="r : ${view.repositories}"
              th:classappend="${r.slug == selectedRepo} ? 'primary'"
-             th:href="@{/pipeline(repo=${r.slug})}" th:text="${r.slug}">owner/name</a>
+             th:href="@{/flows(repo=${r.slug})}" th:text="${r.slug}">owner/name</a>
         </span>
-        <nav th:replace="~{fragments/nav :: links('pipeline')}"></nav>
+        <nav th:replace="~{fragments/nav :: links('flows')}"></nav>
       </header>
 
       <div th:hx-get="@{/fragments/live(repo=${selectedRepo})}" hx-trigger="every 5s" hx-swap="innerHTML">

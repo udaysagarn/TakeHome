@@ -71,7 +71,7 @@ review quoted as its evidence.
 
 | | |
 |---|---|
-| `/pipeline` | The board, including the honest `UNVERIFIED` column |
+| `/flows` | The board, including the honest `UNVERIFIED` column |
 | `/learnings` | What the simulated reviewer taught menD |
 | `/api/sandbox` | Everything menD wrote to the fake GitHub |
 

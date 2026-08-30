@@ -31,7 +31,7 @@ MAVEN_MIRROR_URL=https://your/mirror`.
 
 With no `.env` present this writes one with `MEND_ENGINE_ENABLED=false` and `MEND_POLLING_ENABLED=false`, so
 menD never calls GitHub and never spends an ACU. Open http://localhost:8080 and walk `/` → `/repositories/new`
-→ `/pipeline` → `/learnings` → `/api/report`.
+→ `/flows` → `/learnings` → `/api/report`.
 
 Good for: explaining the product. Not good for: showing anything move.
 
@@ -43,7 +43,7 @@ Good for: explaining the product. Not good for: showing anything move.
 
 The `sandbox` profile replaces the GitHub client and the Devin client with in-memory simulations and files four
 issues, one per scenario. Everything between those two edges is the real control plane. Open
-http://localhost:8080/pipeline and watch:
+http://localhost:8080/flows and watch:
 
 - a clean fix land and be proved by the (simulated) repository CI,
 - an issue that needs a product decision be declined as `menD:not-a-candidate` before a remediation session is
@@ -81,7 +81,7 @@ an audience is watching.
 
 Then label a real issue `menD:fix` in a registered repository. menD scopes it in one Devin session, writes the
 acceptance criteria as a comment, dispatches a second session to do the work, waits for independent
-verification, and reports back on `/pipeline`. Label a vague issue too — the contrast between the two is the
+verification, and reports back on `/flows`. Label a vague issue too — the contrast between the two is the
 demo. The vetted set of issues in the superset fork, and which outcome each one is there to show, is in
 [docs/DEMO-ISSUES.md](DEMO-ISSUES.md).
 

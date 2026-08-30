@@ -31,7 +31,7 @@ of the controllers and exercised against a running instance, so nothing here is 
 - **Base URL** — wherever you run menD. Locally that is `http://localhost:8080`.
 - **JSON API** — everything under `/api`. No authentication is enforced by menD itself; see
   [Errors and limits](Errors-and-Limits#authentication-and-exposure).
-- **Web UI** — `/` (overview), `/pipeline` (board), `/tasks/{id}`, `/repositories/new`,
+- **Web UI** — `/` (overview), `/flows` (board), `/tasks/{id}`, `/repositories/new`,
   `/learnings`, `/deck`. Human surfaces, not contracts; they can change shape without notice.
 - **Webhooks** — `POST /webhooks/github`, the low-latency trigger.
 - **Operations** — `/actuator/health`, `/actuator/info`, `/actuator/metrics`,

@@ -9,6 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body>
     <div class="shell" th:with="t=${detail.task}, c=${detail.criteria}, l=${detail.lease}">
@@ -16,7 +17,7 @@
         <div th:replace="~{fragments/nav :: heading('#' + ${t.issueNumber})}"></div>
         <span class="subtitle" th:text="${t.title}">title</span>
         <span class="spacer"></span>
-        <a class="btn" th:href="@{/pipeline(repo=${t.repo})}">This repository</a>
+        <a class="btn" th:href="@{/flows(repo=${t.repo})}">This repository</a>
         <a class="btn" th:href="${t.issueUrl}" target="_blank">Issue</a>
         <a class="btn" th:if="${t.prUrl}" th:href="${t.prUrl}" target="_blank">Pull request</a>
         <nav th:replace="~{fragments/nav :: links('task')}"></nav>

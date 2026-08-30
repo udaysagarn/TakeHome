@@ -41,7 +41,7 @@ See [Sandbox API](Sandbox-API).
 | Route | Page |
 |---|---|
 | `/` | Product overview, repository cards, register CTA |
-| `/pipeline?repo=` | The board |
+| `/flows?repo=` | The board |
 | `/tasks/{id}` | Task detail |
 | `/repositories/new` | Step-by-step registration; `POST /repositories` (form-encoded) registers |
 | `/learnings` | What reviewers taught menD |

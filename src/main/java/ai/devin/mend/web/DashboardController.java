@@ -48,8 +48,8 @@ public class DashboardController {
         return "overview";
     }
 
-    @GetMapping("/pipeline")
-    public String pipeline(@RequestParam(required = false) String repo, Model model) {
+    @GetMapping("/flows")
+    public String flow(@RequestParam(required = false) String repo, Model model) {
         model.addAttribute("view", dashboard.view(repo));
         model.addAttribute("selectedRepo", repo);
         model.addAttribute("repo", repo == null ? "all repositories" : repo);

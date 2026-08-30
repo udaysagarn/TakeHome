@@ -8,7 +8,7 @@ import java.util.Set;
  *
  * <p>The full transition table lives in {@link #canTransitionTo(IssueState)}; it is the single
  * authority for what the reconciler is allowed to do, so an illegal transition fails loudly instead
- * of corrupting the pipeline.
+ * of corrupting the flow.
  */
 public enum IssueState {
 

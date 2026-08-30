@@ -18,7 +18,7 @@ import org.springframework.stereotype.Component;
  * An in-memory stand-in for GitHub, used by the {@code sandbox} profile.
  *
  * <p>It holds the issues, labels, comments, pull requests, check runs and reviews that the real
- * control plane reads and writes, so the whole pipeline can be run on a laptop with no credentials.
+ * control plane reads and writes, so the whole flow can be run on a laptop with no credentials.
  * Everything a contributor would otherwise have to fake by hand — a reviewer asking for changes, a
  * repository with no CI — is one HTTP call away through {@link SandboxController}.
  */

@@ -67,7 +67,7 @@ All metrics are tagged `application=mend-orchestrator`.
 | Route | What |
 |---|---|
 | `/` | Product overview, repository cards, register CTA |
-| `/pipeline?repo=owner/name` | The board, refreshing itself |
+| `/flows?repo=owner/name` | The board, refreshing itself |
 | `/tasks/{id}` | Everything menD persisted about one issue |
 | `/repositories/new` | Step-by-step registration |
 | `/learnings` | What reviewers have taught menD |

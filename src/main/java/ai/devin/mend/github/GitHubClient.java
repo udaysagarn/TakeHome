@@ -169,7 +169,7 @@ public class GitHubClient {
         }
     }
 
-    /** Ensures a label exists so the pipeline never fails on a fresh repository. */
+    /** Ensures a label exists so the flow never fails on a fresh repository. */
     public void ensureLabel(String repo, String label, String color, String description) {
         try {
             http.post()

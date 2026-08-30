@@ -46,7 +46,7 @@ jobs:
             sleep 2
           done
           echo "menD never became healthy"; docker compose logs mend; exit 1
-      - name: File one issue per scenario and wait for the pipeline to settle
+      - name: File one issue per scenario and wait for the flow to settle
         run: |
           curl -sf -X POST http://localhost:8080/api/sandbox/issues/all >/dev/null
           # The poller picks the issues up on its own schedule, so an empty board means "not

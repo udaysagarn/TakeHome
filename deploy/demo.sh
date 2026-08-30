@@ -26,7 +26,7 @@ menD is running.
 
   1. Product overview        $BASE/
   2. Register a repository   $BASE/repositories/new
-  3. Pipeline board          $BASE/pipeline
+  3. Flow board          $BASE/flows
   4. What reviewers taught    $BASE/learnings
   5. Leadership report       $BASE/api/report
 

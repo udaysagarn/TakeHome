@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
  * Watches menD's own pull requests for what humans say about them.
  *
  * <p>A rejection is not the end of a task: reviewer feedback is handed straight back to the session
- * that wrote the code, and the task returns to the pipeline. Once a task is finally settled, a cheap
+ * that wrote the code, and the task returns to the flow. Once a task is finally settled, a cheap
  * read-only retrospective turns the review history into durable lessons, which
  * {@link LearningService} feeds into later sessions for that repository — and, when a lesson is
  * broader than one codebase, surfaces as a recommendation to promote it further.

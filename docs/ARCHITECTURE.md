@@ -184,7 +184,7 @@ contract that holds at that point.
 
 | Component | Purpose | Integration point | Contract |
 |---|---|---|---|
-| `DashboardController` | The operator UI | `/`, `/pipeline`, `/tasks/{id}`, `/learnings`, `/repositories/new`, `/deck`, `/fragments/live` | Server-rendered Thymeleaf; `/fragments/live` is the htmx polling fragment |
+| `DashboardController` | The operator UI | `/`, `/flows`, `/tasks/{id}`, `/learnings`, `/repositories/new`, `/deck`, `/fragments/live` | Server-rendered Thymeleaf; `/fragments/live` is the htmx polling fragment |
 | `ApiController` | The JSON surface | `/api/summary`, `/api/states`, `/api/tasks[/{id}[/events]]`, `POST /api/tasks/{id}/cancel`, `POST /api/issues/{number}/ingest`, `/api/repositories`, `POST /api/repositories/{id}/validate`, `/api/learnings`, `/api/report` | Read models only, plus three commands; the commands go through `Orchestrator`/`TaskService`, never straight to the repository layer |
 | `DashboardService` / `ReportService` | Read models and the report | Called by the two controllers | Counts declined and unverified work as prominently as successes |
 | `MendErrorController` | Branded error page | `/error` | — |
@@ -279,7 +279,7 @@ Precedence, first tier able to answer wins:
 
 ### 5.5 HTTP surface
 
-Full list with controllers in [SITEMAP.md](SITEMAP.md). Shape: HTML pages (`/`, `/pipeline`,
+Full list with controllers in [SITEMAP.md](SITEMAP.md). Shape: HTML pages (`/`, `/flows`,
 `/tasks/{id}`, `/learnings`, `/repositories/new`, `/deck`, `/fragments/live`), JSON under `/api/**`,
 the webhook, sandbox routes under the profile, and `/actuator/{health,info,metrics,prometheus}`.
 

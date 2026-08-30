@@ -32,7 +32,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
 
 /**
- * The unhappy half of the pipeline: sessions that stall, sessions that die, issues that disappear
+ * The unhappy half of the flow: sessions that stall, sessions that die, issues that disappear
  * and attempt budgets that run out. These are the paths that decide whether menD escalates honestly
  * or quietly loses a task.
  */

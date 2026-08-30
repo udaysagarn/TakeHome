@@ -1,7 +1,7 @@
 # Issue lifecycle and states
 
 The state machine is the product. It is enforced in one place: an illegal transition throws rather
-than silently corrupting the pipeline, and every legal one writes an event row.
+than silently corrupting the flow, and every legal one writes an event row.
 
 ## States
 

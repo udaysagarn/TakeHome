@@ -10,6 +10,7 @@
     <link rel="stylesheet" th:href="@{/css/deck.css}" />
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body class="deck-body">
     <header class="topbar deck-bar">
@@ -386,7 +387,7 @@
           every week it runs.
         </p>
         <div class="cta-row">
-          <a class="btn primary" th:href="@{/pipeline}">Open the live board</a>
+          <a class="btn primary" th:href="@{/flows}">Open the live board</a>
           <a class="btn" th:href="@{/learnings}">See what reviewers have taught it</a>
           <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
         </div>

@@ -9,6 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body>
     <div class="shell">
@@ -28,7 +29,7 @@
           Anything ambiguous is handed straight back to a human, labelled and explained.
         </p>
         <div class="cta-row">
-          <a class="btn primary" th:href="@{/pipeline}">Open the pipeline</a>
+          <a class="btn primary" th:href="@{/flows}">Open the flows</a>
           <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
           <a class="btn" th:href="@{/deck}">See the pitch</a>
         </div>
@@ -114,7 +115,7 @@
             <div><dt>PRs opened</dt><dd th:text="${r.kpis.prsOpened}">0</dd></div>
             <div><dt>Remediated</dt><dd th:text="${r.kpis.succeeded}">0</dd></div>
           </dl>
-          <a class="btn" th:href="@{/pipeline(repo=${r.slug})}">View pipeline</a>
+          <a class="btn" th:href="@{/flows(repo=${r.slug})}">View flows</a>
         </div>
         <div class="repo-card empty-card" th:if="${repositories.isEmpty()}">
           <p>No repositories registered yet.</p>

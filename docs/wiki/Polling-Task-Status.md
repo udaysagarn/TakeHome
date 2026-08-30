@@ -41,7 +41,7 @@ curl -s localhost:8080/api/tasks
 `excluded`. Poll this if all you need is "how is it going".
 
 There is no server-side filter parameter on this route; filter client-side on `repo` or `state`.
-(The HTML board at `/pipeline?repo=owner/name` does filter, but that is a UI route, not a contract.)
+(The HTML board at `/flows?repo=owner/name` does filter, but that is a UI route, not a contract.)
 
 ## One task, in full
 

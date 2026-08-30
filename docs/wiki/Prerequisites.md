@@ -16,7 +16,7 @@ Storage is H2 in file mode by default (`./data/mend`), so state survives restart
 `MEND_DB_URL` at Postgres for anything shared.
 
 Nothing below is needed if you only want to see the workflow: the
-[sandbox](Sandbox-API) runs the whole pipeline with no credentials and no ACU spend.
+[sandbox](Sandbox-API) runs the whole flow with no credentials and no ACU spend.
 
 ## 2. Devin API credentials
 

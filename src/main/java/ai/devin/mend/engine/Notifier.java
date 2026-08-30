@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Writes the pipeline's decisions back onto the issue. Everything the automation decides is visible to
+ * Writes the flow's decisions back onto the issue. Everything the automation decides is visible to
  * the engineers who own the repository, not only on an internal dashboard.
  */
 @Component
