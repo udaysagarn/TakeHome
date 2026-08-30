@@ -61,6 +61,59 @@ public final class GitHubDtos {
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record CombinedStatus(String state, int totalCount) {}
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record Repo(
+            long id,
+            String name,
+            String fullName,
+            String htmlUrl,
+            String defaultBranch,
+            boolean archived,
+            boolean disabled,
+            String visibility,
+            boolean hasIssues,
+            String language) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record InstallationRepos(int totalCount, List<Repo> repositories) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record Ref(String sha) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record User(String login, String type) {
+
+        public boolean isBot() {
+            return "Bot".equals(type);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record Review(long id, User user, String state, String body, String htmlUrl, Instant submittedAt) {
+
+        public boolean isRejection() {
+            return "CHANGES_REQUESTED".equalsIgnoreCase(state) || "DISMISSED".equalsIgnoreCase(state);
+        }
+
+        public boolean isApproval() {
+            return "APPROVED".equalsIgnoreCase(state);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record ReviewComment(
+            long id, User user, String body, String path, Integer line, String htmlUrl, Instant createdAt) {}
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public record PrFile(String filename, String status, int additions, int deletions, int changes) {}
+
     /** Aggregate CI verdict for a pull request. */
     public enum CiVerdict {
         PENDING,

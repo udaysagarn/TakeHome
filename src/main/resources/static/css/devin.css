@@ -446,3 +446,230 @@ details summary {
     opacity: 0.3;
   }
 }
+
+/* ---------------------------------------------------------------- overview */
+
+.hero {
+  padding: 36px 0 8px;
+  max-width: 860px;
+}
+
+.hero h1 {
+  font-size: 34px;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.hero p {
+  color: rgb(var(--text-secondary));
+  font-size: 15px;
+  margin: 0;
+}
+
+.cta-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cta-row .btn {
+  padding: 9px 16px;
+  font-size: 14px;
+}
+
+.diagram {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-L1);
+  overflow-x: auto;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.feature {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-L1);
+}
+
+.feature h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.feature p {
+  margin: 0;
+  color: rgb(var(--text-secondary));
+  font-size: 13px;
+}
+
+.repo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.repo-card {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-L1);
+}
+
+.repo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.repo-slug {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.repo-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 0 0 14px;
+}
+
+.repo-facts dt {
+  font-size: 11px;
+  color: rgb(var(--text-tertiary));
+}
+
+.repo-facts dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.repo-card.add-card {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  color: rgb(var(--text-secondary));
+  border-style: dashed;
+  min-height: 140px;
+}
+
+.repo-card.add-card:hover {
+  text-decoration: none;
+  background: rgb(var(--bg-hover));
+}
+
+.add-card .plus {
+  font-size: 26px;
+}
+
+/* ------------------------------------------------------- register + verdict */
+
+.steps {
+  counter-reset: step;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.steps > li {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 12px;
+  padding: 16px 18px 18px 56px;
+  margin-bottom: 12px;
+  position: relative;
+  box-shadow: var(--shadow-L1);
+}
+
+.steps > li::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgb(var(--bg-accent-primary));
+  color: rgb(var(--text-on-accent));
+}
+
+.steps h3 {
+  margin: 0 0 6px;
+  font-size: 15px;
+}
+
+.steps p {
+  margin: 0 0 8px;
+  color: rgb(var(--text-secondary));
+  font-size: 13px;
+}
+
+.register-form {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 6px;
+}
+
+.register-form input {
+  flex: 1;
+  max-width: 380px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 1px solid rgb(var(--border-primary));
+  background: rgb(var(--bg-page));
+  color: rgb(var(--text-primary));
+}
+
+.verdict {
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 18px;
+  font-size: 14px;
+  border: 1px solid rgb(var(--border-primary));
+  background: rgb(var(--bg-elevated));
+}
+
+.verdict.good {
+  border-color: rgb(var(--text-green));
+}
+
+.verdict.bad {
+  border-color: rgb(var(--text-red));
+}
+
+.pill.good {
+  color: rgb(var(--text-green));
+  border-color: rgb(var(--text-green));
+}
+
+.pill.bad {
+  color: rgb(var(--text-red));
+  border-color: rgb(var(--text-red));
+}
+
+.repo-switch {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}

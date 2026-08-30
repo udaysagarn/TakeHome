@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.RemediationTask;
+import ai.devin.mend.domain.Repository;
+import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.engine.TaskService;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,9 +40,15 @@ class DashboardRenderTest {
     @Autowired
     private TaskService taskService;
 
+    @Autowired
+    private RepositoryRegistry repositories;
+
     @BeforeEach
     void seed() {
         tasks.deleteAll();
+        repositories.deleteAll();
+        repositories.save(new Repository("acme", "superset"));
+        repositories.save(new Repository("acme", "airflow"));
         RemediationTask succeeded = task(101, "chore(frontend): bump vulnerable transitive dependency");
         succeeded.setConfidence(0.92);
         succeeded.setSessionUrl("https://app.devin.ai/sessions/abc");
@@ -73,11 +81,48 @@ class DashboardRenderTest {
 
     @Test
     void theMonitoringViewRendersEveryPanel() throws Exception {
-        mvc.perform(get("/"))
+        mvc.perform(get("/pipeline"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("chore(frontend): bump")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Rethink the chart picker")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/devin.css")));
+    }
+
+    @Test
+    void theOverviewLandsOnTheProductStoryAndEveryRegisteredRepository() throws Exception {
+        String html = mvc.perform(get("/"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("acme/superset", "acme/airflow", "/img/architecture.svg", "/repositories/new")
+                .contains("/pipeline?repo=acme/superset");
+    }
+
+    @Test
+    void theRegistrationGuideExplainsEveryPermissionItAsksFor() throws Exception {
+        String html = mvc.perform(get("/repositories/new"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).contains("Issues", "Pull requests", "Contents", "Checks", "Metadata", "menD:fix");
+    }
+
+    @Test
+    void theBoardCanBeNarrowedToOneRepository() throws Exception {
+        String superset = mvc.perform(get("/pipeline").param("repo", "acme/superset"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(superset).contains("chore(frontend): bump");
+
+        String airflow = mvc.perform(get("/pipeline").param("repo", "acme/airflow"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(airflow).doesNotContain("chore(frontend): bump").contains("No issues ingested yet");
     }
 
     @Test

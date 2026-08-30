@@ -1,31 +1,71 @@
 package ai.devin.mend.web;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.domain.Repository;
+import ai.devin.mend.registry.RepositoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Serves the monitoring view. htmx re-fetches the fragments on an interval. */
+/**
+ * Serves the product overview, the monitoring board and the registration guide. htmx re-fetches the
+ * board fragment on an interval.
+ */
 @Controller
 public class DashboardController {
 
     private final DashboardService dashboard;
+    private final RepositoryService registry;
     private final MendProperties props;
 
-    public DashboardController(DashboardService dashboard, MendProperties props) {
+    public DashboardController(DashboardService dashboard, RepositoryService registry, MendProperties props) {
         this.dashboard = dashboard;
+        this.registry = registry;
         this.props = props;
     }
 
+    /** The landing page: what menD does, and the way in to each watched repository. */
     @GetMapping("/")
-    public String index(Model model) {
-        model.addAttribute("view", dashboard.view());
-        model.addAttribute("repo", props.getGithub().getRepo());
+    public String overview(Model model) {
+        model.addAttribute("repositories", dashboard.repoCards());
+        model.addAttribute("kpis", dashboard.view(null).kpis());
         model.addAttribute("triggerLabel", props.getGithub().getTriggerLabel());
+        return "overview";
+    }
+
+    @GetMapping("/pipeline")
+    public String pipeline(@RequestParam(required = false) String repo, Model model) {
+        model.addAttribute("view", dashboard.view(repo));
+        model.addAttribute("selectedRepo", repo);
+        model.addAttribute("repo", repo == null ? "all repositories" : repo);
+        model.addAttribute("triggerLabel", triggerLabel(repo));
         return "dashboard";
+    }
+
+    /** Step-by-step instructions plus the form that registers and validates a repository. */
+    @GetMapping("/repositories/new")
+    public String registerForm(Model model) {
+        model.addAttribute("app", props.getGithub().getApp().getSlug());
+        model.addAttribute("triggerLabel", props.getGithub().getTriggerLabel());
+        model.addAttribute("repositories", dashboard.repoCards());
+        return "register";
+    }
+
+    /** Registers from the form, then shows the same page with the validation verdict. */
+    @PostMapping("/repositories")
+    public String register(@RequestParam String repo, Model model) {
+        try {
+            Repository registered = registry.register(repo);
+            model.addAttribute("registered", registered);
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", e.getMessage());
+        }
+        return registerForm(model);
     }
 
     /** Everything menD persisted about one issue, including the contract Devin was held to. */
@@ -35,14 +75,20 @@ public class DashboardController {
                 .detail(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "no task " + id));
         model.addAttribute("detail", detail);
-        model.addAttribute("repo", props.getGithub().getRepo());
+        model.addAttribute("repo", detail.task().repo());
         return "task";
     }
 
     /** htmx polling target: everything below the header. */
     @GetMapping("/fragments/live")
-    public String live(Model model) {
-        model.addAttribute("view", dashboard.view());
+    public String live(@RequestParam(required = false) String repo, Model model) {
+        model.addAttribute("view", dashboard.view(repo));
         return "fragments/live :: live";
+    }
+
+    private String triggerLabel(String repo) {
+        return registry.find(repo == null ? "" : repo)
+                .map(registry::triggerLabel)
+                .orElse(props.getGithub().getTriggerLabel());
     }
 }

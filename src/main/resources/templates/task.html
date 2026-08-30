@@ -18,7 +18,7 @@
         </div>
         <span class="subtitle" th:text="${t.title}">title</span>
         <span class="spacer"></span>
-        <a class="btn" th:href="@{/}">← Pipeline</a>
+        <a class="btn" th:href="@{/pipeline(repo=${t.repo})}">← Pipeline</a>
         <a class="btn" th:href="${t.issueUrl}" target="_blank">Issue</a>
         <a class="btn" th:if="${t.prUrl}" th:href="${t.prUrl}" target="_blank">Pull request</a>
         <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
@@ -129,6 +129,10 @@
                 <li th:each="v : ${c.verificationCommands}" th:text="${v}"></li>
               </ul>
             </td>
+          </tr>
+          <tr th:if="${c.testPlan != null and !c.testPlan.isBlank()}">
+            <th>Test plan</th>
+            <td colspan="3" class="note" th:text="${c.testPlan}"></td>
           </tr>
           <tr>
             <th>Files in scope</th>

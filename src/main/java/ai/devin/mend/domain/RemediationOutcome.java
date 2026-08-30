@@ -14,6 +14,8 @@ public record RemediationOutcome(
         String summary,
         List<String> filesChanged,
         List<CriterionResult> criteriaResults,
+        List<String> testsChanged,
+        String testEvidence,
         List<String> commandsRun,
         double confidence,
         String blockedReason) {
@@ -24,6 +26,7 @@ public record RemediationOutcome(
     public RemediationOutcome {
         filesChanged = filesChanged == null ? List.of() : List.copyOf(filesChanged);
         criteriaResults = criteriaResults == null ? List.of() : List.copyOf(criteriaResults);
+        testsChanged = testsChanged == null ? List.of() : List.copyOf(testsChanged);
         commandsRun = commandsRun == null ? List.of() : List.copyOf(commandsRun);
     }
 
@@ -37,7 +40,7 @@ public record RemediationOutcome(
               "type": "object",
               "additionalProperties": false,
               "required": ["remediated", "pr_url", "summary", "files_changed", "criteria_results",
-                           "commands_run", "confidence", "blocked_reason"],
+                           "tests_changed", "test_evidence", "commands_run", "confidence", "blocked_reason"],
               "properties": {
                 "remediated": {"type": "boolean"},
                 "pr_url": {"type": "string", "description": "URL of the opened pull request, or empty string."},
@@ -55,6 +58,15 @@ public record RemediationOutcome(
                       "evidence": {"type": "string", "description": "Command output or diff excerpt proving the result."}
                     }
                   }
+                },
+                "tests_changed": {
+                  "type": "array",
+                  "items": {"type": "string"},
+                  "description": "Test files added or edited by this change. Empty only when the test plan said no test change was warranted."
+                },
+                "test_evidence": {
+                  "type": "string",
+                  "description": "How the tests prove the fix: the test run output, and for a new test, confirmation that it fails without the fix. If no test was added, the justification."
                 },
                 "commands_run": {"type": "array", "items": {"type": "string"}},
                 "confidence": {"type": "number", "minimum": 0, "maximum": 1},

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>menD · register a repository</title>
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="stylesheet" th:href="@{/css/devin.css}" />
+    <script th:src="@{/js/theme.js}"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <a th:href="@{/}" class="mark">menD</a>
+          <span>Register a repository</span>
+        </div>
+        <span class="spacer"></span>
+        <a class="btn" th:href="@{/}">Overview</a>
+        <a class="btn" th:href="@{/pipeline}">Pipeline</a>
+        <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
+          Theme: <span data-theme-label>Light</span>
+        </button>
+      </header>
+
+      <section class="hero">
+        <h1>Connect a repository to menD</h1>
+        <p>
+          menD acts on GitHub as its own bot identity, using a GitHub App installation rather than a
+          personal token, so every comment, label and pull request is attributable and every
+          credential it holds is short lived. Five steps, once per repository.
+        </p>
+      </section>
+
+      <div class="verdict good" th:if="${registered != null and registered.accessState.name() == 'VALIDATED'}">
+        <strong th:text="${registered.slug()}">owner/name</strong> is registered and validated
+        (default branch <code th:text="${registered.defaultBranch}">main</code>). menD will build its
+        repository profile on the next reconcile.
+        <a class="btn" th:href="@{/pipeline(repo=${registered.slug()})}">View its pipeline</a>
+      </div>
+      <div class="verdict bad" th:if="${registered != null and registered.accessState.name() != 'VALIDATED'}">
+        <strong th:text="${registered.slug()}">owner/name</strong> was saved, but menD cannot work on
+        it yet — <span th:text="${registered.accessError}">reason</span>
+      </div>
+      <div class="verdict bad" th:if="${error}" th:text="${error}"></div>
+
+      <h2 class="section">Steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>Install the menD GitHub App on the repository</h3>
+          <p>
+            Open
+            <a th:href="'https://github.com/apps/' + ${app} + '/installations/new'" target="_blank"
+               th:text="'github.com/apps/' + ${app}">the app</a>,
+            choose <em>Only select repositories</em>, and pick the repository you want menD to watch.
+            Installing per repository keeps the blast radius explicit.
+          </p>
+        </li>
+        <li>
+          <h3>Grant the permissions menD needs</h3>
+          <p>Under the app's repository permissions:</p>
+          <table class="grid">
+            <thead>
+              <tr><th>Permission</th><th>Level</th><th>Why</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Issues</td><td>Read and write</td><td>read the issue, apply state labels, post the contract and the outcome</td></tr>
+              <tr><td>Pull requests</td><td>Read and write</td><td>find the PR Devin opened and comment the verification evidence on it</td></tr>
+              <tr><td>Contents</td><td>Read-only</td><td>read the repository profile sources: build files, test layout, AGENTS.md and friends</td></tr>
+              <tr><td>Checks</td><td>Read-only</td><td>read the CI verdict that gates success</td></tr>
+              <tr><td>Metadata</td><td>Read-only</td><td>mandatory, granted automatically</td></tr>
+            </tbody>
+          </table>
+          <p class="note">
+            If you change permissions after installing, GitHub keeps the old grant until the
+            installation accepts the request — approve it on the installation page, or reinstall.
+          </p>
+        </li>
+        <li>
+          <h3>Create the trigger label</h3>
+          <p>
+            Add a label named <code th:text="${triggerLabel}">menD:fix</code> to the repository.
+            Applying it to an issue is what puts that issue in menD's queue; menD manages the rest of
+            the <code>menD:</code> labels itself (<code>menD:in-progress</code>,
+            <code>menD:pr-open</code>, <code>menD:not-a-candidate</code>, <code>menD:done</code>,
+            <code>menD:needs-human</code>).
+          </p>
+        </li>
+        <li>
+          <h3>Register it here</h3>
+          <p>
+            menD validates immediately: that it can see the repository, that the repository is not
+            archived and has issues enabled, that it is inside the app installation, and that the
+            installation actually carries the write permissions above. A failure is kept with the
+            reason so you can fix it and re-validate rather than starting over.
+          </p>
+          <form method="post" th:action="@{/repositories}" class="register-form">
+            <input type="text" name="repo" placeholder="owner/name" required
+                   pattern="[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+" />
+            <button class="btn primary" type="submit">Register and validate</button>
+          </form>
+          <p class="note">A full GitHub URL works too — menD normalises it to <code>owner/name</code>.</p>
+        </li>
+        <li>
+          <h3>Let menD learn the repository once</h3>
+          <p>
+            On the first reconcile after registration, menD runs a single Devin session that reads the
+            repository's build, test, CI and convention surface —
+            <code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>codex.md</code>,
+            <code>GEMINI.md</code>, <code>.cursor/rules</code>, <code>.agents/skills</code>,
+            <code>CONTRIBUTING.md</code> — and persists it as the repository profile. Every later
+            scoping and remediation session is primed with that profile instead of re-reading the
+            codebase, and pushes that touch those files mark only the affected slices stale.
+          </p>
+        </li>
+      </ol>
+
+      <h2 class="section" th:if="${!repositories.isEmpty()}">Already registered</h2>
+      <table class="grid" th:if="${!repositories.isEmpty()}">
+        <thead>
+          <tr><th>Repository</th><th>Access</th><th>Profile</th><th>Trigger</th><th>Work</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="r : ${repositories}">
+            <td><a th:href="${r.htmlUrl}" target="_blank" th:text="${r.slug}">owner/name</a></td>
+            <td>
+              <span class="pill" th:classappend="${r.accessState == 'VALIDATED'} ? 'good' : 'bad'"
+                    th:text="${r.accessState}">VALIDATED</span>
+              <div class="note" th:if="${r.accessError}" th:text="${r.accessError}"></div>
+            </td>
+            <td class="muted" th:text="${r.indexState}">INDEXED</td>
+            <td><code th:text="${r.triggerLabel}">menD:fix</code></td>
+            <td><a th:href="@{/pipeline(repo=${r.slug})}" th:text="${r.kpis.total} + ' issues'">0 issues</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
