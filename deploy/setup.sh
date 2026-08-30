@@ -22,10 +22,12 @@ prompt_for() {
   esac
 }
 
-# The value already recorded in $ENV_FILE, if any.
+# The value already recorded in $ENV_FILE, if any. docker compose lets the last assignment win, so
+# read the file the same way — an operator appending a value below .env.example's blank placeholder
+# has supplied it, not left it missing.
 value_of() {
   [[ -f $ENV_FILE ]] || return 0
-  sed -n "s/^$1=//p" "$ENV_FILE" | head -1 | sed 's/^"//;s/"$//'
+  sed -n "s/^$1=//p" "$ENV_FILE" | { grep . || true; } | tail -1 | sed 's/^"//;s/"$//'
 }
 
 missing() {
@@ -44,9 +46,15 @@ write_var() {
   escaped=${escaped//\"/\\\"}
   escaped=${escaped//$'\n'/\\n}
   if grep -q "^$name=" "$ENV_FILE"; then
-    local out=()
+    local out=() seen=""
     while IFS= read -r line; do
-      [[ $line == "$name="* ]] && line="$name=\"$escaped\""
+      if [[ $line == "$name="* ]]; then
+        if [[ -n $seen ]]; then
+          continue                          # collapse duplicates onto the first assignment
+        fi
+        line="$name=\"$escaped\""
+        seen=yes
+      fi
       out+=("$line")
     done <"$ENV_FILE"
     printf '%s\n' "${out[@]}" >"$ENV_FILE"
@@ -59,7 +67,10 @@ ask() {
   local name=$1 answer
   echo
   echo "$(prompt_for "$name")"
-  read -r -p "  $name: " answer
+  if ! read -r -p "  $name: " answer; then
+    echo "  no input available — $name has to be supplied interactively or in $ENV_FILE" >&2
+    exit 1
+  fi
   case $name in
     GITHUB_APP_PRIVATE_KEY)
       answer=${answer/#\~/$HOME}
