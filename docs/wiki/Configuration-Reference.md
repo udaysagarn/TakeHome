@@ -13,7 +13,7 @@ file.
 | `DEVIN_API_URL` | `mend.devin.base-url` | `https://api.devin.ai` | |
 | `GITHUB_APP_ID` | `mend.github.app.app-id` | — | |
 | `GITHUB_APP_INSTALLATION_ID` | `mend.github.app.installation-id` | — | |
-| `GITHUB_APP_PRIVATE_KEY` | `mend.github.app.private-key` | — | Whole PEM, newlines included |
+| `GITHUB_APP_PRIVATE_KEY` | `mend.github.app.private-key` | — | Whole PEM (newlines or `\n` escapes), or the path of the `.pem`, or the file base64-encoded |
 | `GITHUB_TOKEN` | `mend.github.token` | — | Fallback for local use |
 | `GITHUB_WEBHOOK_SECRET` | `mend.github.webhook-secret` | — | Empty disables signature checking (local only) |
 | `GITHUB_API_URL` | `mend.github.api-url` | `https://api.github.com` | GHES-friendly |

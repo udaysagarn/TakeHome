@@ -5,7 +5,11 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
@@ -133,17 +137,108 @@ public class GitHubCredentials {
      * so a PKCS#1 body is wrapped in the PKCS#8 envelope rather than making the operator run
      * {@code openssl pkcs8} first.
      */
-    private static PrivateKey privateKey(String pem) throws GeneralSecurityException {
+    private static PrivateKey privateKey(String configured) throws GeneralSecurityException {
+        String pem = pem(configured);
         boolean pkcs1 = pem.contains("BEGIN RSA PRIVATE KEY");
-        String body = pem.replace("\\n", "\n")
-                .replaceAll("-----BEGIN (RSA )?PRIVATE KEY-----", "")
+        String body = pem.replaceAll("-----BEGIN (RSA )?PRIVATE KEY-----", "")
                 .replaceAll("-----END (RSA )?PRIVATE KEY-----", "")
                 .replaceAll("\\s", "");
-        byte[] der = Base64.getDecoder().decode(body);
+        byte[] der;
+        try {
+            der = Base64.getMimeDecoder().decode(body);
+        } catch (IllegalArgumentException e) {
+            throw new GitHubCredentialsException(
+                    "GITHUB_APP_PRIVATE_KEY holds a PEM whose body is not valid base64. Re-copy the"
+                            + " whole .pem GitHub generated, or point GITHUB_APP_PRIVATE_KEY at the file.");
+        }
         if (pkcs1) {
             der = wrapPkcs1(der);
         }
-        return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
+        try {
+            return KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(der));
+        } catch (GeneralSecurityException e) {
+            throw new GitHubCredentialsException("GITHUB_APP_PRIVATE_KEY decoded, but is not an RSA private key"
+                    + " GitHub would have issued (" + e.getMessage() + ").");
+        }
+    }
+
+    /**
+     * Resolves the configured value to PEM text, accepting the shapes an operator's environment
+     * actually produces: the PEM itself, a PEM whose newlines survived only as {@code \n} escapes,
+     * one still wrapped in the quotes it was pasted with, a path to the downloaded {@code .pem}, and
+     * the whole file base64-encoded for a single-line variable. Anything else fails here, naming the
+     * variable, rather than deeper down as an opaque base64 complaint.
+     */
+    private static String pem(String configured) {
+        String value = unquote(configured.strip()).replace("\\n", "\n");
+        if (value.contains("PRIVATE KEY-----")) {
+            return value;
+        }
+        String fromFile = readIfPath(value);
+        if (fromFile != null) {
+            return fromFile;
+        }
+        String decoded = decodeIfBase64Pem(value);
+        if (decoded != null) {
+            return decoded;
+        }
+        throw new GitHubCredentialsException("GITHUB_APP_PRIVATE_KEY does not hold a private key: "
+                + diagnosis(value)
+                + " Set it to the contents of the .pem GitHub generated, to the path of that file, or to"
+                + " the file base64-encoded.");
+    }
+
+    /** Why the value cannot be a key, said without repeating anything that might be key material. */
+    private static String diagnosis(String value) {
+        if (value.isEmpty()) {
+            return "it is empty.";
+        }
+        if (value.contains("$")) {
+            return "it still contains an unexpanded shell substitution. A .env file is read literally"
+                    + " by docker compose and by Spring, so \"$(cat key.pem)\" is never run.";
+        }
+        if (value.contains("BEGIN OPENSSH PRIVATE KEY")) {
+            return "it is an OpenSSH key, not the RSA key a GitHub App issues.";
+        }
+        if (value.contains("ENCRYPTED PRIVATE KEY")) {
+            return "it is passphrase-encrypted; menD cannot decrypt it.";
+        }
+        return "it has no -----BEGIN PRIVATE KEY----- header.";
+    }
+
+    private static String unquote(String value) {
+        boolean quoted = value.length() > 1
+                && ((value.startsWith("\"") && value.endsWith("\"")) || (value.startsWith("'") && value.endsWith("'")));
+        return quoted ? value.substring(1, value.length() - 1) : value;
+    }
+
+    private static String readIfPath(String value) {
+        if (value.contains("\n") || value.length() > 4096) {
+            return null;
+        }
+        try {
+            Path path = Path.of(value);
+            if (!Files.isReadable(path) || Files.isDirectory(path)) {
+                return null;
+            }
+            String contents = Files.readString(path, StandardCharsets.UTF_8);
+            if (!contents.contains("PRIVATE KEY-----")) {
+                throw new GitHubCredentialsException(
+                        "GITHUB_APP_PRIVATE_KEY points at " + path + ", which is not a PEM private key.");
+            }
+            return contents;
+        } catch (InvalidPathException | IOException e) {
+            return null;
+        }
+    }
+
+    private static String decodeIfBase64Pem(String value) {
+        try {
+            String decoded = new String(Base64.getMimeDecoder().decode(value), StandardCharsets.UTF_8);
+            return decoded.contains("PRIVATE KEY-----") ? decoded : null;
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /** SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL }, OCTET STRING pkcs1 } */

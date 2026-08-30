@@ -1,12 +1,15 @@
 package ai.devin.mend.github;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import ai.devin.mend.config.MendProperties;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -15,6 +18,7 @@ import java.security.Signature;
 import java.time.Instant;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -85,6 +89,81 @@ class GitHubCredentialsTest {
 
         assertThat(credentials.bearerToken()).isEqualTo("ghs_installation");
         server.verify();
+    }
+
+    @Test
+    void acceptsAKeyWhoseNewlinesSurvivedOnlyAsEscapesAndTheQuotesItWasPastedWith() throws Exception {
+        KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        String escaped = "\"" + pkcs8Pem(keyPair).replace("\n", "\\n") + "\"";
+
+        assertThat(mints(escaped, keyPair)).isEqualTo("ghs_installation");
+    }
+
+    @Test
+    void acceptsAPathToTheDownloadedPemAndTheWholeFileBase64Encoded(@TempDir Path dir) throws Exception {
+        KeyPair keyPair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
+        Path pem = Files.writeString(dir.resolve("mend.private-key.pem"), pkcs8Pem(keyPair));
+
+        assertThat(mints(pem.toString(), keyPair)).isEqualTo("ghs_installation");
+        assertThat(mints(
+                        Base64.getEncoder()
+                                .encodeToString(pkcs8Pem(keyPair).getBytes(StandardCharsets.UTF_8)),
+                        keyPair))
+                .isEqualTo("ghs_installation");
+    }
+
+    /**
+     * A {@code .env} is read literally, so {@code GITHUB_APP_PRIVATE_KEY="$(cat key.pem)"} reaches
+     * menD unexpanded. That used to surface as "Illegal base64 character 24".
+     */
+    @Test
+    void namesTheVariableAndTheUnexpandedSubstitutionInsteadOfComplainingAboutBase64() {
+        MendProperties props = new MendProperties();
+        props.getGithub().getApp().setAppId("12345");
+        props.getGithub().getApp().setInstallationId("67890");
+        props.getGithub().getApp().setPrivateKey("$(cat mend.private-key.pem)");
+        GitHubCredentials credentials = new GitHubCredentials(RestClient.builder(), props);
+
+        assertThatThrownBy(credentials::bearerToken)
+                .isInstanceOf(GitHubCredentialsException.class)
+                .hasMessageContaining("GITHUB_APP_PRIVATE_KEY")
+                .hasMessageContaining("unexpanded shell substitution")
+                .hasMessageNotContaining("base64 character");
+    }
+
+    @Test
+    void rejectsAKeyThatIsNotAPemWithoutRepeatingTheValue() {
+        MendProperties props = new MendProperties();
+        props.getGithub().getApp().setAppId("12345");
+        props.getGithub().getApp().setInstallationId("67890");
+        props.getGithub().getApp().setPrivateKey("ghp_not_a_key_at_all");
+        GitHubCredentials credentials = new GitHubCredentials(RestClient.builder(), props);
+
+        assertThatThrownBy(credentials::bearerToken)
+                .isInstanceOf(GitHubCredentialsException.class)
+                .hasMessageContaining("no -----BEGIN PRIVATE KEY----- header")
+                .hasMessageNotContaining("ghp_not_a_key_at_all");
+    }
+
+    /** Mints one installation token with the configured key, asserting the JWT it signs. */
+    private static String mints(String configuredKey, KeyPair keyPair) {
+        MendProperties props = new MendProperties();
+        props.getGithub().getApp().setAppId("12345");
+        props.getGithub().getApp().setInstallationId("67890");
+        props.getGithub().getApp().setPrivateKey(configuredKey);
+
+        RestClient.Builder builder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        GitHubCredentials credentials = new GitHubCredentials(builder, props);
+        server.expect(requestTo("https://api.github.com/app/installations/67890/access_tokens"))
+                .andExpect(jwtSignedBy(keyPair.getPublic(), "12345"))
+                .andRespond(withSuccess(
+                        INSTALLATION_TOKEN_JSON.formatted(Instant.now().plusSeconds(3600)),
+                        MediaType.APPLICATION_JSON));
+
+        String token = credentials.bearerToken();
+        server.verify();
+        return token;
     }
 
     /** Verifies the request carries a JWT this key actually signed, issued by this app. */

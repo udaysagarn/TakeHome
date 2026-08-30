@@ -6,6 +6,7 @@ import ai.devin.mend.domain.IndexState;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.github.GitHubCredentialsException;
 import ai.devin.mend.github.GitHubDtos;
 import java.time.Instant;
 import java.util.List;
@@ -90,7 +91,11 @@ public class RepositoryService {
         return validate(repository);
     }
 
-    /** Runs the access chain and stores the verdict on the repository. */
+    /**
+     * Runs the access chain and stores the verdict on the repository. Credentials menD cannot use are
+     * a verdict too, not an exception: the operator sees the reason next to the repository and
+     * re-validates once the environment is fixed.
+     */
     @Transactional
     public Repository validate(Repository repository) {
         if (!github.isConfigured()) {
@@ -99,7 +104,15 @@ public class RepositoryService {
                     "No GitHub credentials configured. Set the menD GitHub App or a token and re-validate.");
             return repositories.save(repository);
         }
+        try {
+            return runAccessChain(repository);
+        } catch (GitHubCredentialsException e) {
+            repository.markAccessFailure(AccessState.NO_ACCESS, e.getMessage());
+            return repositories.save(repository);
+        }
+    }
 
+    private Repository runAccessChain(Repository repository) {
         Optional<GitHubDtos.Repo> remote = github.getRepo(repository.slug());
         if (remote.isEmpty()) {
             repository.markAccessFailure(
