@@ -86,7 +86,7 @@ Spring Boot 3.3 / Java 21 / Maven. Thymeleaf + htmx for the UI, no build step fo
 | Package | What lives there |
 |---|---|
 | `domain` | JPA entities and the state machine. `IssueState.canTransitionTo` is the single authority on legal transitions |
-| `engine` | `Orchestrator` (drives one task), `Reconciler` (the loop), `TaskService` (**the only writer**), `LeaseManager`, `PromptBuilder`, `Verifier`, `Notifier` |
+| `engine` | `Orchestrator` (drives one task), `Reconciler` (the loop), `TaskService` (**the only writer**), `LeaseManager`, `EngineControl` (the pause switch), `PromptBuilder`, `Verifier`, `Notifier` |
 | `triage` | `PreFilter` (free, deterministic) and `SuccessCriteriaService` (the criteria contract + scoping session) |
 | `devin` | `DevinApiClient` — session create/poll/message, structured output, ACU limits; `DevinCredentialMonitor` turns a refused call into the verdict the alarm reads |
 | `github` | `GitHubClient`, `GitHubCredentials` (App JWT → installation token), DTOs |
@@ -152,6 +152,11 @@ API and contracts written from the controllers).
   guards it.
 - **Timestamp precision**: the review watermark is compared at the precision the database stores, not
   the JVM's. Comparing finer made menD answer the same reviewer forever.
+- **A pause is not the kill switch.** `mend.engine.enabled=false` is configuration, read at startup,
+  and nothing lifts it but a restart. The pause an operator clicks is a persisted row read every tick,
+  and it holds only the states whose next step creates a Devin session (`DISCOVERED`, `READY`,
+  `FAILED`, and starting a repository profile). Anything already dispatched keeps being polled: a
+  session frozen mid-run still spends and nobody reads the result.
 - **`TaskService` is the only writer.** Anything else mutating a task is a bug.
 - **Terminal labels**: `settleLabel(...)` removes stale lifecycle labels before applying the terminal
   one, so an issue never carries `menD:changes-requested` *and* `menD:done`.

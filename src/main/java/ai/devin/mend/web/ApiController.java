@@ -6,6 +6,7 @@ import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.Orchestrator;
 import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.github.GitHubClient;
@@ -36,6 +37,7 @@ public class ApiController {
     private final GitHubClient github;
     private final RepositoryService registry;
     private final LearningService learnings;
+    private final EngineControl engine;
 
     public ApiController(
             DashboardService dashboard,
@@ -45,7 +47,9 @@ public class ApiController {
             Orchestrator orchestrator,
             GitHubClient github,
             RepositoryService registry,
-            LearningService learnings) {
+            LearningService learnings,
+            EngineControl engine) {
+        this.engine = engine;
         this.registry = registry;
         this.learnings = learnings;
         this.dashboard = dashboard;
@@ -54,6 +58,24 @@ public class ApiController {
         this.taskService = taskService;
         this.orchestrator = orchestrator;
         this.github = github;
+    }
+
+    /** Whether menD is allowed to start work that spends, and why not if it is not. */
+    @GetMapping("/engine")
+    public EngineControl.Status engine() {
+        return engine.status();
+    }
+
+    /**
+     * Pauses or resumes new work. Nothing authenticates this route, like every other {@code /api}
+     * route, so {@code actor} is a claim recorded for the audit trail rather than an identity.
+     */
+    @PostMapping("/engine")
+    public EngineControl.Status engine(
+            @RequestParam boolean paused,
+            @RequestParam(required = false) String reason,
+            @RequestParam(defaultValue = "api") String actor) {
+        return paused ? engine.pause(actor, reason) : engine.resume(actor);
     }
 
     @GetMapping("/summary")

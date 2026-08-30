@@ -43,7 +43,7 @@ file.
 
 | Variable | Property | Default | Meaning |
 |---|---|---|---|
-| `MEND_ENGINE_ENABLED` | `mend.engine.enabled` | `true` | `false` stops the reconciler: the dashboard serves, nothing is dispatched |
+| `MEND_ENGINE_ENABLED` | `mend.engine.enabled` | `true` | `false` stops every loop: the dashboard serves, nothing is dispatched. Read at startup only, and the pause switch cannot lift it |
 | `MEND_RECONCILE_INTERVAL` | `mend.engine.reconcile-interval` | `PT15S` | |
 | — | `mend.engine.context-interval` | `PT60S` | Profile refresh pass |
 | `MEND_MAX_CONCURRENT` | `mend.engine.max-concurrent-sessions` | `4` | Devin sessions in flight |
@@ -105,3 +105,21 @@ Actuator exposes `health`, `info`, `metrics` and `prometheus`, tagged
 # Dashboard only: the engine and the poller off, so no issue is dispatched and no ACU is spent
 MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false docker compose up -d
 ```
+
+## Pausing a running instance
+
+`MEND_ENGINE_ENABLED` is startup configuration. To stop the spending on an instance that is already
+up, use the pause switch in the navigation, or the same thing over the API:
+
+```bash
+curl -X POST 'localhost:8080/api/engine?paused=true&reason=demo%20over&actor=uday'
+curl localhost:8080/api/engine     # {"paused":true,"off":false,"reason":"demo over", ...}
+curl -X POST 'localhost:8080/api/engine?paused=false'
+```
+
+A pause holds only the steps that would create a Devin session — triage, dispatch, a retry, a
+repository profile. Sessions already dispatched keep being polled and finished, because they have
+been paid for either way, and an issue labelled while paused is still recorded and waits on the
+board. The pause is stored in the database, so it survives a restart, and
+`MEND_ENGINE_ENABLED=false` outranks it: the switch cannot start an engine that configuration
+disabled.

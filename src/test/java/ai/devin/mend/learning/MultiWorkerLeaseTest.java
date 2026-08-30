@@ -18,6 +18,7 @@ import ai.devin.mend.domain.RepositoryContextRepository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.LeaseManager;
 import ai.devin.mend.engine.Notifier;
 import ai.devin.mend.engine.PromptBuilder;
@@ -111,6 +112,9 @@ class MultiWorkerLeaseTest {
 
     @Autowired
     private MendProperties props;
+
+    @Autowired
+    private EngineControl control;
 
     @Autowired
     private PlatformTransactionManager txManager;
@@ -239,12 +243,12 @@ class MultiWorkerLeaseTest {
     }
 
     private ContextReconciler contextWorker() {
-        return new ContextReconciler(registry, context, worker(), props);
+        return new ContextReconciler(registry, context, worker(), control);
     }
 
     private ReviewLoop reviewWorker() {
         return new ReviewLoop(
-                tasks, taskService, worker(), github, devin, prompts, notifier, learnings, mapper, props);
+                tasks, taskService, worker(), github, devin, prompts, notifier, learnings, mapper, control, props);
     }
 
     private Repository operationalRepository() {

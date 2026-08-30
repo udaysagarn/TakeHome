@@ -72,6 +72,30 @@
         </div>
       </details>
 
+      <!--
+        Pause holds everything that would start a Devin session; sessions already dispatched are
+        still polled to the end, because they have been paid for either way. A plain form, so the
+        switch works on every page and with JavaScript off, and `from` is the page's own key so the
+        operator lands back where they clicked.
+      -->
+      <form th:action="@{/engine}" method="post" class="engine" th:if="${engine != null}">
+        <input type="hidden" name="from" th:value="${active}" />
+        <input type="hidden" name="repo" th:value="${selectedRepo}" />
+        <input type="hidden" name="taskId" th:if="${detail != null}" th:value="${detail.task.id}" />
+        <input type="hidden" name="paused" th:value="${!engine.paused()}" />
+        <button class="btn" type="submit" th:disabled="${engine.off()}"
+                th:classappend="${engine.paused() and !engine.off()} ? 'paused'"
+                th:title="${engine.off()}
+                  ? 'MEND_ENGINE_ENABLED=false — the engine is off in configuration, and only a restart lifts that'
+                  : (${engine.paused()}
+                     ? 'Let menD start new work again'
+                     : 'Hold new work; sessions already dispatched still finish')">
+          <span th:if="${engine.off()}">Engine off</span>
+          <span th:if="${engine.paused() and !engine.off()}">Paused — resume</span>
+          <span th:if="${engine.running()}">Pause</span>
+        </button>
+      </form>
+
       <button class="btn" type="button" onclick="cycleTheme()" title="Light → Dark → High contrast">
         Theme: <span data-theme-label>Light</span>
       </button>

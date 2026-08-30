@@ -1,6 +1,27 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
   <body>
+    <!--/*
+      Why the board is not moving, when an operator chose it. Says what is still happening, so a
+      paused menD is not mistaken for a stuck one: dispatched sessions keep being polled.
+    */-->
+    <section th:fragment="paused" class="alarm paused" role="status"
+             th:if="${engine != null and (engine.paused() or engine.off())}">
+      <div class="alarm-head">
+        <span class="pill" th:text="${engine.off()} ? 'Engine off' : 'Paused'">Paused</span>
+        <span th:if="${engine.off()}">
+          MEND_ENGINE_ENABLED=false, so no loop is running at all. Only a restart changes it.
+        </span>
+        <span th:unless="${engine.off()}">
+          No new work is being started. Sessions already dispatched are still polled and finished,
+          and issues carrying the trigger label are recorded and wait here.
+        </span>
+        <span class="spacer"></span>
+        <span class="note mono" th:if="${engine.since() != null}"
+              th:text="'by ' + (${engine.actor()} ?: 'unknown') + ' at ' + ${engine.since()}">by whom</span>
+      </div>
+    </section>
+
     <!--/* The credential alarm. Renders nothing while menD can do its job. */-->
     <section th:fragment="credentials" class="alarm" role="alert"
              th:if="${credentialProblems != null and !credentialProblems.isEmpty()}">

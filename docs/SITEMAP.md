@@ -26,6 +26,7 @@ Issue/Pull request on a task, Print on the deck) sit beside that nav, never in p
 | `GET /learnings` | `learnings.html` | What reviewers taught menD: repo-scoped and general lessons, recommended actions, retired lessons | nav on every page |
 | `GET /repositories/new` | `register.html` | Step-by-step registration instructions plus the register form | nav on every page, `/` |
 | `POST /repositories` | `register.html` | Registers + validates a repository, re-renders the same page with the verdict | form on `/repositories/new` |
+| `POST /engine` | — (redirects back) | Pauses or resumes new work | pause switch in the navigation |
 | `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | nav on every page |
 | `GET /fragments/live?repo=` | `fragments/live :: live` | htmx polling target — everything below the header on the board. Not a page a human opens | htmx on `/flows` |
 | `RequestMapping /error` | `error.html` | Branded error page for 404/500 | Spring's error dispatch |
@@ -36,6 +37,8 @@ Issue/Pull request on a task, Print on the deck) sit beside that nav, never in p
 |---|---|
 | `GET /api/summary` | KPI counters for the whole instance |
 | `GET /api/states` | Task counts per state |
+| `GET /api/engine` | Whether menD may start work that spends, and who paused it |
+| `POST /api/engine?paused=&reason=&actor=` | Pauses or resumes new work |
 | `GET /api/tasks` | Task rows |
 | `GET /api/tasks/{id}` | One task's full detail (404 if unknown) |
 | `GET /api/tasks/{id}/events` | That task's state-transition history |
@@ -67,8 +70,8 @@ actuator is reachable.
 ## Audit notes
 
 - **No authentication anywhere.** Every page and every `/api` route, including the mutating ones
-  (`POST /api/repositories`, `POST /api/tasks/{id}/cancel`, `POST /api/issues/{number}/ingest`), is
-  open to whoever can reach the port. Only `/webhooks/github` verifies anything, and only that the
+  (`POST /api/repositories`, `POST /api/tasks/{id}/cancel`, `POST /api/issues/{number}/ingest`,
+  `POST /api/engine`, `POST /engine`), is open to whoever can reach the port. Only `/webhooks/github` verifies anything, and only that the
   payload came from GitHub. This is documented in the wiki under Errors and limits; it is the single
   biggest gap before anyone exposes menD beyond a laptop or a private network.
 - **Reachable only by URL, not by link:** `/api/*` (except the report and Prometheus links in the

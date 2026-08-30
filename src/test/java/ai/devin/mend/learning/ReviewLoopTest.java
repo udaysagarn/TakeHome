@@ -20,6 +20,7 @@ import ai.devin.mend.domain.LearningScope;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
@@ -53,6 +54,9 @@ class ReviewLoopTest {
 
     @Autowired
     private ReviewLoop reviewLoop;
+
+    @Autowired
+    private EngineControl control;
 
     @Autowired
     private LearningService learnings;
@@ -201,6 +205,31 @@ class ReviewLoopTest {
     void aWebhookForAPullRequestMenDDoesNotOwnIsIgnored() {
         assertThat(reviewLoop.onPullRequestEvent(REPO, "https://github.com/acme/superset/pull/999", false))
                 .startsWith("ignored");
+    }
+
+    @Test
+    void aPausedEngineDoesNotOpenARetrospectiveSessionButFinishesOneAlreadyOpen() {
+        RemediationTask task = taskWithOpenPr(108);
+        task.setFeedbackJson("CHANGES_REQUESTED by @alice: tests missing");
+        task = taskService.save(task);
+        taskService.transition(task, IssueState.SUCCEEDED, "merged after revisions", "test");
+        when(devin.isConfigured()).thenReturn(true);
+        control.pause("test", "no spend");
+
+        reviewLoop.retrospect(reload(task));
+
+        verify(devin, never()).createSession(anyString(), anyString(), anyList(), any(), any(), anyString());
+
+        task = reload(task);
+        task.setRetrospectiveSessionId("devin-retro-paused");
+        task = taskService.save(task);
+        when(devin.getSession("devin-retro-paused"))
+                .thenReturn(Optional.of(session("devin-retro-paused", retrospectiveJson())));
+
+        reviewLoop.retrospect(reload(task));
+
+        assertThat(reload(task).isLearningsExtracted()).isTrue();
+        control.resume("test");
     }
 
     @Test

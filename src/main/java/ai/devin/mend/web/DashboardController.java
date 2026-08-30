@@ -4,9 +4,12 @@ import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.LearningScope;
 import ai.devin.mend.domain.Repository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.learning.LearningService;
 import ai.devin.mend.registry.RepositoryService;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriUtils;
 
 /**
  * Serves the product overview, the monitoring board and the registration guide. htmx re-fetches the
@@ -23,10 +27,24 @@ import org.springframework.web.server.ResponseStatusException;
 @Controller
 public class DashboardController {
 
+    /**
+     * Where each page the navigation names lives. The pause switch posts the key of the page it was
+     * clicked on and is sent back to it; resolving through this map rather than trusting the
+     * submitted value keeps the redirect inside menD. A task page has no key of its own here — it
+     * posts its numeric id instead, which cannot name anything outside {@code /tasks/}.
+     */
+    private static final Map<String, String> PAGES = Map.of(
+            "overview", "/",
+            "flows", "/flows",
+            "learnings", "/learnings",
+            "register", "/repositories/new",
+            "deck", "/deck");
+
     private final DashboardService dashboard;
     private final RepositoryService registry;
     private final LearningService learnings;
     private final CredentialHealth credentials;
+    private final EngineControl engine;
     private final MendProperties props;
 
     public DashboardController(
@@ -34,12 +52,38 @@ public class DashboardController {
             RepositoryService registry,
             LearningService learnings,
             CredentialHealth credentials,
+            EngineControl engine,
             MendProperties props) {
         this.dashboard = dashboard;
         this.registry = registry;
         this.learnings = learnings;
         this.credentials = credentials;
+        this.engine = engine;
         this.props = props;
+    }
+
+    /**
+     * The pause switch in the navigation. A plain form post, so pausing works on every page rather
+     * than only on the one that loads htmx, and works with JavaScript off.
+     */
+    @PostMapping("/engine")
+    public String engine(
+            @RequestParam boolean paused,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String repo,
+            @RequestParam(required = false) Long taskId) {
+        if (paused) {
+            engine.pause("dashboard", "paused from the dashboard");
+        } else {
+            engine.resume("dashboard");
+        }
+        if ("task".equals(from) && taskId != null) {
+            return "redirect:/tasks/" + taskId;
+        }
+        String page = PAGES.getOrDefault(from, "/");
+        return "redirect:" + (repo == null || repo.isBlank() || !"/flows".equals(page)
+                ? page
+                : page + "?repo=" + UriUtils.encodeQueryParam(repo, StandardCharsets.UTF_8));
     }
 
     /** The landing page: what menD does, and the way in to each watched repository. */

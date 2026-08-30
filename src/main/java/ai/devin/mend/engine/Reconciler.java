@@ -6,8 +6,10 @@ import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.TaskRepository;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,25 +42,40 @@ public class Reconciler {
     private static final List<IssueState> DRIVEN =
             Stream.concat(ACTIVE.stream(), Stream.of(IssueState.FAILED)).toList();
 
+    /**
+     * The states whose next step creates a Devin session, and so spends. A pause holds these and
+     * lets every other state through, so a task already dispatched still reaches its verdict.
+     */
+    private static final Set<IssueState> BEGINS_NEW_SPEND =
+            EnumSet.of(IssueState.DISCOVERED, IssueState.READY, IssueState.FAILED);
+
     private final TaskRepository tasks;
     private final Orchestrator orchestrator;
     private final LeaseManager leases;
+    private final EngineControl control;
     private final MendProperties props;
 
     public Reconciler(
-            TaskRepository tasks, Orchestrator orchestrator, LeaseManager leases, MendProperties props) {
+            TaskRepository tasks,
+            Orchestrator orchestrator,
+            LeaseManager leases,
+            EngineControl control,
+            MendProperties props) {
         this.tasks = tasks;
         this.orchestrator = orchestrator;
         this.leases = leases;
+        this.control = control;
         this.props = props;
     }
 
     @Scheduled(fixedDelayString = "${mend.engine.reconcile-interval:PT15S}")
     public void tick() {
-        if (!props.getEngine().isEnabled()) {
+        if (control.off()) {
             return;
         }
+        boolean holdNewSpend = control.paused();
         List<RemediationTask> claimable = leases.claimable(DRIVEN).stream()
+                .filter(task -> !holdNewSpend || !BEGINS_NEW_SPEND.contains(task.getState()))
                 .filter(this::worthDriving)
                 .toList();
         if (claimable.isEmpty()) {
