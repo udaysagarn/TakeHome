@@ -15,7 +15,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Drives every non-terminal task forward on a timer. The pipeline is level-triggered rather than
+ * Drives every non-terminal task forward on a timer. The flow is level-triggered rather than
  * edge-triggered: state lives in the database, so a restart, a missed webhook or a transient API
  * failure costs one tick rather than losing the task.
  *

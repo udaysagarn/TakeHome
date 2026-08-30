@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!--
+      The one navigation every page uses. `active` is the calling page's own key, so the page you
+      are on is marked instead of offering a link to itself. A page with no entry of its own (a
+      task, a sandbox object, an error) passes its own key and marks nothing: `aria-current="page"`
+      on a link that navigates elsewhere would be a lie.
+
+      The groups are <details>, so a menu opens with a click or with the keyboard and needs no
+      JavaScript to work; `nav.js` only adds the conveniences a mouse user expects (closing on
+      outside click or Escape, and one menu open at a time). A group whose page you are on stays
+      marked while closed, so the current section is visible without opening anything.
+    -->
+    <nav th:fragment="links(active)" class="nav" aria-label="Primary">
+      <a class="btn" th:href="@{/}"
+         th:attr="aria-current=${active == 'overview'} ? 'page' : null">Overview</a>
+
+      <details class="menu"
+               th:with="here=${active == 'flows' or active == 'learnings'}"
+               th:classappend="${here} ? 'here'">
+        <summary class="btn" th:attr="aria-current=${here} ? 'true' : null">Flows</summary>
+        <div class="menu-list">
+          <a th:href="@{/flows}"
+             th:attr="aria-current=${active == 'flows'} ? 'page' : null">
+            <span>Board</span>
+            <small>Tasks by state, refreshed live</small>
+          </a>
+          <a th:href="@{/learnings}"
+             th:attr="aria-current=${active == 'learnings'} ? 'page' : null">
+            <span>Learnings</span>
+            <small>What reviewers have taught menD</small>
+          </a>
+        </div>
+      </details>
+
+      <details class="menu"
+               th:with="here=${active == 'register'}"
+               th:classappend="${here} ? 'here'">
+        <summary class="btn" th:attr="aria-current=${here} ? 'true' : null">Repositories</summary>
+        <div class="menu-list">
+          <a th:href="@{/repositories/new}"
+             th:attr="aria-current=${active == 'register'} ? 'page' : null">
+            <span>Register a repository</span>
+            <small>Install the app and validate access</small>
+          </a>
+          <a th:href="@{/api/repositories}">
+            <span>Registered repositories</span>
+            <small>JSON, as the API sees them</small>
+          </a>
+        </div>
+      </details>
+
+      <details class="menu"
+               th:with="here=${active == 'deck'}"
+               th:classappend="${here} ? 'here'">
+        <summary class="btn" th:attr="aria-current=${here} ? 'true' : null">More</summary>
+        <div class="menu-list">
+          <a th:href="@{/deck}"
+             th:attr="aria-current=${active == 'deck'} ? 'page' : null">
+            <span>Deck</span>
+            <small>The pitch, drawn from live numbers</small>
+          </a>
+          <a th:href="@{/api/report}">
+            <span>Report</span>
+            <small>Every task and its evidence, as JSON</small>
+          </a>
+          <a th:href="@{/actuator/prometheus}">
+            <span>Metrics</span>
+            <small>Prometheus scrape endpoint</small>
+          </a>
+        </div>
+      </details>
+
+      <button class="btn" type="button" onclick="cycleTheme()" title="Light → Dark → High contrast">
+        Theme: <span data-theme-label>Light</span>
+      </button>
+    </nav>
+
+    <div th:fragment="heading(label)" class="brand">
+      <a th:replace="~{fragments/brand :: mark}"></a>
+      <span th:text="${label}">menD</span>
+    </div>
+  </body>
+</html>

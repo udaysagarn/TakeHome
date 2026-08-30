@@ -90,7 +90,7 @@ Criteria come from a fenced block a human wrote in the issue:
 or, when absent, from a short read-only Devin *scoping* session with a tight ACU cap that returns the same
 schema as structured output. If the gate fails, the issue moves to `NOT_A_CANDIDATE`, is labelled
 `menD:not-a-candidate`, and is commented on with the exact reasons and what a human would need to add.
-Adding that detail and re-applying `menD:fix` re-enters the pipeline, so the gate teaches the team how to
+Adding that detail and re-applying `menD:fix` re-enters the flow, so the gate teaches the team how to
 write automatable issues instead of silently dropping them.
 
 The accepted criteria become the contract: embedded in the remediation prompt, asserted point by point in the
@@ -272,7 +272,7 @@ curl -X POST localhost:8080/api/sandbox/issues/all
 ```
 
 Four issues are filed, each written to exercise one path, and the set settles in about a minute on
-`/pipeline`:
+`/flows`:
 
 | Scenario | What it proves | Path |
 |---|---|---|
@@ -299,7 +299,7 @@ and that Devin can actually write the fix. Those need credentials and a real rep
 | Route | Purpose |
 |---|---|
 | `/` | product overview, registered repositories, architecture diagram |
-| `/pipeline` | the live board: KPIs, pipeline, run table, exclusions, transition stream |
+| `/flows` | the live board: KPIs, flow, run table, exclusions, transition stream |
 | `/tasks/{id}` | one issue end to end: criteria contract, sessions, verification evidence, lease, audit |
 | `/learnings` | what reviewers have taught menD, and what needs a human to promote |
 | `/repositories/new` | step-by-step registration |
@@ -317,7 +317,7 @@ view is recognisably part of the product rather than an approximation of it.
 
 1. `/` — what it does, which repositories are connected.
 2. `/repositories/new` — register one; menD validates access and profiles the codebase.
-3. Label a real issue `menD:fix`. Watch `/pipeline`: criteria → session → PR → verification.
+3. Label a real issue `menD:fix`. Watch `/flows`: criteria → session → PR → verification.
 4. Label a placeholder issue too — it comes back `menD:not-a-candidate` with reasons, having spent nothing.
 5. Reject one of menD's PRs with "changes requested". Watch it come back as `CHANGES_REQUESTED`, answer the
    reviewer in the same session, and land a lesson in `/learnings`.

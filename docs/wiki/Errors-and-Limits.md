@@ -65,4 +65,4 @@ are shown only when authorised.
 - Workers are stateless: a worker that dies loses its lease and another resumes from the persisted
   row. Nothing is held in memory that a restart would lose.
 - Every state change is validated against the state machine and appended to the event log, so an
-  illegal transition fails loudly instead of corrupting the pipeline.
+  illegal transition fails loudly instead of corrupting the flow.

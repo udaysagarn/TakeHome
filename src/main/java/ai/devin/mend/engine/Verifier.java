@@ -179,7 +179,7 @@ public class Verifier {
 
     // --------------------------------------------------------------- helpers
 
-    /** A tier that stays silent past the timeout stops blocking the pipeline and hands over. */
+    /** A tier that stays silent past the timeout stops blocking the flow and hands over. */
     private Verification waitingFor(Verification.Tier tier, Instant since, String why) {
         Duration timeout = props.getVerify().getTierTimeout();
         if (since != null && Instant.now().isAfter(since.plus(timeout))) {

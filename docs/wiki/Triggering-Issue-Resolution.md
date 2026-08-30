@@ -33,7 +33,7 @@ session has started.
 
 ## 3. The sandbox
 
-`POST /api/sandbox/issues?scenario=CLEAN_FIX` files a simulated issue and drives the whole pipeline
+`POST /api/sandbox/issues?scenario=CLEAN_FIX` files a simulated issue and drives the whole flow
 with no credentials and no ACU spend. See [Sandbox API](Sandbox-API).
 
 ## What happens next
@@ -88,7 +88,7 @@ A block that fails to parse is ignored and menD falls back to a scoping session.
 - Exactly one worker owns a task at a time, via a lease with an owner, an expiry and a predicted
   completion time. A worker that dies has its lease expire, and a different stateless worker
   resumes from the persisted row. See [Polling task status](Polling-Task-Status#lease).
-- Re-triggering a terminal task re-enters the pipeline only where the state machine allows it
+- Re-triggering a terminal task re-enters the flow only where the state machine allows it
   (for example `FAILED → DISPATCHED` while the attempt budget lasts); `SUCCEEDED`,
   `NOT_A_CANDIDATE`, `NEEDS_HUMAN` and `CANCELLED` are final.
 

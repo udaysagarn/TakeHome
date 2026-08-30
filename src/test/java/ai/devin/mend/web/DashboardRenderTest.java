@@ -112,9 +112,79 @@ class DashboardRenderTest {
                 "acme/superset", number, title, "https://github.com/acme/superset/issues/" + number, "bug");
     }
 
+    private long idOfIssue(int number) {
+        return tasks.findAll().stream()
+                .filter(t -> t.getIssueNumber() == number)
+                .findFirst()
+                .orElseThrow()
+                .getId();
+    }
+
+    /** Where the nav says you are: the href of the one link marked current, or null if none is. */
+    private static String markedCurrent(String html) {
+        var tags = java.util.regex.Pattern.compile("<a\\s[^>]*aria-current=\"page\"[^>]*>")
+                .matcher(html)
+                .results()
+                .map(java.util.regex.MatchResult::group)
+                .toList();
+        assertThat(tags).as("links claiming to be the current page").hasSizeLessThan(2);
+        if (tags.isEmpty()) {
+            return null;
+        }
+        var href = java.util.regex.Pattern.compile("href=\"([^\"]*)\"").matcher(tags.get(0));
+        assertThat(href.find()).as("the current link has an href").isTrue();
+        return href.group(1);
+    }
+
+    @Test
+    void everyPageCarriesTheSameNavigationAndMarksTheOneYouAreOn() throws Exception {
+        // A task belongs to no group and has no entry of its own, so it marks nothing rather than
+        // claiming to be the board.
+        var current = new java.util.LinkedHashMap<String, String>();
+        current.put("/", "/");
+        current.put("/flows", "/flows");
+        current.put("/learnings", "/learnings");
+        current.put("/deck", "/deck");
+        current.put("/repositories/new", "/repositories/new");
+        current.put("/tasks/" + idOfIssue(101), null);
+
+        var group = java.util.Map.of(
+                "/flows", "Flows",
+                "/learnings", "Flows",
+                "/deck", "More",
+                "/repositories/new", "Repositories");
+
+        for (var page : current.entrySet()) {
+            String html = mvc.perform(get(page.getKey()))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(html)
+                    .as("navigation on %s", page.getKey())
+                    .contains(">Overview<", ">Flows<", ">Repositories<", ">More<")
+                    .contains(">Board<", ">Learnings<", ">Register a repository<", ">Deck<", ">Report<", ">Metrics<")
+                    .contains("/flows", "/learnings", "/repositories/new", "/deck", "/api/report");
+            assertThat(markedCurrent(html))
+                    .as("the page the nav says you are on, from %s", page.getKey())
+                    .isEqualTo(page.getValue());
+            String openGroup = group.get(page.getKey());
+            if (openGroup == null) {
+                assertThat(html)
+                        .as("no group marked current on %s", page.getKey())
+                        .doesNotContain("aria-current=\"true\"");
+            } else {
+                assertThat(html)
+                        .as("group marked current on %s", page.getKey())
+                        .containsOnlyOnce("aria-current=\"true\"")
+                        .contains("aria-current=\"true\">" + openGroup + "<");
+            }
+        }
+    }
+
     @Test
     void theMonitoringViewRendersEveryPanel() throws Exception {
-        mvc.perform(get("/pipeline"))
+        mvc.perform(get("/flows"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("chore(frontend): bump")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("Rethink the chart picker")))
@@ -130,7 +200,7 @@ class DashboardRenderTest {
                 .getContentAsString();
         assertThat(html)
                 .contains("acme/superset", "acme/airflow", "/img/architecture.svg", "/repositories/new")
-                .contains("/pipeline?repo=acme/superset");
+                .contains("/flows?repo=acme/superset");
     }
 
     @Test
@@ -157,13 +227,13 @@ class DashboardRenderTest {
 
     @Test
     void theBoardCanBeNarrowedToOneRepository() throws Exception {
-        String superset = mvc.perform(get("/pipeline").param("repo", "acme/superset"))
+        String superset = mvc.perform(get("/flows").param("repo", "acme/superset"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
         assertThat(superset).contains("chore(frontend): bump");
 
-        String airflow = mvc.perform(get("/pipeline").param("repo", "acme/airflow"))
+        String airflow = mvc.perform(get("/flows").param("repo", "acme/airflow"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
@@ -285,7 +355,7 @@ class DashboardRenderTest {
 
     @Test
     void anUnverifiedTaskIsOnTheBoardAndCountedApartFromRemediated() throws Exception {
-        String html = mvc.perform(get("/pipeline"))
+        String html = mvc.perform(get("/flows"))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -303,7 +373,7 @@ class DashboardRenderTest {
 
     @Test
     void theBoardHasAColumnForEveryStateAnIssueCanRestIn() throws Exception {
-        String html = mvc.perform(get("/pipeline"))
+        String html = mvc.perform(get("/flows"))
                 .andReturn()
                 .getResponse()
                 .getContentAsString();

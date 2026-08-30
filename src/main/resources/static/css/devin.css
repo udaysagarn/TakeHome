@@ -99,9 +99,100 @@ a:hover {
 header.topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   padding-bottom: 20px;
   border-bottom: 1px solid rgb(var(--border-primary));
+}
+
+header.topbar .nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nav .btn[aria-current] {
+  font-weight: 600;
+  border-color: rgb(var(--bg-accent-primary));
+  color: rgb(var(--text-primary));
+  box-shadow: inset 0 -2px 0 rgb(var(--bg-accent-primary));
+}
+
+/* A nav group. The panel is absolutely positioned so opening a menu never moves the page. */
+.nav details.menu {
+  position: relative;
+}
+
+.nav details.menu > summary {
+  display: inline-flex;
+  align-items: center;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav details.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.nav details.menu > summary::after {
+  content: '';
+  display: inline-block;
+  margin-left: 6px;
+  border: 4px solid transparent;
+  border-top-color: currentColor;
+  translate: 0 2px;
+}
+
+.nav details.menu[open] > summary::after {
+  rotate: 180deg;
+  translate: 0 -2px;
+}
+
+.nav .menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  min-width: 248px;
+  padding: 6px;
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 10px;
+  box-shadow: var(--shadow-L3);
+}
+
+/* The rightmost group would otherwise hang off the page. */
+.nav details.menu:last-of-type .menu-list {
+  left: auto;
+  right: 0;
+}
+
+.nav .menu-list a {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: rgb(var(--text-primary));
+  text-decoration: none;
+}
+
+.nav .menu-list a:hover {
+  background: rgb(var(--bg-hover));
+  text-decoration: none;
+}
+
+.nav .menu-list a small {
+  color: rgb(var(--text-secondary));
+  font-size: 12px;
+}
+
+.nav .menu-list a[aria-current='page'] {
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 rgb(var(--bg-accent-primary));
 }
 
 .brand {

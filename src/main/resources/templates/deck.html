@@ -10,16 +10,16 @@
     <link rel="stylesheet" th:href="@{/css/deck.css}" />
     <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
+    <script th:src="@{/js/nav.js}" defer></script>
   </head>
   <body class="deck-body">
-    <nav class="deck-bar">
-      <a class="brand" th:href="@{/}"><span th:replace="~{fragments/brand :: markStatic}"></span></a>
+    <header class="topbar deck-bar">
+      <div th:replace="~{fragments/nav :: heading('The pitch')}"></div>
       <span class="deck-progress"><span data-slide-position>1</span> / <span data-slide-count>0</span></span>
       <span class="spacer"></span>
-      <a class="btn" th:href="@{/pipeline}">Live board</a>
-      <button class="btn" onclick="cycleTheme()">Theme: <span data-theme-label>Light</span></button>
-      <button class="btn" onclick="window.print()" title="Print or save as PDF">Print</button>
-    </nav>
+      <button class="btn" type="button" onclick="window.print()" title="Print or save as PDF">Print</button>
+      <nav th:replace="~{fragments/nav :: links('deck')}"></nav>
+    </header>
 
     <main class="deck">
       <!-- ACT 1 — WHAT -->
@@ -387,7 +387,7 @@
           every week it runs.
         </p>
         <div class="cta-row">
-          <a class="btn primary" th:href="@{/pipeline}">Open the live board</a>
+          <a class="btn primary" th:href="@{/flows}">Open the live board</a>
           <a class="btn" th:href="@{/learnings}">See what reviewers have taught it</a>
           <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
         </div>

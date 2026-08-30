@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 /**
  * Fallback trigger. The webhook is the low-latency path, but a repository cannot always be given one
  * (org policy, no public ingress), and webhooks are at-most-once in practice. Polling the trigger
- * label makes the pipeline eventually consistent with GitHub regardless.
+ * label makes the flow eventually consistent with GitHub regardless.
  */
 @Component
 public class IssuePoller {

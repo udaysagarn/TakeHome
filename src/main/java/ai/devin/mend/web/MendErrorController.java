@@ -40,7 +40,7 @@ public class MendErrorController implements ErrorController {
 
     private static String detail(HttpStatus status) {
         return status == HttpStatus.NOT_FOUND
-                ? "That page, task or repository does not exist. Every task menD knows about is on the pipeline board."
+                ? "That page, task or repository does not exist. Every task menD knows about is on the flow board."
                 : "The request could not be completed. The task itself is unaffected — menD's state lives in the "
                         + "database, not in this page.";
     }

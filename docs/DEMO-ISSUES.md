@@ -44,7 +44,7 @@ be right to refuse them.
 
 1. Register the fork (or use the pre-registered entry in the Docker image) and confirm `accessState: VALIDATED`
    on `/api/repositories`.
-2. Label one dependency issue `menD:fix`. One is enough for the happy path: the board at `/pipeline` shows it
+2. Label one dependency issue `menD:fix`. One is enough for the happy path: the board at `/flows` shows it
    move `DISCOVERED → CRITERIA_PENDING → READY → DISPATCHED → RUNNING → PR_OPEN → VERIFYING → SUCCEEDED`.
 3. Label #9 as well. It stops at `NOT_A_CANDIDATE` with the gate's reason on the task page — that contrast is
    the point of the demo, not an accident of the data.
