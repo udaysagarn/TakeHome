@@ -228,6 +228,49 @@ class DashboardRenderTest {
     }
 
     @Test
+    void theLearningStorePageSaysSoWhenNothingHasBeenLearnedYet() throws Exception {
+        String html = mvc.perform(get("/learnings"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Nothing pending.")
+                .contains("None yet.")
+                .doesNotContain("Retired");
+    }
+
+    @Test
+    void aRetiredLessonLeavesTheActiveTablesButStaysOnTheRecord() throws Exception {
+        learnings.absorb(
+                new Retrospective(
+                        "summary",
+                        List.of(new Retrospective.Lesson(
+                                LearningScope.REPO,
+                                "commits",
+                                "Always squash the commits.",
+                                "bob's review",
+                                RecommendedAction.PROMPT_PREAMBLE,
+                                null,
+                                0.9))),
+                "acme/superset",
+                102,
+                null);
+        for (int i = 0; i < 4; i++) {
+            learnings.markApplied("acme/superset");
+            learnings.recordFeedbackDespite("acme/superset");
+        }
+
+        String html = mvc.perform(get("/learnings"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).contains("Retired").contains("Always squash the commits.");
+        assertThat(learnings.byScope(LearningScope.REPO)).isEmpty();
+    }
+
+    @Test
     void theMarkdownReportIsGeneratedForLeadership() throws Exception {
         String report = mvc.perform(get("/api/report"))
                 .andExpect(status().isOk())
