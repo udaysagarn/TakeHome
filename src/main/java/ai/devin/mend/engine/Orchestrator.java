@@ -358,7 +358,12 @@ public class Orchestrator {
         switch (verification.verdict()) {
             case PASSED -> {
                 RemediationOutcome outcome = readOutcomeJson(task.getOutcomeJson());
-                if (outcome != null && !outcome.allCriteriaSatisfied()) {
+                if (outcome == null) {
+                    settleUnverified(task, verification, null, "verified by " + verification.provenance()
+                            + ", but nothing asserted the acceptance criteria: the session returned no readable outcome");
+                    return;
+                }
+                if (!outcome.allCriteriaSatisfied()) {
                     failOrRetry(task, "The session did not assert every acceptance criterion as satisfied.");
                     return;
                 }
@@ -387,13 +392,26 @@ public class Orchestrator {
                     failOrRetry(task, "The session did not assert every acceptance criterion as satisfied.");
                     return;
                 }
-                task.setLastError(null);
-                task = taskService.save(task);
-                task = taskService.transition(task, IssueState.UNVERIFIED, verification.summary(), ACTOR);
-                notifier.unverified(task, verification, outcome);
+                String reason = outcome == null
+                        ? verification.summary()
+                                + ", and nothing asserted the acceptance criteria: the session returned no readable outcome"
+                        : verification.summary();
+                settleUnverified(task, verification, outcome, reason);
             }
             case PENDING -> log.debug("verification still pending for {} at tier {}", task.key(), verification.tier());
         }
+    }
+
+    /**
+     * The honest terminal state: a pull request exists, but either nothing independent proved it or
+     * nothing asserted the criteria contract. Not a failure of the attempt, so it is not retried.
+     */
+    private void settleUnverified(
+            RemediationTask task, Verification verification, RemediationOutcome outcome, String reason) {
+        task.setLastError(null);
+        task = taskService.save(task);
+        task = taskService.transition(task, IssueState.UNVERIFIED, reason, ACTOR);
+        notifier.unverified(task, verification, outcome);
     }
 
     private String writeJson(Verification verification) {
@@ -478,6 +496,7 @@ public class Orchestrator {
         try {
             return mapper.readValue(json, RemediationOutcome.class);
         } catch (Exception e) {
+            log.warn("stored remediation outcome could not be read back: {}", e.getMessage());
             return null;
         }
     }

@@ -251,6 +251,48 @@ class OrchestratorFailureTest {
     }
 
     @Test
+    void greenCiWithNoOutcomeAtAllSettlesUnverifiedRatherThanClaimingSuccess() {
+        RemediationTask task = verifying(46, null);
+        when(github.checkRuns(REPO, 46))
+                .thenReturn(List.of(new GitHubDtos.CheckRun(
+                        "frontend-build", "completed", "success", "https://github.com/acme/superset/runs/3")));
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.UNVERIFIED);
+        assertThat(lastTransitionReason(task)).contains("nothing asserted the acceptance criteria");
+    }
+
+    @Test
+    void greenCiWithAnUnreadableOutcomeSettlesUnverifiedRatherThanClaimingSuccess() {
+        RemediationTask task = verifying(47, "{\"remediated\": tru");
+        when(github.checkRuns(REPO, 47))
+                .thenReturn(List.of(new GitHubDtos.CheckRun(
+                        "frontend-build", "completed", "success", "https://github.com/acme/superset/runs/4")));
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.UNVERIFIED);
+        assertThat(lastTransitionReason(task)).contains("nothing asserted the acceptance criteria");
+    }
+
+    @Test
+    void noVerifierAndNoOutcomeSaysSoOnTheUnverifiedTransition() {
+        RemediationTask task = verifying(48, null);
+        task.setCriteriaJson(null);
+        tasks.saveAndFlush(task);
+        when(github.checkRuns(REPO, 48)).thenReturn(List.of());
+        when(github.ciVerdict(REPO, 48)).thenReturn(GitHubDtos.CiVerdict.NONE);
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.UNVERIFIED);
+        assertThat(lastTransitionReason(task))
+                .contains("no independent verifier")
+                .contains("nothing asserted the acceptance criteria");
+    }
+
+    @Test
     void anExhaustedAttemptBudgetOnRedCiEscalatesInsteadOfNudgingAgain() {
         RemediationTask task = discover(42);
         task.setState(IssueState.VERIFYING);
@@ -367,6 +409,24 @@ class OrchestratorFailureTest {
         RemediationTask dispatched = reload(task);
         dispatched.setDispatchedAt(Instant.now().minusSeconds(60));
         return tasks.saveAndFlush(dispatched);
+    }
+
+    /** A task parked in {@code VERIFYING} with an open pull request and the given stored outcome. */
+    private RemediationTask verifying(int number, String outcomeJson) {
+        RemediationTask task = discover(number);
+        task.setState(IssueState.VERIFYING);
+        task.setPrUrl("https://github.com/acme/superset/pull/" + number);
+        task.setSessionId("devin-fix-" + number);
+        task.setCriteriaJson(criteriaJson(0.92, List.of("npm audit reports no high advisory"), List.of("npm audit"))
+                .toString());
+        task.setOutcomeJson(outcomeJson);
+        task.setAttempts(1);
+        return tasks.saveAndFlush(task);
+    }
+
+    private String lastTransitionReason(RemediationTask task) {
+        List<ai.devin.mend.domain.TaskEvent> recorded = events.findByTaskIdOrderByOccurredAtAsc(task.getId());
+        return recorded.get(recorded.size() - 1).getReason();
     }
 
     private RemediationTask reload(RemediationTask task) {
