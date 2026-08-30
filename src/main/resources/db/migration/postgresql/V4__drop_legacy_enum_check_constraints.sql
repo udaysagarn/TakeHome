@@ -34,6 +34,11 @@ begin
               and rel.relname = target.table_name
               and a.attname = target.column_name
               and array_length(c.conkey, 1) = 1
+              -- Only the value list ddl-auto emits: PostgreSQL stores `state in ('A', 'B')` as
+              -- CHECK (((state)::text = ANY ((ARRAY['A'::character varying, ...])::text[]))), and
+              -- V3's type change reprints it with one bracket fewer. A hand-written rule on the same
+              -- column is somebody's intent, and survives.
+              and pg_get_constraintdef(c.oid) ~ '= ANY \(\(?ARRAY\['
         loop
             execute format('alter table %I drop constraint %I', target.table_name, doomed);
         end loop;

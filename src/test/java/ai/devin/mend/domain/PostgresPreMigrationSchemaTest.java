@@ -74,6 +74,9 @@ class PostgresPreMigrationSchemaTest {
                     + " drop column lease_acquired_at,"
                     + " drop column lease_expires_at,"
                     + " drop column lease_takeovers");
+            // an operator's own rule on an enum-backed column: intent, not ddl-auto's value list
+            statement.execute("alter table learning"
+                    + " add constraint learning_status_not_blank check (char_length(status) > 0)");
         }
     }
 
@@ -141,6 +144,18 @@ class PostgresPreMigrationSchemaTest {
                     }
                 })
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void keepsAConstraintSomebodyWroteOnTheSameColumn() throws SQLException {
+        try (Connection connection = connect();
+                Statement statement = connection.createStatement();
+                ResultSet constraint = statement.executeQuery(
+                        "select 1 from pg_constraint where conname = 'learning_status_not_blank'")) {
+            assertThat(constraint.next())
+                    .describedAs("only ddl-auto's enum value list is disposable")
+                    .isTrue();
+        }
     }
 
     @Test
