@@ -8,6 +8,7 @@ import ai.devin.mend.domain.Learning;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Retrospective;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.engine.LeaseManager;
 import ai.devin.mend.engine.Notifier;
 import ai.devin.mend.engine.PromptBuilder;
 import ai.devin.mend.engine.TaskService;
@@ -53,6 +54,7 @@ public class ReviewLoop {
 
     private final TaskRepository tasks;
     private final TaskService taskService;
+    private final LeaseManager leases;
     private final GitHubClient github;
     private final DevinApiClient devin;
     private final PromptBuilder prompts;
@@ -64,6 +66,7 @@ public class ReviewLoop {
     public ReviewLoop(
             TaskRepository tasks,
             TaskService taskService,
+            LeaseManager leases,
             GitHubClient github,
             DevinApiClient devin,
             PromptBuilder prompts,
@@ -73,6 +76,7 @@ public class ReviewLoop {
             MendProperties props) {
         this.tasks = tasks;
         this.taskService = taskService;
+        this.leases = leases;
         this.github = github;
         this.devin = devin;
         this.prompts = prompts;
@@ -93,7 +97,7 @@ public class ReviewLoop {
             }
             try {
                 collectFeedback(task);
-                retrospect(tasks.findById(task.getId()).orElse(task));
+                retrospectUnderLease(tasks.findById(task.getId()).orElse(task));
             } catch (RuntimeException e) {
                 log.warn("review loop failed for {}: {}", task.key(), e.getMessage());
             }
@@ -186,13 +190,38 @@ public class ReviewLoop {
         taskService.transition(task, IssueState.RUNNING, "reviewer feedback handed back to the session", ACTOR);
     }
 
+    /**
+     * Claims the task before retrospecting it, so of two workers reaching the same settled task only
+     * one creates the retrospective session and writes its lessons.
+     */
+    void retrospectUnderLease(RemediationTask task) {
+        if (!needsRetrospective(task)) {
+            return;
+        }
+        Optional<RemediationTask> claimed = leases.claim(task);
+        if (claimed.isEmpty()) {
+            log.debug("another worker holds the lease on {}; leaving its retrospective alone", task.key());
+            return;
+        }
+        try {
+            retrospect(claimed.get());
+        } finally {
+            leases.release(claimed.get());
+        }
+    }
+
+    /** True when a retrospective is owed: settled, fed back on, and not yet extracted. */
+    boolean needsRetrospective(RemediationTask task) {
+        return props.getLearning().isRetrospectiveEnabled()
+                && !task.isLearningsExtracted()
+                && task.getState().isTerminal()
+                && task.getFeedbackJson() != null
+                && devin.isConfigured();
+    }
+
     /** Runs, then reads, the retrospective for a settled task that actually drew feedback. */
     void retrospect(RemediationTask task) {
-        if (!props.getLearning().isRetrospectiveEnabled()
-                || task.isLearningsExtracted()
-                || !task.getState().isTerminal()
-                || task.getFeedbackJson() == null
-                || !devin.isConfigured()) {
+        if (!needsRetrospective(task)) {
             return;
         }
         if (task.getRetrospectiveSessionId() == null) {
