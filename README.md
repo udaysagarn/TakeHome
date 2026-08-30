@@ -246,6 +246,10 @@ mvn spring-boot:run          # needs the same environment variables
 mvn -B verify                # the full suite, with a coverage floor
 ```
 
+Before you change anything, read [AGENTS.md](AGENTS.md): how we work, the mental models behind the
+control plane, the sharp edges (Flyway-owned schema, enum column mapping, the review watermark), what
+is deliberately unbuilt, and the open ToDos.
+
 The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else
 changes.
 
@@ -325,8 +329,8 @@ view is recognisably part of the product rather than an approximation of it.
   merged, menD reports `UNVERIFIED` rather than inflating its own numbers.
 - The contract workflow (`deploy/target-repo/mend-verify.yml`) is a starter template: a repository with an
   unusual toolchain should adapt the setup steps before merging it.
-- Schema changes are applied by Hibernate `ddl-auto=update`, which is fine for the demo; a production
-  deployment wants explicit migrations.
+- Every page and every `/api` route is unauthenticated; only `/webhooks/github` verifies anything, and
+  only that the payload came from GitHub. Fine on a laptop or a private network, not beyond it.
 - Lesson effectiveness is tracked per repository, not per individual injected lesson — good enough to retire
   bad advice, not yet a precise attribution.
 - General lessons are surfaced for human promotion rather than written straight into org-wide Devin knowledge;
