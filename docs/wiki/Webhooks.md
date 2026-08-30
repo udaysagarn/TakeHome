@@ -48,8 +48,8 @@ GitHub should not retry a delivery menD deliberately ignored.
 | `200 OK` | `ignored: ping` | Unsupported event type |
 | `200 OK` | `ignored: unknown/repo is not a registered repository` | Repository not registered or not operational |
 | `200 OK` | `ignored: labeled/bug` | Wrong label or wrong action |
-| `200 OK` | `ignored: push to refs/heads/feature-x` | Push to a non-default branch |
-| `200 OK` | `ignored: no pull request in the payload` | Review event menD cannot attach to a pull request |
+| `202 Accepted` | `ignored: push to refs/heads/feature-x` | Push to a non-default branch |
+| `202 Accepted` | `ignored: no pull request in the payload` | Review event menD cannot attach to a pull request |
 | `401 Unauthorized` | `invalid signature` | HMAC mismatch |
 | `500` | `error` | menD failed to handle the payload; the exception is logged |
 

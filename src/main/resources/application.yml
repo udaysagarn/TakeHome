@@ -52,6 +52,7 @@ mend:
       installation-id: ${GITHUB_APP_INSTALLATION_ID:}
       private-key: ${GITHUB_APP_PRIVATE_KEY:}
     repo: ${MEND_REPO:udaysagarn/superset}
+    repos: ${MEND_REPOS:${MEND_REPO:udaysagarn/superset}}
     webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
     polling-enabled: ${MEND_POLLING_ENABLED:true}
     poll-interval: ${MEND_POLL_INTERVAL:PT30S}

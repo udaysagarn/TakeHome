@@ -13,7 +13,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds the registry on startup: the repositories named in configuration, plus any repository that
+ * Seeds the registry on startup: the repositories named in configuration — both the list and the
+ * single {@code MEND_REPO} the rest of the app treats as the default — plus any repository that
  * already owns tasks from before menD was multi-repository. Validation failures are stored on the
  * repository rather than thrown, so a demo container still starts without GitHub credentials.
  */
@@ -37,6 +38,7 @@ public class RepositoryBootstrap {
     @EventListener(ApplicationReadyEvent.class)
     public void seed() {
         Set<String> slugs = new LinkedHashSet<>(props.getGithub().getRepos());
+        slugs.add(props.getGithub().getRepo());
         tasks.findAll().stream().map(RemediationTask::getRepo).forEach(slugs::add);
         for (String slug : slugs) {
             if (slug == null || slug.isBlank() || registry.find(slug).isPresent()) {

@@ -22,7 +22,8 @@ file.
 
 | Variable | Property | Default |
 |---|---|---|
-| `MEND_REPO` | `mend.github.repo` | `udaysagarn/superset` — seeded into the registry on first boot |
+| `MEND_REPO` | `mend.github.repo` | `udaysagarn/superset` — the default repository, seeded into the registry on first boot |
+| `MEND_REPOS` | `mend.github.repos` | Comma-separated list of repositories to seed; defaults to `MEND_REPO` |
 | `MEND_TRIGGER_LABEL` | `mend.github.trigger-label` | `menD:fix` (per-repository overridable) |
 | `MEND_POLLING_ENABLED` | `mend.github.polling-enabled` | `true` |
 | `MEND_POLL_INTERVAL` | `mend.github.poll-interval` | `PT30S` |
