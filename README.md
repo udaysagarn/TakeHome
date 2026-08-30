@@ -207,7 +207,9 @@ docker compose up -d --build
 open http://localhost:8080
 ```
 
-A Mac walkthrough of all three modes — read-only, simulated and live — is in [docs/DEMO-MAC.md](docs/DEMO-MAC.md).
+A Mac walkthrough of all three modes — read-only, simulated and live — is in [docs/DEMO-MAC.md](docs/DEMO-MAC.md),
+and the issues the live demo runs against, with how each one was vetted, are in
+[docs/DEMO-ISSUES.md](docs/DEMO-ISSUES.md).
 
 Or `./deploy/demo.sh`, which does the above and prints the demo path. With no `.env` it starts in read-only
 mode (`MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false`) so you can browse the whole product without

@@ -78,7 +78,8 @@ an audience is watching.
 Then label a real issue `menD:fix` in a registered repository. menD scopes it in one Devin session, writes the
 acceptance criteria as a comment, dispatches a second session to do the work, waits for independent
 verification, and reports back on `/pipeline`. Label a vague issue too — the contrast between the two is the
-demo.
+demo. The vetted set of issues in the superset fork, and which outcome each one is there to show, is in
+[docs/DEMO-ISSUES.md](DEMO-ISSUES.md).
 
 Budget: the scoping session is capped at 3 ACUs and the remediation session at 10 (`MEND_CRITERIA_ACU`,
 `MEND_REMEDIATION_ACU`).
