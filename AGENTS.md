@@ -93,7 +93,6 @@ Spring Boot 3.3 / Java 21 / Maven. Thymeleaf + htmx for the UI, no build step fo
 | `ingest` | `WebhookController` (HMAC verified) and `IssuePoller` (works with no ingress) |
 | `registry` | `RepositoryService` (registration + access validation), `ContextService`/`ContextReconciler` (repository profile, incrementally refreshed on push) |
 | `learning` | `ReviewLoop` (reviewer feedback in) and `LearningService` (lessons out, dedup, retire) |
-| `sandbox` | Credential-free simulation: `SandboxGitHubClient`, `SandboxDevinClient`, `SandboxHub`, plus pages that serve the simulated issues/PRs |
 | `web` | Dashboard, JSON API, report, error page |
 | `config` | `MendProperties` — every tunable, bound from `mend.*` |
 
@@ -127,19 +126,18 @@ toolchain, and it would be an arbitrary-code-execution target.
 ## 4. Running it
 
 ```bash
-mvn -B verify                                  # full suite + coverage floor
-SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run   # no credentials, no ACUs, no network
-curl -X POST localhost:8080/api/sandbox/issues/all   # files the four demo scenarios
-./deploy/simulate.sh                           # the same thing in Docker
-docker compose up -d --build                   # live mode; needs .env
+mvn -B verify                # full suite + coverage floor
+./deploy/setup.sh            # the one entry point: procures credentials, writes .env, starts the stack
+docker compose up -d --build # the same start, once .env is complete
 ```
 
-The `sandbox` profile swaps exactly two beans (the GitHub client and the Devin client). Everything
-else — pre-filter, gate, state machine, leases, verification, review loop, learning store — is the
-production path, which is why the four scenarios are a real regression test and run in CI.
+There is one mode and it is live: menD needs a Devin key and a GitHub App to do anything, so the
+orchestrator's behaviour is pinned by the test suite rather than by a credential-free run. Working on
+the dashboard alone, start it with `MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false` so no
+issue is dispatched and no ACU is spent.
 
 Docs: `README.md` (the pitch), `docs/SITEMAP.md` (every route, for audit), `docs/DEMO-MAC.md`,
-`docs/CREDENTIALS.md`, `docs/DEMO-ISSUES.md`, and the published GitHub Wiki (`docs/wiki/`, 15 pages of
+`docs/CREDENTIALS.md`, `docs/DEMO-ISSUES.md`, and the published GitHub Wiki (`docs/wiki/`, 14 pages of
 API and contracts written from the controllers).
 
 ---
@@ -161,8 +159,6 @@ API and contracts written from the controllers).
   audience, and the operator who can fix a credential is not looking at it. The deck cannot go
   silently false either — its numbers come from the same live query, so a rejected credential shows
   there as zeroes and a `NO_ACCESS` repository card.
-- **Sandbox URLs must stay inside menD** (`/sandbox/{owner}/{repo}/{issues|pull}/{n}`). Minting
-  `github.com/...` URLs for simulated objects gives a 404 in the middle of a demo.
 - **Maven Central 429s** on shared IPs; the Dockerfile falls back to a mirror (`use-mirror.sh`,
   `MAVEN_MIRROR_URL`).
 
@@ -244,7 +240,5 @@ arcs that do not start and end *at the labels* stop it reading as a wheel.
 - Target repository for demos: the `udaysagarn/superset` fork. Vetted demo issues and how each was
   checked are in `docs/DEMO-ISSUES.md` — they are real (OSV-confirmed pins, a mirrored upstream
   issue), which matters: **only file legitimate issues**.
-- The credential-free path (`sandbox` profile) is the fallback for any demo where keys are awkward; it
-  proves everything except that GitHub's API contract holds and that Devin can write the fix.
 - Secrets are listed in `.env.example` and created step-by-step in `docs/CREDENTIALS.md`. Never commit
   a key, and never paste one into an issue, PR or log line.

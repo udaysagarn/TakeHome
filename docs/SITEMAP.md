@@ -5,8 +5,7 @@ an audit: each row says who serves it, what it renders, what it links to, and wh
 UI actually reaches it.
 
 Controllers: `web/DashboardController` (pages), `web/ApiController` (JSON under `/api`),
-`web/MendErrorController` (`/error`), `ingest/WebhookController` (`/webhooks/github`),
-`sandbox/SandboxController` + `sandbox/SandboxPagesController` (sandbox profile only).
+`web/MendErrorController` (`/error`), `ingest/WebhookController` (`/webhooks/github`).
 
 ## Pages (HTML)
 
@@ -15,8 +14,8 @@ Overview, then three menus — Flows (Board, Learnings), Repositories (Register 
 Registered repositories JSON) and More (Deck, Report, Metrics) — then the theme control. The menus
 are `<details>`, so they work without JavaScript; `static/js/nav.js` only closes them on an outside
 click or Escape. The page you are on is marked with `aria-current="page"` and its menu with
-`aria-current="true"`, instead of linking to itself; a page with no entry of its own (a task, a
-sandbox object, an error) marks nothing. Page-specific controls (the repository switch on the board,
+`aria-current="true"`, instead of linking to itself; a page with no entry of its own (a task, an
+error) marks nothing. Page-specific controls (the repository switch on the board,
 Issue/Pull request on a task, Print on the deck) sit beside that nav, never in place of it.
 
 | Route | Template | Purpose | Linked from |
@@ -30,19 +29,6 @@ Issue/Pull request on a task, Print on the deck) sit beside that nav, never in p
 | `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | nav on every page |
 | `GET /fragments/live?repo=` | `fragments/live :: live` | htmx polling target — everything below the header on the board. Not a page a human opens | htmx on `/flows` |
 | `RequestMapping /error` | `error.html` | Branded error page for 404/500 | Spring's error dispatch |
-
-## Sandbox pages — `sandbox` profile only
-
-Both controllers are `@Profile("sandbox")`, so a credentialed deployment cannot serve them at all.
-
-| Route | Template | Purpose |
-|---|---|---|
-| `GET /sandbox/{owner}/{name}/issues/{number}` | `sandbox-issue.html` | Simulated GitHub issue with menD's comments and the scenario it plays |
-| `GET /sandbox/{owner}/{name}/pull/{number}` | `sandbox-pull.html` | Simulated pull request: head branch, checks, reviews, the issue behind it |
-
-These are what task pages link to in sandbox mode (`issueUrl` / `prUrl` on the task), which is why a
-demo click never leaves the app for a github.com 404. A number that was never minted, or the right
-number under the wrong repo slug, 404s rather than leaking another repository's data.
 
 ## JSON API — `/api`
 
@@ -60,15 +46,6 @@ number under the wrong repo slug, 404s rather than leaking another repository's 
 | `POST /api/repositories/{id}/validate` | Re-runs the access/permission check |
 | `GET /api/learnings` | `active`, `recommendedActions`, `retired` |
 | `GET /api/report` | The run report as `text/markdown` |
-
-## Sandbox API — `sandbox` profile only
-
-| Route | Purpose |
-|---|---|
-| `GET /api/sandbox` | The simulated surface: repository, scenarios, current hub state |
-| `POST /api/sandbox/issues?scenario=&repo=` | Files one simulated issue (default `CLEAN_FIX`) |
-| `POST /api/sandbox/issues/all` | One issue per scenario — the fastest way to fill the board |
-| `POST /api/sandbox/pulls/{pullNumber}/request-changes` | Play the reviewer; `404` for a pull request that was never opened |
 
 ## Machine endpoints
 
@@ -95,8 +72,8 @@ actuator is reachable.
   payload came from GitHub. This is documented in the wiki under Errors and limits; it is the single
   biggest gap before anyone exposes menD beyond a laptop or a private network.
 - **Reachable only by URL, not by link:** `/api/*` (except the report and Prometheus links in the
-  footer), `/fragments/live`, and the sandbox routes. That is intentional for the fragment and the
-  API, but it means the sandbox pages are only discoverable through a task's issue/PR link.
+  footer) and `/fragments/live`. That is intentional: both are called by the pages, not opened by a
+  human.
 - **`POST /repositories` and `POST /api/repositories` do the same thing** through different content
   types — the form path re-renders `register.html`, the API path returns JSON.
 - **`/deck` reads live instance data**, so an empty database renders a deck with zeroes; it is not a

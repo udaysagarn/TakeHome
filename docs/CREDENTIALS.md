@@ -1,7 +1,8 @@
-# Credentials for a live menD demo
+# Credentials for menD
 
-Two modes need nothing at all — read-only and the sandbox ([docs/DEMO-MAC.md](DEMO-MAC.md)). This page is only
-for the live mode, where Devin writes real code and menD writes to a real repository.
+menD only runs against real credentials: Devin writes real code and menD writes to a real repository. There is
+no offline mode. `./deploy/setup.sh` asks for everything on this page, writes `.env` and starts the stack —
+this is the reference for where each value comes from.
 
 You create these yourself; nobody can hand them to you, and none of them belong in the repository. They are
 read from the environment at boot and never written to the image, the database or a log line.
@@ -87,10 +88,12 @@ bot then acts as you. Use it to try things out, not for the demo.
 ## 3. Put them on the machine
 
 ```bash
-cp .env.example .env
+./deploy/setup.sh
 ```
 
-Fill it in. The private key is multi-line, so paste it from the file rather than by hand:
+It prompts for each variable above, accepts the path of the `.pem` for `GITHUB_APP_PRIVATE_KEY` and inlines
+its contents, writes `.env`, then builds and starts the stack. Doing it by hand instead — the private key is
+multi-line, so paste it from the file rather than by hand:
 
 ```bash
 {
@@ -140,7 +143,7 @@ Then label one real issue `menD:fix` and watch `/flows`.
 | `accessState: NO_ACCESS` | the app is not installed on that repository, or the installation id belongs to another install |
 | `accessState: MISSING_PERMISSION` | permission granted on the app but not accepted on the installation — approve the pending request on the installation page; `accessError` names it |
 | Devin sessions never start | key created against the wrong organisation; `DEVIN_ORG_ID` must match the key |
-| Everything is read-only | `MEND_ENGINE_ENABLED` / `MEND_POLLING_ENABLED` are `false` (this is what `deploy/demo.sh` writes when there is no `.env`) |
+| Nothing is ever dispatched | `MEND_ENGINE_ENABLED` / `MEND_POLLING_ENABLED` are `false` in `.env`; `deploy/setup.sh` writes them `true` |
 
 ## Rotation
 

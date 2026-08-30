@@ -21,7 +21,6 @@ of the controllers and exercised against a running instance, so nothing here is 
 | Wire GitHub up to menD | [Webhooks](Webhooks) |
 | Read what reviewers have taught menD | [Learnings API](Learnings-API) |
 | Pull numbers for a review | [Reports and metrics](Reports-and-Metrics) |
-| Try it with no credentials and no ACU spend | [Sandbox API](Sandbox-API) |
 | Configure a deployment | [Configuration reference](Configuration-Reference) |
 | Handle failures | [Errors and limits](Errors-and-Limits) |
 | See every route on one page | [API index](API-Index) |

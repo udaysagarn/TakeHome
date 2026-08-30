@@ -1,6 +1,6 @@
 ---
 name: testing-mend-dashboard
-description: How to run and test the menD (D1) Spring Boot control-plane dashboard end-to-end without spending ACUs or triggering real Devin remediation sessions.
+description: How to run and test the menD (D1) Spring Boot control-plane dashboard end-to-end against a credentialed setup without spending ACUs or triggering real Devin remediation sessions.
 ---
 
 # Testing the menD control-plane dashboard
@@ -32,27 +32,32 @@ issue carrying the trigger label (default `menD:fix`). When testing:
 - For a no-spend copy, stop the live instance first, then start with
   `MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false` on another port against the same H2 file.
 
-## Fastest safe way to test (no credentials, no ACU spend)
+## Fastest safe way to test (credentialed, no ACU spend)
 
-From the menD repo root, the sandbox profile in Docker — it also files the four demo
-scenarios, so nothing has to be seeded by hand:
+`deploy/setup.sh` is the one entry point and it starts the *live* stack on port 8080 — engine and
+poller on. Never test against that instance. Test against a second one of your own with both loops
+off, so no issue is ever dispatched and no ACU is spent:
 
 ```
-docker compose down -v && ./deploy/simulate.sh   # container `mend`, port 8080
+docker compose build
+docker run -d --name mend-test -p 8083:8080 -v mend-test-data:/app/data \
+  -e MEND_REPO=udaysagarn/superset \
+  -e MEND_ENGINE_ENABLED=false -e MEND_POLLING_ENABLED=false \
+  -e GITHUB_APP_ID="$GITHUB_APP_ID" -e GITHUB_APP_INSTALLATION_ID="$GITHUB_APP_INSTALLATION_ID" \
+  -e GITHUB_APP_PRIVATE_KEY="$GITHUB_APP_PRIVATE_KEY" \
+  -e DEVIN_ORG_ID="$DEVIN_ORG_ID" -e DEVIN_API_KEY="$DEVIN_API_KEY" mend-orchestrator:local
 ```
 
-The four issues settle ~50s after the script returns. This mutates the demo data as you
-test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so run the whole
-line again — including `down -v` — before an actual demo: `simulate.sh` on its own does
-`compose up` and keeps the `mend-data` volume, and the four issues are then already known, so
-nothing resets.
+With the credentials present the registry validates for real (`accessState: VALIDATED`), which is
+what the repository cards and the credential alarm are read against. Task rows have to be seeded
+directly (below) — with the poller off nothing is ingested, which is the point.
 
 Compose pins the container name, port 8080 and the `mend-data` volume, so a *second*
 revision has to run beside it with its own name, port and volume:
 
 ```
 docker build -t mend-orchestrator:fix .
-docker run -d --name mend-fix -p 8083:8080 -v mend-fix-data:/app/data \
+docker run -d --name mend-fix -p 8084:8080 -v mend-fix-data:/app/data \
   -e MEND_ENGINE_ENABLED=false -e MEND_POLLING_ENABLED=false mend-orchestrator:fix
 ```
 
@@ -75,35 +80,14 @@ shell calls: `pkill -f mend-orchestrator`, then
 an earlier branch, and templates/CSS are packaged *inside* it — so a Thymeleaf- or CSS-only change
 (headers, nav, themes) is completely invisible if you run a stale jar, and the test will
 "pass" against the old UI. Run `mvn -B -DskipTests package` (~1-3 min) and check the jar's mtime
-before starting. `SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run` avoids the trap entirely but
-holds the shell.
-
-## Seeding demo data through the sandbox profile (preferred)
-
-For UI work, the quickest safe data is the four sandbox scenarios:
-
-```
-SPRING_PROFILES_ACTIVE=sandbox java -jar target/mend-orchestrator-0.1.0.jar   # polling ON
-curl -s -X POST localhost:8080/api/sandbox/issues/all
-# wait ~45-60s for the poller + orchestrator to drive them, then:
-curl -s localhost:8080/api/tasks
-```
-
-**Do not disable polling when you need data.** With `MEND_POLLING_ENABLED=false`,
-`POST /api/sandbox/issues/all` returns 200 but `/api/tasks` stays `[]` forever — the sandbox issues
-are only filed into `SandboxHub`, and it is the poller that discovers them and creates tasks. With no
-tasks there is no `/tasks/{id}` page and no `/sandbox/.../issues|pull/...` page to test. Leaving the
-poller on is safe in the `sandbox` profile: the GitHub and Devin clients are both simulated, so there
-is no network traffic and no ACU spend.
-
-A settled sandbox run yields tasks 1-4 on `udaysagarn/superset`: #101 `SUCCEEDED` (has a PR), #102
-`NOT_A_CANDIDATE` (no PR — use another task if you need a Pull request link), #103 `VERIFYING`,
-#104 `PR_OPEN`. Simulated links stay inside menD as
-`/sandbox/udaysagarn/superset/issues/{n}` and `/sandbox/udaysagarn/superset/pull/900{n}`.
-The sandbox seed registers only *one* repository, so anything testing the repo switcher needs a
-second repo — registering a nonexistent one via `/repositories/new` is the safe way to add it.
+before starting. `mvn spring-boot:run` avoids the trap entirely but holds the shell.
 
 ## Seeding demo data into H2 directly
+
+This is the only way to get task rows without dispatching real work, so every board, task-page and
+report test starts here. Cover the states the UI has been wrong about before — `UNVERIFIED`,
+`CHANGES_REQUESTED`, `NOT_A_CANDIDATE` — and give at least one row a `prUrl` so the task page's
+Pull request link can be exercised.
 
 A fresh jar run starts with an empty DB, so pages are empty. Seed with the H2 console-less
 client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data/mend ...`)
@@ -162,7 +146,6 @@ container (name/port/volume of its own; never touch port 8080):
 - no `GITHUB_APP_*`/Devin env at all: exactly the two "not configured" problems, no per-repo
   entry (suppressed on purpose — the repo still shows `NO_ACCESS` further down the page) and no
   `Re-validate` button.
-- sandbox profile: both clients hardcode `isConfigured() == true`, so **no** banner at all.
 - Devin refused the key: the `devin_credential` row (id 1) is written by a 401/403 from a call menD
   was already making, so a *present but invalid* key shows nothing until the first dispatch. Force
   the state directly (a one-row insert / `update devin_credential set usable=false, reason='…'`)
@@ -193,7 +176,7 @@ the banner on the first swap. Confirm the polls really happened via
 - `src/main/java/ai/devin/mend/web/DashboardService.java` — the `BOARD` map defines the six board
   columns and the `Kpis` record defines every number the UI and `/api/report` show.
 
-## Read-only verification surface
+## Non-mutating verification surface
 
 Everything can be verified without mutating state:
 
@@ -207,21 +190,17 @@ curl -s localhost:8080/actuator/prometheus | grep '^mend_'
 
 ## Exercising the reviewer loop
 
-```
-curl -X POST localhost:8080/api/sandbox/pulls/<n>/request-changes \
-     -H 'content-type: application/json' -d '{"reviewer":"you","body":"add a test"}'
-```
-
-The target task must not be terminal: `SUCCEEDED` ignores the review silently, so on a fresh
-`simulate.sh` the right target is the pull request of the `UNVERIFIED` task (9002). The
-handback to the session takes ~1s, so the card is essentially never caught in the *In review*
-column by the 5s fragment poll — screenshot the on-page **State transitions** stream for
-proof of `CHANGES_REQUESTED` instead.
+There is no way to play the reviewer from outside without a real pull request, and a real review
+hands the task back to a real Devin session. Leave it to `ReviewLoopTest` and the rest of
+`mvn -B verify`; on the UI side, seed a `CHANGES_REQUESTED` row and check the board column, the
+task page's review rounds and `/learnings` render it. The handback takes ~1s in any case, so the
+*In review* column is essentially never caught by the 5s fragment poll — read the on-page
+**State transitions** stream instead of chasing the card.
 
 ## Proving auto-refresh actually polls
 
 The dashboard uses htmx `hx-get="/fragments/live" hx-trigger="every 5s"`. Since the data is
-static during a read-only test, a screenshot cannot distinguish "refreshing" from "frozen".
+static during a non-mutating test, a screenshot cannot distinguish "refreshing" from "frozen".
 Instead sample the request counter twice, ~12s apart:
 
 ```
@@ -254,7 +233,7 @@ state that says "verified" without a tier, verdict and provenance is a reportabl
 
 `docker build` compiles Maven inside the image; on this box it fails with HTTP 429 from Maven
 Central. If that happens, retry or pass the build arg `MAVEN_MIRROR_URL=<internal mirror>`
-(the Dockerfile supports it). Do not run `deploy/demo.sh` while a local instance is up — it
+(the Dockerfile supports it). Do not run `deploy/setup.sh` while a local instance is up — it
 binds port 8080 and the same H2 data dir.
 
 ## Browser quirk on this box

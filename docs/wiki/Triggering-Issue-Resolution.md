@@ -31,11 +31,6 @@ curl -s -X POST 'localhost:8080/api/issues/108/ingest?repo=udaysagarn/superset'
 `202` means the task row exists and the reconciler owns it from here. It does **not** mean a Devin
 session has started.
 
-## 3. The sandbox
-
-`POST /api/sandbox/issues?scenario=CLEAN_FIX` files a simulated issue and drives the whole flow
-with no credentials and no ACU spend. See [Sandbox API](Sandbox-API).
-
 ## What happens next
 
 ```
