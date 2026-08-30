@@ -44,9 +44,44 @@ MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false \
 With no GitHub key present the app logs "GitHub token not configured: ingestion and issue
 feedback are disabled" and cannot make outbound calls — the safest possible test posture.
 Use `setsid nohup ... &` to start it; a `pkill -f mend-orchestrator && java -jar ...` chain in
-one shell command can kill the shell before the restart runs.
+one shell command can kill the shell before the restart runs. Safest sequence is three separate
+shell calls: `pkill -f mend-orchestrator`, then
+`setsid nohup env ... java -jar ... > /tmp/mend.log 2>&1 < /dev/null & disown`, then poll
+`curl -s -o /dev/null -w "%{http_code}" localhost:8080/` until it returns 200 (~20-25s).
 
-## Seeding demo data into H2
+**Always rebuild before `java -jar`.** `target/mend-orchestrator-0.1.0.jar` is often left over from
+an earlier branch, and templates/CSS are packaged *inside* it — so a Thymeleaf- or CSS-only change
+(headers, nav, themes) is completely invisible if you run a stale jar, and the test will
+"pass" against the old UI. Run `mvn -B -DskipTests package` (~1-3 min) and check the jar's mtime
+before starting. `SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run` avoids the trap entirely but
+holds the shell.
+
+## Seeding demo data through the sandbox profile (preferred)
+
+For UI work, the quickest safe data is the four sandbox scenarios:
+
+```
+SPRING_PROFILES_ACTIVE=sandbox java -jar target/mend-orchestrator-0.1.0.jar   # polling ON
+curl -s -X POST localhost:8080/api/sandbox/issues/all
+# wait ~45-60s for the poller + orchestrator to drive them, then:
+curl -s localhost:8080/api/tasks
+```
+
+**Do not disable polling when you need data.** With `MEND_POLLING_ENABLED=false`,
+`POST /api/sandbox/issues/all` returns 200 but `/api/tasks` stays `[]` forever — the sandbox issues
+are only filed into `SandboxHub`, and it is the poller that discovers them and creates tasks. With no
+tasks there is no `/tasks/{id}` page and no `/sandbox/.../issues|pull/...` page to test. Leaving the
+poller on is safe in the `sandbox` profile: the GitHub and Devin clients are both simulated, so there
+is no network traffic and no ACU spend.
+
+A settled sandbox run yields tasks 1-4 on `udaysagarn/superset`: #101 `SUCCEEDED` (has a PR), #102
+`NOT_A_CANDIDATE` (no PR — use another task if you need a Pull request link), #103 `VERIFYING`,
+#104 `PR_OPEN`. Simulated links stay inside menD as
+`/sandbox/udaysagarn/superset/issues/{n}` and `/sandbox/udaysagarn/superset/pull/900{n}`.
+The sandbox seed registers only *one* repository, so anything testing the repo switcher needs a
+second repo — registering a nonexistent one via `/repositories/new` is the safe way to add it.
+
+## Seeding demo data into H2 directly
 
 A fresh jar run starts with an empty DB, so pages are empty. Seed with the H2 console-less
 client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data/mend ...`)
@@ -64,7 +99,7 @@ client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data
 
 ## Routes (current product revision)
 
-`/` product overview (architecture SVG + repo cards), `/pipeline[?repo=]` board,
+`/` product overview (architecture SVG + repo cards), `/flows[?repo=]` board,
 `/tasks/{id}` detail, `/learnings`, `/repositories/new`, plus JSON `/api/summary`,
 `/api/tasks`, `/api/tasks/{id}`, `/api/report`, `/api/learnings`, `/api/repositories`.
 
@@ -73,7 +108,7 @@ client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data
 - `src/main/resources/templates/dashboard.html` — shell, header buttons (Report / Metrics / Theme)
   and the inline theme JS (localStorage key `mend-theme`).
 - `src/main/resources/templates/fragments/live.html` — everything below the header: KPI cards,
-  pipeline board, issues table, exclusion table, state-transition stream.
+  flow board, issues table, exclusion table, state-transition stream.
 - `src/main/resources/static/css/devin.css` — theme tokens: `:root`/`.light`, `.dark`,
   `.high-contrast`. `static/js/theme.js` cycles light → dark → contrast and stores
   `localStorage['mend-theme']`; some pages have no `[data-theme-label]` span so the active
