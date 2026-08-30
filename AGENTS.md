@@ -9,19 +9,32 @@ records how we work, what menD is, what is deliberately *not* built yet, and whe
 
 ## 1. How we work (non-negotiable)
 
-These four rules came out of building menD and they outrank convenience every time.
+These rules came out of building menD and they outrank convenience every time.
 
-1. **Pull requests as small as possible.** One reviewable idea per PR, landing bottom-up. This repo
-   already paid for ignoring that once: a single large branch was merged, the incremental series
-   underneath it had to be reverted (PR #9) and re-landed as six layers. If a change grows a second
+1. **Pull requests as small as possible — one session = one PR = one concern.** Decompose *upfront*.
+   This repo already paid for ignoring that once: a single large branch was merged, the incremental
+   series underneath it had to be reverted (PR #9) and re-landed as six layers. The seams that became
+   PRs #2–#7 (control plane → leases → registry → verification → review/learning → docs) existed from
+   the start; they were found after the revert rather than before it. If a change grows a second
    idea, cut a second PR.
-2. **Clarify assumptions — out loud, in writing.** State the assumption in the PR description or the
+2. **Open the PR early and keep it small.** Ask Devin to raise the pull request as soon as there is
+   something to look at, so review comments arrive while the change is still small enough to reason
+   about. A review on a 3,000-line branch is not a review.
+3. **Clarify assumptions — out loud, in writing.** State the assumption in the PR description or the
    issue before you build on it. An assumption nobody can see is a bug with a delay fuse.
-3. **Clarify before writing code.** Ambiguity is resolved with the requester, not guessed at in an
+4. **Clarify before writing code.** Ambiguity is resolved with the requester, not guessed at in an
    editor. Half of the rework here came from starting to type too early.
-4. **Tests first, then high-quality code.** Write the failing test that describes the behaviour, then
+5. **Tests first, then high-quality code.** Write the failing test that describes the behaviour, then
    make it pass. `mvn -B verify` enforces a coverage floor; a behavioural change without a test is
    not finished. Never weaken or delete a test to make a build green.
+6. **"Untested" in an agent's own summary is a task list, not a footnote.** Every gap Devin admits to
+   gets a dispatched follow-up. The three that were left as caveats here — the `docker build`, the
+   empty `/learnings` state, and the schema migrations — each turned out to hide a real defect once
+   someone actually ran them.
+7. **Front-load the SKILL / AGENTS file.** Write the instructions *before* the big session, not
+   inside it. `.agents/skills/testing-mend-dashboard/SKILL.md` was worth its weight, and was written
+   in the middle of PR #1; writing it first would have made the whole run cheaper and every
+   verification pass consistent with the last.
 
 Other conventions that follow from those:
 
