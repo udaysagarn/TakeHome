@@ -92,6 +92,7 @@ file.
 | `PORT` | `8080` | |
 | `MEND_DB_URL` | `jdbc:h2:file:./data/mend;AUTO_SERVER=TRUE` | Point at Postgres for anything shared |
 | `MEND_DB_USER` / `MEND_DB_PASSWORD` | `sa` / empty | |
+| `MEND_SCHEDULER_POOL_SIZE` | `8` | Threads shared by every `@Scheduled` loop. There are five; below that count the lease heartbeat waits behind a reconcile pass and a healthy worker's lease can expire |
 
 Actuator exposes `health`, `info`, `metrics` and `prometheus`, tagged
 `application=mend-orchestrator`.
