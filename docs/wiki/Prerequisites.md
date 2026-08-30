@@ -40,17 +40,21 @@ Either a GitHub App (recommended) or a personal access token (local use).
 | `GITHUB_APP_INSTALLATION_ID` | Installation on your org/account |
 | `GITHUB_APP_PRIVATE_KEY` | PEM contents of the app private key |
 
-Required installation permissions, checked at registration time:
+Required installation permissions:
 
-| Permission | Level | Why |
-|---|---|---|
-| Issues | Read & write | Read the issue, apply and swap menD's labels, comment |
-| Pull requests | Read & write | Read the pull requests Devin opens, comment the evidence |
-| Contents | Read | Build the repository profile and read instruction files |
-| Checks / Actions | Read | Read CI verdicts on the pull request head |
-| Metadata | Read | Mandatory for any app |
+| Permission | Level | Why | Checked at registration |
+|---|---|---|---|
+| Issues | Read & write | Read the issue, apply and swap menD's labels, comment | Yes |
+| Pull requests | Read & write | Read the pull requests Devin opens, comment the evidence | Yes |
+| Contents | Read | Build the repository profile and read instruction files | No |
+| Checks / Actions | Read | Read CI verdicts on the pull request head, dispatch the contract workflow | No |
+| Metadata | Read | Mandatory for any app | No |
 
-A repository whose installation is missing one of these registers with
+Registration pre-checks only the two write permissions menD cannot work without; the read
+permissions are not pre-checked, so a missing one surfaces later as a failed profile build or a
+verification that falls back to `UNVERIFIED` rather than as a registration error.
+
+A repository whose installation is missing one of the checked permissions registers with
 `accessState: MISSING_PERMISSION` and an `accessError` naming the missing scope — see
 [Registering a repository](Registering-a-Repository).
 

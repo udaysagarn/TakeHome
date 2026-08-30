@@ -71,8 +71,9 @@ rather than hidden in menD, and menD scales to any toolchain without knowing any
 - Nothing independent confirmed it.
 - It is **not** counted in `succeeded`, the success rate, or the "remediated" report section — it
   has its own KPI and its own board column and its own `menD:unverified` label.
-- It is not final in practice: `UNVERIFIED → VERIFYING → SUCCEEDED` is a legal path, so late
-  evidence (a CI run that eventually appears, a merged contract workflow) upgrades it.
+- It is terminal in current processing: `UNVERIFIED → VERIFYING → SUCCEEDED` is a legal transition,
+  but nothing re-drives an unverified task, so late evidence (a CI run that eventually appears, a
+  merged contract workflow) does not automatically upgrade it.
 
 Turning off the fallbacks is a supported choice: `mend.verify.verifier-session-enabled=false` leaves
 only real CI, so everything else is honestly `UNVERIFIED`.

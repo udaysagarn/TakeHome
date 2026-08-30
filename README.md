@@ -228,7 +228,8 @@ read-only mirror of Central by itself; behind a corporate proxy, force yours wit
 | `DEVIN_ORG_ID` | organisation the service user belongs to; scopes every v3 session route |
 | `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY` | the GitHub App menD acts as |
 | `GITHUB_WEBHOOK_SECRET` | HMAC-SHA256 secret for `/webhooks/github` |
-| `MEND_REPO` | comma-separated repositories to seed into the registry on first boot |
+| `MEND_REPO` | the default repository, seeded into the registry on first boot |
+| `MEND_REPOS` | additional repositories to seed, comma-separated |
 
 menD acts as a GitHub App rather than as a person: it signs an RS256 JWT with the app's private key, exchanges
 it for a one-hour installation token, and refreshes before expiry. Every label, comment and PR is attributable
