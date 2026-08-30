@@ -20,7 +20,7 @@ curl -s localhost:8080/api/tasks
   "issueUrl": "https://github.com/udaysagarn/superset/issues/108",
   "state": "SUCCEEDED",
   "bucket": "succeeded",
-  "sessionUrl": "https://app.devin.ai/sessions/sandbox-remediation-17",
+  "sessionUrl": "https://app.devin.ai/sessions/8f6c1e0b4a2d4f9e",
   "prUrl": "https://github.com/udaysagarn/superset/pull/9006",
   "ciStatus": "PASSED",
   "confidence": 0.86,

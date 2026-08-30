@@ -10,7 +10,7 @@ services:
       MEND_REPO: ${MEND_REPO:-udaysagarn/superset}
       # Additional repositories to seed, comma-separated. Optional.
       MEND_REPOS: ${MEND_REPOS:-}
-      # Devin does the engineering work. Without a key menD stays read-only.
+      # Devin does the engineering work. Without a key menD cannot remediate anything.
       DEVIN_API_KEY: ${DEVIN_API_KEY:-}
       DEVIN_ORG_ID: ${DEVIN_ORG_ID:-}
       # GitHub App credentials. Without them menD cannot read issues or write labels.
@@ -18,9 +18,7 @@ services:
       GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID:-}
       GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
       GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
-      # 'sandbox' replaces GitHub and Devin with in-memory simulations — see deploy/simulate.sh.
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
-      # Set both to false to browse the dashboard without touching GitHub or spending ACUs.
+      # The reconciler and the ingestion poller. Both on is the live control plane.
       MEND_ENGINE_ENABLED: ${MEND_ENGINE_ENABLED:-true}
       MEND_POLLING_ENABLED: ${MEND_POLLING_ENABLED:-true}
     volumes:

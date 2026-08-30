@@ -25,17 +25,6 @@ Every route menD serves, on one page.
 |---|---|---|
 | `POST` | `/webhooks/github` | Issues, pushes, pull requests, reviews — see [Webhooks](Webhooks) |
 
-## Sandbox — `sandbox` profile only
-
-| Method | Route | Purpose |
-|---|---|---|
-| `GET` | `/api/sandbox` | Scenarios and everything written to the fake GitHub |
-| `POST` | `/api/sandbox/issues?scenario=&repo=` | File one simulated issue |
-| `POST` | `/api/sandbox/issues/all?repo=` | One issue per scenario |
-| `POST` | `/api/sandbox/pulls/{n}/request-changes` | Play the reviewer |
-
-See [Sandbox API](Sandbox-API).
-
 ## Web UI — not contracts
 
 | Route | Page |

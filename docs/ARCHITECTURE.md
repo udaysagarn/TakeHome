@@ -190,19 +190,6 @@ contract that holds at that point.
 | `MendErrorController` | Branded error page | `/error` | — |
 | `MendMetrics` | Prometheus instrumentation | `/actuator/prometheus` | Gauges `mend.issues{state}`, `mend.sessions.active`; counters `mend.transitions{from,to}`, `mend.outcomes{outcome}`, `mend.acu.budget{kind}`, `mend.api.calls{api,operation,success}`; timers `mend.time.to.pr`, `mend.time.to.outcome` (p50/p90) |
 
-### 4.9 Sandbox (`sandbox`, profile `sandbox`)
-
-| Component | Purpose | Integration point | Contract |
-|---|---|---|---|
-| `SandboxGitHubClient` / `SandboxDevinClient` | Replace **exactly two beans** | Same interfaces as the real clients | No network, no credentials, no ACUs |
-| `SandboxHub` | The simulated world | In-memory issues, PRs, reviews, checks | Deterministic; four scenarios: `CLEAN_FIX` → `SUCCEEDED`, `NOT_A_CANDIDATE`, `UNVERIFIED`, `REVIEW_THEN_FIX` → `CHANGES_REQUESTED` → `SUCCEEDED` + lessons |
-| `SandboxController` | Drive the simulation | `GET /api/sandbox`, `POST /api/sandbox/issues?scenario=&repo=`, `POST /api/sandbox/issues/all`, `POST /api/sandbox/pulls/{n}/request-changes` | Present only under the profile |
-| `SandboxPagesController` | Clickable simulated objects | `/sandbox/{owner}/{repo}/{issues\|pull}/{n}` | Simulated links must stay inside menD; minting `github.com` URLs would 404 mid-demo |
-
-Everything between those two edges — pre-filter, gate, state machine, leases, verification, review
-loop, learning, dashboard — is the production path, which is why the four scenarios run as a CI
-regression test.
-
 ---
 
 ## 5. Contracts
@@ -281,7 +268,7 @@ Precedence, first tier able to answer wins:
 
 Full list with controllers in [SITEMAP.md](SITEMAP.md). Shape: HTML pages (`/`, `/flows`,
 `/tasks/{id}`, `/learnings`, `/repositories/new`, `/deck`, `/fragments/live`), JSON under `/api/**`,
-the webhook, sandbox routes under the profile, and `/actuator/{health,info,metrics,prometheus}`.
+the webhook, and `/actuator/{health,info,metrics,prometheus}`.
 
 ### 5.6 Persistence
 
@@ -361,8 +348,7 @@ stops; anything ambiguous escalates to `NEEDS_HUMAN` rather than guessing.
 4. A task is advanced only by the worker holding its lease; terminal states release ownership.
 5. `SUCCEEDED` is unreachable without both independent evidence and an outcome asserting every criterion; a missing or unreadable outcome settles `UNVERIFIED` (see [5.1](#51-state-machine)).
 6. menD never executes a target repository's commands inside its own container.
-7. Sandbox links resolve inside menD.
-8. Nothing menD writes to GitHub is ever read back as authoritative state.
+7. Nothing menD writes to GitHub is ever read back as authoritative state.
 
 ---
 
@@ -374,8 +360,7 @@ stops; anything ambiguous escalates to `NEEDS_HUMAN` rather than guessing.
 | A state | `IssueState` (value + transition table) and the `Orchestrator` branch; **no migration** — enum columns are plain varchar |
 | A profile slice | `ContextKind` (label + path triggers) and a `ContextPrompt` entry |
 | Another ingest source | Anything that can call `Orchestrator.onTriggerLabel` |
-| A simulation scenario | `SandboxScenario` + `SandboxHub`, then the CI demo job asserts it |
-| A new external backend | Swap the client bean the way the sandbox profile does |
+| A new external backend | Swap the client bean behind the same interface |
 
 ---
 

@@ -7,16 +7,16 @@ What has to be true before menD can do anything useful.
 Java 21 and Maven, or Docker. From the repository root:
 
 ```bash
-mvn -B spring-boot:run          # http://localhost:8080
-# or
+./deploy/setup.sh               # asks for the credentials below, then starts on http://localhost:8080
+# or, once .env is complete
 docker compose up -d --build
 ```
 
 Storage is H2 in file mode by default (`./data/mend`), so state survives restarts. Point
 `MEND_DB_URL` at Postgres for anything shared.
 
-Nothing below is needed if you only want to see the workflow: the
-[sandbox](Sandbox-API) runs the whole flow with no credentials and no ACU spend.
+Everything below is required: without a Devin key and a GitHub App, menD can neither read an issue
+nor have it fixed.
 
 ## 2. Devin API credentials
 

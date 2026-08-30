@@ -17,7 +17,6 @@
 **Reference**
 - [Learnings API](Learnings-API)
 - [Reports and metrics](Reports-and-Metrics)
-- [Sandbox API](Sandbox-API)
 - [Configuration reference](Configuration-Reference)
 - [Errors and limits](Errors-and-Limits)
 - [API index](API-Index)

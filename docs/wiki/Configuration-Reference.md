@@ -43,7 +43,7 @@ file.
 
 | Variable | Property | Default | Meaning |
 |---|---|---|---|
-| `MEND_ENGINE_ENABLED` | `mend.engine.enabled` | `true` | `false` = read-only: browse without calling GitHub or Devin |
+| `MEND_ENGINE_ENABLED` | `mend.engine.enabled` | `true` | `false` stops the reconciler: the dashboard serves, nothing is dispatched |
 | `MEND_RECONCILE_INTERVAL` | `mend.engine.reconcile-interval` | `PT15S` | |
 | — | `mend.engine.context-interval` | `PT60S` | Profile refresh pass |
 | `MEND_MAX_CONCURRENT` | `mend.engine.max-concurrent-sessions` | `4` | Devin sessions in flight |
@@ -92,17 +92,16 @@ file.
 | `PORT` | `8080` | |
 | `MEND_DB_URL` | `jdbc:h2:file:./data/mend;AUTO_SERVER=TRUE` | Point at Postgres for anything shared |
 | `MEND_DB_USER` / `MEND_DB_PASSWORD` | `sa` / empty | |
-| `SPRING_PROFILES_ACTIVE` | — | `sandbox` enables the [simulated workflow](Sandbox-API) |
 
 Actuator exposes `health`, `info`, `metrics` and `prometheus`, tagged
 `application=mend-orchestrator`.
 
-## Two useful modes
+## Starting it
 
 ```bash
-# Read-only: browse the dashboard, touch nothing
-MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false docker compose up -d
+# The one entry point: procures credentials, writes .env, builds and starts
+./deploy/setup.sh
 
-# Full workflow, no credentials, no ACU spend
-./deploy/simulate.sh
+# Dashboard only: the engine and the poller off, so no issue is dispatched and no ACU is spent
+MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false docker compose up -d
 ```
