@@ -30,7 +30,8 @@ public class DashboardController {
     /**
      * Where each page the navigation names lives. The pause switch posts the key of the page it was
      * clicked on and is sent back to it; resolving through this map rather than trusting the
-     * submitted value keeps the redirect inside menD.
+     * submitted value keeps the redirect inside menD. A task page has no key of its own here — it
+     * posts its numeric id instead, which cannot name anything outside {@code /tasks/}.
      */
     private static final Map<String, String> PAGES = Map.of(
             "overview", "/",
@@ -69,11 +70,15 @@ public class DashboardController {
     public String engine(
             @RequestParam boolean paused,
             @RequestParam(required = false) String from,
-            @RequestParam(required = false) String repo) {
+            @RequestParam(required = false) String repo,
+            @RequestParam(required = false) Long taskId) {
         if (paused) {
             engine.pause("dashboard", "paused from the dashboard");
         } else {
             engine.resume("dashboard");
+        }
+        if ("task".equals(from) && taskId != null) {
+            return "redirect:/tasks/" + taskId;
         }
         String page = PAGES.getOrDefault(from, "/");
         return "redirect:" + (repo == null || repo.isBlank() || !"/flows".equals(page)

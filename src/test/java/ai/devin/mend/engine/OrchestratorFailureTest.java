@@ -71,6 +71,9 @@ class OrchestratorFailureTest {
     @Autowired
     private ObjectMapper mapper;
 
+    @Autowired
+    private EngineControl control;
+
     @MockBean
     private DevinApiClient devin;
 
@@ -81,6 +84,7 @@ class OrchestratorFailureTest {
     void setUp() {
         tasks.deleteAll();
         events.deleteAll();
+        control.resume("test");
         when(github.defaultRepo()).thenReturn(REPO);
         when(github.isConfigured()).thenReturn(true);
     }
@@ -397,6 +401,51 @@ class OrchestratorFailureTest {
         orchestrator.advance(reload(task));
         assertThat(reload(task).getState()).isEqualTo(IssueState.READY);
         return reload(task);
+    }
+
+    @Test
+    void aSessionThatDiesWhilePausedIsNotHandedAFreshOneUntilTheOperatorResumes() {
+        RemediationTask task = toDispatched(46);
+        stubSession("devin-fix-46", "finished", null, blockedOutcome("the branch would not build"));
+        control.pause("operator", "the demo is over");
+        clearInvocations(devin);
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.FAILED);
+        verify(devin, never()).createSession(anyString(), anyString(), anyList(), any(), any(), anyString());
+
+        control.resume("operator");
+        when(devin.createSession(anyString(), anyString(), anyList(), any(), any(), anyString()))
+                .thenReturn(session("devin-fix-46-retry", "working", null, null));
+        orchestrator.advance(reload(task));
+
+        RemediationTask retried = reload(task);
+        assertThat(retried.getState()).isEqualTo(IssueState.DISPATCHED);
+        assertThat(retried.getSessionId()).isEqualTo("devin-fix-46-retry");
+    }
+
+    @Test
+    void noVerifierSessionIsStartedWhilePausedAndTheTaskWaitsInVerifyingRatherThanSettlingUnverified() {
+        RemediationTask task = verifying(47, outcomeJson(true).toString());
+        when(github.checkRuns(REPO, 47)).thenReturn(List.of());
+        when(github.ciVerdict(REPO, 47)).thenReturn(GitHubDtos.CiVerdict.NONE);
+        when(devin.isConfigured()).thenReturn(true);
+        control.pause("operator", "the demo is over");
+        clearInvocations(devin);
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.VERIFYING);
+        assertThat(reload(task).getVerifierSessionId()).isNull();
+        verify(devin, never()).createSession(anyString(), anyString(), anyList(), any(), any(), anyString());
+
+        control.resume("operator");
+        when(devin.createSession(anyString(), anyString(), anyList(), any(), any(), anyString()))
+                .thenReturn(session("devin-verify-47", "working", null, null));
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getVerifierSessionId()).isEqualTo("devin-verify-47");
     }
 
     private RemediationTask toDispatched(int number) {

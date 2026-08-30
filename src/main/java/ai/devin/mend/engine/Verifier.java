@@ -36,6 +36,7 @@ public class Verifier {
     private final DevinApiClient devin;
     private final PromptBuilder prompts;
     private final ObjectMapper mapper;
+    private final EngineControl control;
     private final MendProperties props;
 
     public Verifier(
@@ -43,11 +44,13 @@ public class Verifier {
             DevinApiClient devin,
             PromptBuilder prompts,
             ObjectMapper mapper,
+            EngineControl control,
             MendProperties props) {
         this.github = github;
         this.devin = devin;
         this.prompts = prompts;
         this.mapper = mapper;
+        this.control = control;
         this.props = props;
     }
 
@@ -132,6 +135,14 @@ public class Verifier {
         }
         if (criteria == null || criteria.verificationCommands().isEmpty()) {
             return Verification.unavailable("the contract carries no command that could prove the change");
+        }
+        if (task.getVerifierSessionId() == null && control.paused()) {
+            return new Verification(
+                    Verification.Tier.VERIFIER_SESSION,
+                    Verification.Verdict.PENDING,
+                    "menD is paused, so no verifier session was started; the task waits in VERIFYING",
+                    List.of(),
+                    null);
         }
         if (task.getVerifierSessionId() == null) {
             DevinDtos.SessionDetails session = devin.createSession(

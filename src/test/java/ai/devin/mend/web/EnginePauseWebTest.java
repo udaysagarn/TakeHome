@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ai.devin.mend.domain.EnginePauses;
+import ai.devin.mend.domain.RemediationTask;
+import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.Orchestrator;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,12 +47,16 @@ class EnginePauseWebTest {
     @Autowired
     private EnginePauses pauses;
 
+    @Autowired
+    private TaskRepository tasks;
+
     @MockBean
     private Orchestrator orchestrator;
 
     @BeforeEach
     void setUp() {
         pauses.deleteAll();
+        tasks.deleteAll();
     }
 
     @Test
@@ -101,6 +107,30 @@ class EnginePauseWebTest {
                 .andExpect(header().string("Location", "/learnings"));
 
         assertThat(control.paused()).isFalse();
+    }
+
+    @Test
+    void pausingFromATaskPageComesBackToThatTask() throws Exception {
+        RemediationTask task = tasks.saveAndFlush(new RemediationTask(
+                "acme/superset", 61, "chore: bump nth-check", "https://github.com/acme/superset/issues/61", ""));
+
+        mvc.perform(get("/tasks/" + task.getId()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("name=\"taskId\" value=\"" + task.getId() + "\"")));
+
+        mvc.perform(post("/engine")
+                        .param("paused", "true")
+                        .param("from", "task")
+                        .param("taskId", String.valueOf(task.getId())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/tasks/" + task.getId()));
+
+        mvc.perform(post("/engine")
+                        .param("paused", "false")
+                        .param("from", "task")
+                        .param("taskId", String.valueOf(task.getId())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(header().string("Location", "/tasks/" + task.getId()));
     }
 
     @Test

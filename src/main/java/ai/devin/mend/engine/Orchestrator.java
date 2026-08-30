@@ -52,6 +52,7 @@ public class Orchestrator {
     private final ContextService context;
     private final MendMetrics metrics;
     private final ObjectMapper mapper;
+    private final EngineControl control;
     private final MendProperties props;
 
     public Orchestrator(
@@ -69,6 +70,7 @@ public class Orchestrator {
             ContextService context,
             MendMetrics metrics,
             ObjectMapper mapper,
+            EngineControl control,
             MendProperties props) {
         this.tasks = tasks;
         this.taskService = taskService;
@@ -84,6 +86,7 @@ public class Orchestrator {
         this.context = context;
         this.metrics = metrics;
         this.mapper = mapper;
+        this.control = control;
         this.props = props;
     }
 
@@ -232,6 +235,10 @@ public class Orchestrator {
     // ----------------------------------------------------------- remediation
 
     private void dispatch(RemediationTask task) {
+        if (control.paused()) {
+            log.debug("dispatch of {} held: menD is paused", task.key());
+            return;
+        }
         long active = tasks.countByStateIn(EnumSet.of(IssueState.DISPATCHED, IssueState.RUNNING, IssueState.BLOCKED));
         if (active >= props.getEngine().getMaxConcurrentSessions()) {
             log.debug("dispatch of {} deferred: {} sessions already active", task.key(), active);
