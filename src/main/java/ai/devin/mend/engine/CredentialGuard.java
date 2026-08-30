@@ -78,8 +78,12 @@ public class CredentialGuard {
     }
 
     /**
-     * Every registered repository refused. One repository losing access is that repository's
-     * problem; all of them is the app id, the installation id or the private key.
+     * No registered repository is usable, so there is nothing menD can act on. One repository losing
+     * access is that repository's problem and has its own alarm row; all of them stops the board.
+     *
+     * <p>The reason quotes each repository's own stored error rather than naming a culprit: the same
+     * {@code NO_ACCESS} covers a revoked installation and an archived repository, and telling an
+     * operator to check a private key that is fine sends them the wrong way.
      */
     private Optional<Problem> lockedOut() {
         List<Repository> all = repositories.all();
@@ -97,8 +101,9 @@ public class CredentialGuard {
                 .orElse("");
         return Optional.of(new Problem(
                 "github-locked-out:" + detail,
-                "menD paused itself: GitHub refused access to every registered repository (" + detail
-                        + "). Check the app id, the installation id and the private key, then resume."));
+                "menD paused itself: no registered repository is usable, so nothing can be remediated ("
+                        + detail + "). Fix the access each repository reports — or the GitHub App"
+                        + " credentials, if none of them can be reached — re-validate, then resume."));
     }
 
     private static boolean refused(Repository repository) {

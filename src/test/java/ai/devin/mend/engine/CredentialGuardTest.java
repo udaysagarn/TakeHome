@@ -154,14 +154,31 @@ class CredentialGuardTest {
     }
 
     @Test
-    void everyRegisteredRepositoryRefusedReadsAsAWrongAppRatherThanAWrongRepository() {
+    void everyRegisteredRepositoryRefusedStopsTheBoardAndQuotesWhatEachOneReported() {
         registry.saveAndFlush(refused("acme/superset", "the app is not installed on acme/superset"));
 
         guard.enforce();
 
+        assertThat(control.paused()).isTrue();
         assertThat(control.status().reason())
-                .contains("every registered repository")
+                .contains("no registered repository is usable")
                 .contains("the app is not installed on acme/superset");
+    }
+
+    /**
+     * An archived repository is stored as the same {@code NO_ACCESS} as a revoked installation, so the
+     * reason must not send the operator to a private key that is fine.
+     */
+    @Test
+    void aRepositoryLocalDefectPausesWithoutBlamingTheCredential() {
+        registry.saveAndFlush(refused("acme/superset", "acme/superset is archived or disabled, so it accepts no changes."));
+
+        guard.enforce();
+
+        assertThat(control.paused()).isTrue();
+        assertThat(control.status().reason())
+                .contains("acme/superset is archived or disabled")
+                .doesNotContain("Check the app id");
     }
 
     @Test
