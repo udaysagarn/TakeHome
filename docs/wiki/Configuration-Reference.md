@@ -123,3 +123,14 @@ been paid for either way, and an issue labelled while paused is still recorded a
 board. The pause is stored in the database, so it survives a restart, and
 `MEND_ENGINE_ENABLED=false` outranks it: the switch cannot start an engine that configuration
 disabled.
+
+### menD pauses itself when a credential cannot be used
+
+A missing or refused credential stops the engine the same way, with the reason on the paused strip:
+no GitHub App, no Devin key, a Devin key Devin answered `401`/`403` to, or a GitHub App that is
+refused access to every registered repository. Dispatching against a credential that does not work
+buys nothing, and an alarm nobody is watching does not stop a poller.
+
+Recovery is deliberate: menD only learns a credential works by using it, so it does not resume by
+itself once the variable is fixed — an operator resumes. Resuming while the problem is still there
+is respected rather than overruled on the next tick; a *different* failure pauses menD again.

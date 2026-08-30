@@ -45,6 +45,13 @@ class ReconcilerTest {
     @MockBean
     private Orchestrator orchestrator;
 
+    /**
+     * The credential guard pauses menD when a mocked client reports no credentials, which is not what
+     * these tests are about; it has its own coverage in {@code CredentialGuardTest}.
+     */
+    @MockBean
+    private CredentialGuard credentialGuard;
+
     @BeforeEach
     void setUp() {
         tasks.deleteAll();

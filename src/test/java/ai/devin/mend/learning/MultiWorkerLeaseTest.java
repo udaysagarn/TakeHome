@@ -24,6 +24,7 @@ import ai.devin.mend.engine.Notifier;
 import ai.devin.mend.engine.PromptBuilder;
 import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.engine.CredentialGuard;
 import ai.devin.mend.registry.ContextReconciler;
 import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.registry.RepositoryService;
@@ -126,6 +127,13 @@ class MultiWorkerLeaseTest {
     private GitHubClient github;
 
     private final AtomicInteger sessionsCreated = new AtomicInteger();
+
+    /**
+     * The credential guard pauses menD when a mocked client reports no credentials, which is not what
+     * these tests are about; it has its own coverage in {@code CredentialGuardTest}.
+     */
+    @MockBean
+    private CredentialGuard credentialGuard;
 
     @BeforeEach
     void setUp() {
