@@ -22,9 +22,9 @@
     </header>
 
     <main class="deck">
-      <!-- ACT 1 — WHAT -->
+      <!-- ACT 1 — PROBLEM -->
       <section class="slide title-slide">
-        <span class="act">What</span>
+        <span class="act">Problem</span>
         <h1>Every engineering team carries a backlog of work that is too small to schedule and too real to close.</h1>
         <p class="lede">
           menD is an event-driven control plane that watches your repositories, decides which of that
@@ -38,7 +38,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">What</span>
+        <span class="act">Problem</span>
         <h2>The problem is not that the work is hard. It is that the work never gets picked.</h2>
         <div class="two-col">
           <div>
@@ -67,8 +67,52 @@
         </div>
       </section>
 
+      <!-- ACT 2 — WHY NOW -->
       <section class="slide">
-        <span class="act">What</span>
+        <span class="act">Why now</span>
+        <h2>The backlog stopped being a tidiness problem.</h2>
+        <ul class="tight big">
+          <li>Frontier models now find real bugs in code humans have read for decades — in April 2026 a
+              frontier model autonomously found and exploited an RCE in FreeBSD's NFS, a DoS in OpenBSD, a
+              flaw in FFmpeg, and a 23-year-old heap overflow in the Linux kernel.</li>
+          <li>Disclosures climb with that capability — faster than human review scales.</li>
+          <li>The fixes themselves are small and well understood, and they are never scheduled.</li>
+          <li>That gap is what menD closes.</li>
+        </ul>
+      </section>
+
+      <!-- ACT 3 — PRODUCT -->
+      <section class="slide">
+        <span class="act">Product</span>
+        <h2>menD turns a GitHub label into a verified pull request.</h2>
+        <div class="cards">
+          <div class="card">
+            <h3>Devin is the engineer</h3>
+            <p>
+              One session scopes the issue, one implements it, tests it and opens the pull request, and the
+              same session answers the reviewer. menD holds no toolchain of its own.
+            </p>
+          </div>
+          <div class="card">
+            <h3>menD is everything around the engineer</h3>
+            <p>
+              Candidacy, budgets, leases, retries, verification, review response and an audit trail — the
+              part a team needs before it will trust the output.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Event-driven, not a batch job</h3>
+            <p>
+              A webhook or the 30-second poller starts it; one durable row per issue is the system of
+              record, and <code th:text="${triggerLabel}">menD:fix</code> on a registered repository is the
+              whole interface.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <span class="act">Product</span>
         <h2>So menD is built around two refusals.</h2>
         <div class="cards">
           <div class="card">
@@ -96,10 +140,10 @@
         </p>
       </section>
 
-      <!-- ACT 2 — HOW -->
+      <!-- ACT 4 — DEMO -->
       <section class="slide">
-        <span class="act">How</span>
-        <h2>One issue, end to end.</h2>
+        <span class="act">Demo</span>
+        <h2>One issue, end to end — what Devin does at each step.</h2>
         <ol class="trail">
           <li>
             <span class="step">Ingest</span>
@@ -157,8 +201,9 @@
         </p>
       </section>
 
+      <!-- ACT 5 — ARCHITECTURE -->
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>The architecture, in one picture.</h2>
         <div class="diagram">
           <object type="image/svg+xml" th:data="@{/img/architecture.svg}" width="100%">
@@ -168,7 +213,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>Four decisions your senior engineers will ask about.</h2>
         <div class="cards four">
           <div class="card">
@@ -209,7 +254,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>The board, live, from the database behind this page.</h2>
         <section class="kpis deck-kpis" th:with="k=${kpis}">
           <div class="kpi">
@@ -265,7 +310,7 @@
         </p>
       </section>
 
-      <!-- ACT 3 — WHY DEVIN -->
+      <!-- ACT 6 — WHY DEVIN -->
       <section class="slide">
         <span class="act">Why Devin</span>
         <h2>Three things in this system are impossible without an autonomous coding agent.</h2>
@@ -298,6 +343,11 @@
           menD's own contribution is the part Devin should not have to own: durability, leases,
           budgets, verification tiers, and the refusal to claim a green it does not have.
         </p>
+        <p class="evidence">
+          The same shape extends: an automated PR review raised when a change lands with test coverage
+          below the repository's bar is only practical with an agent that can read the diff, the tests and
+          the repository's conventions — a rule engine can count lines, not judge a change.
+        </p>
       </section>
 
       <section class="slide">
@@ -316,9 +366,9 @@
         </p>
       </section>
 
-      <!-- ACT 4 — WHEN -->
+      <!-- ACT 7 — EXTEND -->
       <section class="slide">
-        <span class="act">When</span>
+        <span class="act">Extend</span>
         <h2>What this is not, yet.</h2>
         <ul class="tight big">
           <li>Single-node by deployment, not by design — the leases are already the hard part; running
@@ -333,7 +383,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">When</span>
+        <span class="act">Extend</span>
         <h2>How I would extend this in a real engagement.</h2>
         <div class="cards">
           <div class="card">
@@ -379,7 +429,7 @@
       </section>
 
       <section class="slide title-slide">
-        <span class="act">When</span>
+        <span class="act">Extend</span>
         <h1>The pitch, in one sentence.</h1>
         <p class="lede">
           Give menD the work your team keeps deferring, and it will either return a pull request with

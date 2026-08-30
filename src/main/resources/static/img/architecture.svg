@@ -1,167 +1,217 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 720" width="1240" height="720"
-     font-family="'Segoe Print','Bradley Hand','Comic Sans MS',ui-rounded,sans-serif" role="img"
-     aria-label="menD architecture: GitHub events enter menD, the criteria gate decides candidacy, Devin sessions scope and remediate, verification gates success, and outcomes feed a learning store">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1680 900" width="1680" height="900"
+     font-family="Inter, ui-sans-serif, system-ui, sans-serif" role="img"
+     aria-label="menD architecture, left to right: a GitHub issue labelled menD:fix enters menD's ingest, the criteria gate accepts or refuses it with a Devin scoping session, the supervisor dispatches a Devin remediation session that opens a pull request, the verifier turns independent evidence into SUCCEEDED or UNVERIFIED, and reviewer feedback returns to the same session and becomes a lesson">
   <defs>
-    <filter id="rough">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="7" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#4a4a4a"/>
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgb(25 25 25 / 0.45)"/>
     </marker>
     <style>
-      .box { fill: #ffffff; stroke: #2f2f2f; stroke-width: 2; filter: url(#rough); }
-      .devin { fill: #eaf1ff; stroke: #2f5fd0; }
-      .store { fill: #f3f0ff; stroke: #5b3fd0; }
-      .github { fill: #f4f4f4; stroke: #3a3a3a; }
-      .good { fill: #e9f9f0; stroke: #10794a; }
-      .bad  { fill: #fdeeee; stroke: #b3322f; }
-      .t  { font-size: 16px; fill: #1c1c1c; }
-      .h  { font-size: 17px; font-weight: 700; fill: #101010; }
-      .s  { font-size: 13px; fill: #4a4a4a; }
-      .lbl{ font-size: 13px; fill: #3a3a3a; paint-order: stroke; stroke: #fbfaf7; stroke-width: 6px;
-            stroke-linejoin: round; }
-      .flow { fill: none; stroke: #4a4a4a; stroke-width: 2; marker-end: url(#arrow); filter: url(#rough); }
-      .dash { stroke-dasharray: 7 6; }
-      .zone { fill: none; stroke: #b9b9b9; stroke-width: 1.5; stroke-dasharray: 3 7; }
+      .box   { fill: #ffffff; stroke: rgb(0 0 0 / 0.12); stroke-width: 1.5; }
+      .devin { stroke: rgb(49 124 255); fill: rgb(49 124 255 / 0.05); }
+      .store { fill: rgb(0 0 0 / 0.02); }
+      .good  { stroke: rgb(0 165 88); fill: rgb(0 165 88 / 0.06); }
+      .bad   { stroke: rgb(245 59 58); fill: rgb(245 59 58 / 0.05); }
+      .h     { font-size: 15px; font-weight: 600; fill: rgb(25 25 25); }
+      .t     { font-size: 13.5px; fill: rgb(25 25 25); }
+      .s     { font-size: 11.5px; fill: rgb(25 25 25 / 0.56); }
+      .lbl   { font-size: 11.5px; fill: rgb(25 25 25 / 0.56); paint-order: stroke; stroke: #fcfcfc;
+               stroke-width: 5px; stroke-linejoin: round; }
+      .zonelbl { font-size: 12.5px; font-weight: 600; fill: rgb(25 25 25 / 0.56); letter-spacing: 0.02em; }
+      .flow  { fill: none; stroke: rgb(25 25 25 / 0.45); stroke-width: 1.6; marker-end: url(#arrow);
+               stroke-linejoin: round; }
+      .dash  { stroke-dasharray: 6 5; }
+      .zone  { fill: none; stroke: rgb(0 0 0 / 0.1); stroke-width: 1.5; stroke-dasharray: 4 6; }
+      .blue  { fill: rgb(49 124 255); }
+      .green { fill: rgb(0 165 88); }
+      .red   { fill: rgb(245 59 58); }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1240" height="720" fill="#fbfaf7"/>
+  <rect x="0" y="0" width="1680" height="900" fill="#fcfcfc"/>
 
-  <text x="34" y="44" class="h" font-size="24">menD — how an issue becomes a verified pull request</text>
-  <text x="34" y="68" class="s" font-size="14">Devin is the executor. menD decides what is worth executing, what “done” means, and whether to believe the result.</text>
+  <text x="34" y="44" class="h" font-size="22">menD — how an issue becomes a verified pull request</text>
+  <text x="34" y="70" class="s" font-size="13">Devin is the engineer. menD decides what is worth doing, what “done” means, and whether to believe the result.</text>
 
-  <!-- zones -->
-  <rect x="24" y="96" width="250" height="560" rx="14" class="zone"/>
-  <text x="40" y="120" class="lbl">GitHub (your org)</text>
-  <rect x="298" y="96" width="600" height="560" rx="14" class="zone"/>
-  <text x="314" y="120" class="lbl">menD control plane (one container)</text>
-  <rect x="922" y="96" width="294" height="560" rx="14" class="zone"/>
-  <text x="938" y="120" class="lbl">Devin API (api.devin.ai)</text>
+  <!-- trust boundaries -->
+  <rect x="24" y="92" width="1632" height="200" rx="14" class="zone"/>
+  <text x="44" y="116" class="zonelbl">GitHub (your org)</text>
+  <rect x="24" y="312" width="1632" height="312" rx="14" class="zone"/>
+  <text x="44" y="336" class="zonelbl">menD control plane (one container)</text>
+  <rect x="24" y="644" width="1632" height="192" rx="14" class="zone"/>
+  <text x="44" y="668" class="zonelbl">Devin API (api.devin.ai)</text>
 
-  <!-- github column -->
-  <rect x="48" y="140" width="202" height="82" rx="12" class="box github"/>
+  <!-- GitHub row -->
+  <rect x="48" y="140" width="196" height="112" rx="10" class="box"/>
   <text x="66" y="170" class="h">Issue labelled</text>
-  <text x="66" y="194" class="t">menD:fix</text>
+  <text x="66" y="192" class="t">menD:fix</text>
   <text x="66" y="212" class="s">webhook, or 30s poll</text>
+  <text x="66" y="230" class="s">one durable task per issue</text>
 
-  <rect x="48" y="248" width="202" height="72" rx="12" class="box github"/>
-  <text x="66" y="278" class="h">Push to default branch</text>
-  <text x="66" y="300" class="s">ages the repo profile</text>
+  <rect x="506" y="140" width="200" height="112" rx="10" class="box bad"/>
+  <text x="524" y="170" class="h">Not a candidate</text>
+  <text x="524" y="192" class="s">labelled and explained</text>
+  <text x="524" y="210" class="s">on the issue</text>
+  <text x="524" y="230" class="s red">nothing was spent</text>
 
-  <rect x="48" y="348" width="202" height="86" rx="12" class="box github"/>
-  <text x="66" y="378" class="h">Pull request</text>
-  <text x="66" y="400" class="s">opened by Devin,</text>
-  <text x="66" y="418" class="s">reviewed by a human</text>
+  <rect x="968" y="140" width="196" height="112" rx="10" class="box"/>
+  <text x="986" y="170" class="h">Pull request opened</text>
+  <text x="986" y="192" class="s">by Devin, in your repo</text>
+  <text x="986" y="210" class="s">the repository's own</text>
+  <text x="986" y="228" class="s">required checks run</text>
 
-  <rect x="48" y="462" width="202" height="86" rx="12" class="box github"/>
-  <text x="66" y="492" class="h">Required checks</text>
-  <text x="66" y="514" class="s">repo CI, or the menD</text>
-  <text x="66" y="532" class="s">verification contract</text>
+  <rect x="1198" y="140" width="196" height="112" rx="10" class="box"/>
+  <text x="1216" y="170" class="h">Human review</text>
+  <text x="1216" y="192" class="s">approved, or changes</text>
+  <text x="1216" y="210" class="s">requested with inline</text>
+  <text x="1216" y="228" class="s">comments</text>
 
-  <rect x="48" y="576" width="202" height="62" rx="12" class="box github"/>
-  <text x="66" y="606" class="h">Labels + comments</text>
-  <text x="66" y="626" class="s">human-visible projection</text>
+  <rect x="1428" y="140" width="196" height="112" rx="10" class="box"/>
+  <text x="1446" y="170" class="h">Labels + comments</text>
+  <text x="1446" y="192" class="s">human-visible projection</text>
+  <text x="1446" y="210" class="s">of the state of record,</text>
+  <text x="1446" y="228" class="s">never an input to it</text>
 
-  <!-- control plane -->
-  <rect x="324" y="140" width="228" height="80" rx="12" class="box"/>
-  <text x="342" y="170" class="h">Ingest</text>
-  <text x="342" y="192" class="s">HMAC webhook · poller</text>
-  <text x="342" y="210" class="s">one durable task per issue</text>
+  <!-- menD row -->
+  <rect x="278" y="356" width="196" height="120" rx="10" class="box"/>
+  <text x="296" y="386" class="h">Ingest</text>
+  <text x="296" y="410" class="s">HMAC webhook · 30s poller</text>
+  <text x="296" y="428" class="s">one durable task per issue</text>
+  <text x="296" y="446" class="s">deliveries are hints; the</text>
+  <text x="296" y="464" class="s">poller reconciles the truth</text>
 
-  <rect x="324" y="252" width="228" height="104" rx="12" class="box"/>
-  <text x="342" y="282" class="h">Criteria gate</text>
-  <text x="342" y="304" class="s">acceptance criteria,</text>
-  <text x="342" y="322" class="s">verification commands,</text>
-  <text x="342" y="340" class="s">files in scope, test plan</text>
+  <rect x="506" y="356" width="200" height="120" rx="10" class="box"/>
+  <text x="524" y="386" class="h">Criteria gate</text>
+  <text x="524" y="410" class="s">acceptance criteria,</text>
+  <text x="524" y="428" class="s">verification commands,</text>
+  <text x="524" y="446" class="s">files in scope, test plan,</text>
+  <text x="524" y="464" class="s">confidence ≥ 0.7</text>
 
-  <rect x="324" y="388" width="228" height="96" rx="12" class="box"/>
-  <text x="342" y="418" class="h">Supervisor</text>
-  <text x="342" y="440" class="s">lease + ETA, heartbeat,</text>
-  <text x="342" y="458" class="s">nudge, retry, escalate</text>
-  <text x="342" y="476" class="s">reclaim on worker death</text>
+  <rect x="738" y="356" width="196" height="120" rx="10" class="box"/>
+  <text x="756" y="386" class="h">Supervisor</text>
+  <text x="756" y="410" class="s">lease PT2M + predicted ETA</text>
+  <text x="756" y="428" class="s">heartbeat PT30S</text>
+  <text x="756" y="446" class="s">nudge, retry, escalate</text>
+  <text x="756" y="464" class="s">reclaim on worker death</text>
 
-  <rect x="324" y="516" width="228" height="104" rx="12" class="box"/>
-  <text x="342" y="546" class="h">Verifier</text>
-  <text x="342" y="568" class="s">1 repo CI · 2 contract run</text>
-  <text x="342" y="586" class="s">3 verifier session</text>
-  <text x="342" y="604" class="s">else UNVERIFIED, never green</text>
+  <rect x="1198" y="356" width="196" height="120" rx="10" class="box"/>
+  <text x="1216" y="386" class="h">Verifier</text>
+  <text x="1216" y="410" class="s">1 repo CI</text>
+  <text x="1216" y="428" class="s">2 contract workflow run</text>
+  <text x="1216" y="446" class="s">3 verifier session</text>
+  <text x="1216" y="464" class="s">else UNVERIFIED, never green</text>
 
-  <rect x="596" y="140" width="278" height="128" rx="12" class="box store"/>
-  <text x="614" y="170" class="h">State of record</text>
-  <text x="614" y="194" class="s">remediation_task: state, contract</text>
-  <text x="614" y="212" class="s">hash, sessions, PR, attempts, ACU</text>
-  <text x="614" y="230" class="s">owner_id, lease_expires_at, eta_at</text>
-  <text x="614" y="252" class="s">task_event: append-only audit</text>
+  <rect x="1428" y="356" width="196" height="54" rx="10" class="box good"/>
+  <text x="1446" y="380" class="h green">SUCCEEDED</text>
+  <text x="1446" y="399" class="s">independent evidence</text>
 
-  <rect x="596" y="292" width="278" height="118" rx="12" class="box store"/>
-  <text x="614" y="322" class="h">Repository registry</text>
-  <text x="614" y="346" class="s">access validated at connect time</text>
-  <text x="614" y="364" class="s">profile per repo: build, test, CI,</text>
-  <text x="614" y="382" class="s">layout, risk, AGENTS/CLAUDE rules</text>
-  <text x="614" y="400" class="s">refreshed per slice on push</text>
+  <rect x="1428" y="422" width="196" height="54" rx="10" class="box bad"/>
+  <text x="1446" y="446" class="h red">UNVERIFIED</text>
+  <text x="1446" y="465" class="s">nothing could prove it</text>
 
-  <rect x="596" y="434" width="278" height="106" rx="12" class="box store"/>
-  <text x="614" y="464" class="h">Learning store</text>
-  <text x="614" y="488" class="s">repo-specific → that repo's prompts</text>
-  <text x="614" y="506" class="s">general → Devin knowledge / playbook</text>
-  <text x="614" y="524" class="s">retired when it stops paying off</text>
+  <!-- menD stores -->
+  <rect x="278" y="500" width="290" height="104" rx="10" class="box store"/>
+  <text x="296" y="528" class="h">State of record</text>
+  <text x="296" y="550" class="s">remediation_task: state, contract hash,</text>
+  <text x="296" y="568" class="s">sessions, PR, attempts, ACU, lease</text>
+  <text x="296" y="586" class="s">task_event: append-only audit</text>
 
-  <rect x="596" y="564" width="278" height="56" rx="12" class="box"/>
-  <text x="614" y="594" class="h">Dashboard + report</text>
-  <text x="614" y="612" class="s">board, KPIs, per-issue audit trail</text>
+  <rect x="596" y="500" width="290" height="104" rx="10" class="box store"/>
+  <text x="614" y="528" class="h">Repository registry</text>
+  <text x="614" y="550" class="s">access validated at connect time</text>
+  <text x="614" y="568" class="s">profile per repo: build, test, CI, layout,</text>
+  <text x="614" y="586" class="s">AGENTS/CLAUDE rules; aged on push</text>
 
-  <!-- devin column -->
-  <rect x="948" y="150" width="242" height="120" rx="12" class="box devin"/>
-  <text x="966" y="180" class="h">Scoping session</text>
-  <text x="966" y="204" class="s">reads the issue and the repo</text>
-  <text x="966" y="222" class="s">profile, returns a structured</text>
-  <text x="966" y="240" class="s">contract or refuses the issue</text>
-  <text x="966" y="260" class="s">bounded: ~3 ACU</text>
+  <rect x="1000" y="500" width="240" height="104" rx="10" class="box store"/>
+  <text x="1018" y="528" class="h">Learning store</text>
+  <text x="1018" y="550" class="s">repo lessons → that repo's</text>
+  <text x="1018" y="568" class="s">next prompt; general lessons</text>
+  <text x="1018" y="586" class="s">→ promoted by a human</text>
 
-  <rect x="948" y="300" width="242" height="140" rx="12" class="box devin"/>
-  <text x="966" y="330" class="h">Remediation session</text>
-  <text x="966" y="354" class="s">implements inside the agreed</text>
-  <text x="966" y="372" class="s">scope, adds or updates the tests</text>
-  <text x="966" y="390" class="s">named in the plan, runs the</text>
-  <text x="966" y="408" class="s">verification commands, opens</text>
-  <text x="966" y="426" class="s">the PR — bounded: ~10 ACU</text>
+  <rect x="1428" y="500" width="196" height="104" rx="10" class="box store"/>
+  <text x="1446" y="528" class="h">Dashboard + report</text>
+  <text x="1446" y="550" class="s">board, KPIs, per-issue</text>
+  <text x="1446" y="568" class="s">audit trail, declined and</text>
+  <text x="1446" y="586" class="s">unverified work shown too</text>
 
-  <rect x="948" y="470" width="242" height="98" rx="12" class="box devin"/>
-  <text x="966" y="500" class="h">Follow-up session</text>
-  <text x="966" y="524" class="s">same session, resumed with</text>
-  <text x="966" y="542" class="s">red CI or reviewer comments</text>
-  <text x="966" y="560" class="s">until the attempt budget runs out</text>
+  <!-- Devin sessions -->
+  <rect x="506" y="686" width="200" height="134" rx="10" class="box devin"/>
+  <text x="524" y="716" class="h blue">Scoping session</text>
+  <text x="524" y="740" class="s">reads the issue and the</text>
+  <text x="524" y="758" class="s">repository profile, returns</text>
+  <text x="524" y="776" class="s">a structured contract or</text>
+  <text x="524" y="794" class="s">refuses the issue</text>
+  <text x="524" y="812" class="s">bounded: ~3 ACU</text>
 
-  <!-- outcomes -->
-  <rect x="324" y="644" width="110" height="0" class="box"/>
+  <rect x="738" y="686" width="196" height="134" rx="10" class="box devin"/>
+  <text x="756" y="716" class="h blue" style="font-size:16px">Remediation session</text>
+  <text x="756" y="740" class="s">implements inside the</text>
+  <text x="756" y="758" class="s">agreed scope, adds the</text>
+  <text x="756" y="776" class="s">named tests, runs the</text>
+  <text x="756" y="794" class="s">commands, opens the PR</text>
+  <text x="756" y="812" class="s">bounded: ~10 ACU</text>
+
+  <rect x="968" y="686" width="196" height="134" rx="10" class="box devin"/>
+  <text x="986" y="716" class="h blue">Follow-up session</text>
+  <text x="986" y="740" class="s">the same session, resumed</text>
+  <text x="986" y="758" class="s">with red CI or the</text>
+  <text x="986" y="776" class="s">reviewer's comments</text>
+  <text x="986" y="794" class="s">bounded rounds, then a</text>
+  <text x="986" y="812" class="s">human is asked for</text>
+
+  <rect x="1198" y="686" width="196" height="134" rx="10" class="box devin"/>
+  <text x="1216" y="716" class="h blue">Verifier session</text>
+  <text x="1216" y="740" class="s">runs the verification</text>
+  <text x="1216" y="758" class="s">commands at the PR head</text>
+  <text x="1216" y="776" class="s">and reports exit codes,</text>
+  <text x="1216" y="794" class="s">never writing code</text>
 
   <!-- flows -->
-  <path class="flow" d="M250 181 H 318"/>
-  <path class="flow" d="M250 284 C 280 284, 290 320, 318 320"/>
-  <path class="flow" d="M438 220 V 246"/>
-  <path class="flow" d="M438 356 V 382"/>
-  <path class="flow" d="M438 484 V 510"/>
-  <path class="flow" d="M250 505 C 285 505, 292 545, 318 552"/>
-  <!-- menD → Devin over the top corridor, Devin → menD along the bottom, so nothing
-       crosses the boxes in the middle two columns -->
-  <path class="flow" d="M552 292 C 570 292, 574 128, 612 128 H 890 C 928 128, 944 150, 946 174"/>
-  <text x="600" y="119" class="lbl">POST /v3/…/sessions · scope · remediate · verify</text>
+  <path class="flow" d="M146 252 V 318 H 376 V 352"/>
+  <text x="164" y="312" class="lbl">labelled by a human</text>
 
-  <path class="flow" d="M1068 570 C 1068 622, 1000 642, 900 642 H 520 C 470 642, 440 636, 438 622"/>
-  <text x="612" y="662" class="lbl">structured contract · outcome · verification verdict</text>
+  <path class="flow" d="M474 416 H 502"/>
 
-  <path class="flow" d="M552 200 H 590"/>
-  <path class="flow" d="M552 340 H 590"/>
-  <path class="flow" d="M552 470 H 590"/>
-  <path class="flow" d="M552 590 H 590"/>
-  <path class="flow" d="M330 596 C 300 596, 270 620, 254 614"/>
-  <path class="flow dash" d="M330 560 C 290 560, 262 520, 252 500"/>
-  <path class="flow dash" d="M498 648 C 400 656, 288 664, 284 596 C 284 512, 272 442, 254 424"/>
+  <path class="flow" d="M606 356 V 256"/>
+  <text x="616" y="312" class="lbl">refused</text>
 
-  <!-- outcome badges -->
-  <rect x="286" y="228" width="26" height="26" rx="8" class="box bad"/>
-  <text x="292" y="247" class="t" font-size="14">✕</text>
-  <text x="34" y="650" class="lbl">✕ = no checkable “done” → excluded</text>
+  <path class="flow" d="M706 416 H 734"/>
+  <text x="676" y="340" class="lbl">accepted</text>
+
+  <path class="flow" d="M580 476 V 682"/>
+  <path class="flow" d="M632 682 V 480"/>
+  <text x="428" y="620" class="lbl">scope · contract</text>
+
+  <path class="flow" d="M810 476 V 682"/>
+  <path class="flow" d="M862 682 V 480"/>
+  <text x="922" y="620" class="lbl">dispatch · status · ACU</text>
+
+  <path class="flow" d="M934 700 H 951 V 256"/>
+  <text x="958" y="306" class="lbl">opens the pull request</text>
+
+  <path class="flow" d="M1164 196 H 1194"/>
+
+  <path class="flow" d="M1066 252 C 1066 300, 1180 302, 1272 352"/>
+  <text x="1090" y="342" class="lbl">checks · evidence</text>
+
+  <path class="flow" d="M1272 476 V 682"/>
+  <path class="flow" d="M1324 682 V 480"/>
+  <text x="1332" y="620" class="lbl">exit codes</text>
+
+  <path class="flow" d="M1394 383 H 1424"/>
+  <path class="flow" d="M1394 449 H 1424"/>
+
+  <path class="flow" d="M1526 356 V 256"/>
+  <text x="1440" y="308" class="lbl">terminal label applied</text>
+
+  <path class="flow" d="M376 476 V 496"/>
+  <path class="flow" d="M606 476 V 496"/>
+
+  <path class="flow dash" d="M1394 220 H 1411 V 858 H 1066 V 824"/>
+  <text x="1090" y="878" class="lbl">changes requested → back to the same session, bounded rounds</text>
+
+  <path class="flow dash" d="M1120 686 V 608"/>
+  <text x="1130" y="654" class="lbl">retrospective</text>
+
+  <path class="flow dash" d="M1000 552 H 962 V 700 H 938"/>
+  <text x="742" y="668" class="lbl">lessons ride into the next prompt</text>
 </svg>

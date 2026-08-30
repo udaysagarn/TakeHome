@@ -1,5 +1,8 @@
 # menD — public API and contracts
 
+**Your backlog has hundreds of small, real, well-understood issues nobody will ever get to. menD
+closes them — with evidence, or not at all.**
+
 menD watches GitHub repositories, decides which issues are safely automatable, has Devin fix them,
 and refuses to call anything a success unless something other than the session that wrote the code
 says so.

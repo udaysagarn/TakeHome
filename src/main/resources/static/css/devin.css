@@ -604,6 +604,15 @@ details summary {
   margin: 0;
 }
 
+.urgency {
+  max-width: 860px;
+  margin: 20px 0 24px;
+  padding-left: 12px;
+  border-left: 2px solid rgb(var(--bg-accent-primary));
+  color: rgb(var(--text-secondary));
+  font-size: 14px;
+}
+
 .cta-row {
   display: flex;
   gap: 10px;
@@ -622,6 +631,12 @@ details summary {
   padding: 12px;
   box-shadow: var(--shadow-L1);
   overflow-x: auto;
+}
+
+.diagram object {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .feature-grid {

@@ -12,6 +12,18 @@ review so the next issue goes better.
 Devin is the engineer. menD is everything a team needs around an engineer to trust the output: candidacy,
 budgets, leases, retries, verification, review response, and an audit trail.
 
+## Why now
+
+Frontier models have started finding real vulnerabilities in code humans have read for decades. In
+April 2026 a frontier model autonomously found and exploited a remote code execution flaw in
+FreeBSD's NFS implementation, a denial of service in OpenBSD, a flaw in FFmpeg, and a 23-year-old
+heap overflow in the Linux kernel. Disclosure volume is climbing with that capability, and it is
+climbing faster than human review scales.
+
+The work that follows a disclosure is rarely hard. It is a pin, a bounds check, a missing test — small,
+well-understood fixes that are never anybody's priority and therefore never get scheduled. That gap
+is what menD closes.
+
 ## The business case
 
 A mid-size platform team carries 200–500 issues that are individually worth ~1–4 engineer-hours and
@@ -197,19 +209,35 @@ issue:
 - **Release** — terminal states and clean shutdowns release immediately, so a rolling restart hands work over
   rather than waiting for expiry.
 
-## Run it on a laptop
+## Run or simulate the workflow
 
-One container, one file-backed H2 database, `udaysagarn/superset` pre-registered.
+One container, one file-backed H2 database, `udaysagarn/superset` pre-registered. There is one mode and it
+is live: menD cannot dispatch, verify or learn without a real Devin key and a real GitHub App, so the whole
+walkthrough below needs credentials. The only credential-free way to see the surfaces is the rendered-HTML
+test suite — `mvn -B test -Dtest=DashboardRenderTest` seeds a fake instance (repositories, tasks, PRs,
+lessons) and asserts `/`, `/flows`, `/tasks/{id}`, `/learnings` and `/deck` against it, so the templates can
+be reviewed without spending an ACU. Nothing else simulates the pipeline.
 
-```bash
-./deploy/setup.sh
-```
+1. **Start it.**
 
-One interactive script: it asks for the Devin key and the GitHub App credentials it cannot invent, writes
-`.env`, builds the image, and waits for `/actuator/health`. Creating those credentials from scratch, with the
-exact GitHub App permissions, is [docs/CREDENTIALS.md](docs/CREDENTIALS.md); the Mac walkthrough is
-[docs/DEMO-MAC.md](docs/DEMO-MAC.md), and the issues the demo runs against, with how each one was vetted, are
-in [docs/DEMO-ISSUES.md](docs/DEMO-ISSUES.md).
+   ```bash
+   ./deploy/setup.sh
+   ```
+
+   One interactive script: it asks for the Devin key and the GitHub App credentials it cannot invent, writes
+   `.env`, builds the image, and waits for `/actuator/health`. Creating those credentials from scratch, with
+   the exact GitHub App permissions, is [docs/CREDENTIALS.md](docs/CREDENTIALS.md); the Mac walkthrough is
+   [docs/DEMO-MAC.md](docs/DEMO-MAC.md).
+2. **Confirm the registry.** Open `/`. `udaysagarn/superset` is seeded from `MEND_REPO` on first boot and its
+   card should read `VALIDATED`; anything else means the GitHub App is not installed on it.
+3. **Label a real issue `menD:fix`.** Watch `/flows` move it criteria → session → PR → verification. The
+   issues these demos run against, and how each one was vetted, are in
+   [docs/DEMO-ISSUES.md](docs/DEMO-ISSUES.md).
+4. **Label a placeholder issue too.** It comes back `menD:not-a-candidate`, commented with the reasons and
+   what a human would need to add, having spent nothing.
+5. **Request changes on one of menD's pull requests.** The task moves to `CHANGES_REQUESTED`, the feedback
+   goes back to the *same* Devin session, and the exchange lands as a lesson at `/learnings`.
+6. **Read `/api/report`.** The same numbers, as markdown, for a leadership audience.
 
 State lives in the `mend-data` volume, so `docker compose down` and back up keeps your history. If Maven
 Central rate-limits the build (shared and cloud IPs get HTTP 429 regularly), the image retries through a
@@ -258,7 +286,7 @@ changes.
 | `/tasks/{id}` | one issue end to end: criteria contract, sessions, verification evidence, lease, audit |
 | `/learnings` | what reviewers have taught menD, and what needs a human to promote |
 | `/repositories/new` | step-by-step registration |
-| `/deck` | the twelve-slide walkthrough, drawn from this instance's own numbers — arrow keys, printable |
+| `/deck` | the slide walkthrough, drawn from this instance's own numbers — arrow keys, printable |
 | `/api/report` | markdown report for a leadership audience |
 | `/api/summary`, `/api/tasks`, `/api/learnings`, `/api/repositories` | JSON read model |
 | `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
@@ -266,16 +294,6 @@ changes.
 
 The stylesheet uses Devin's own design tokens under its `.light` / `.dark` / `.high-contrast` scheme, so the
 view is recognisably part of the product rather than an approximation of it.
-
-## Demo path
-
-1. `/` — what it does, which repositories are connected.
-2. `/repositories/new` — register one; menD validates access and profiles the codebase.
-3. Label a real issue `menD:fix`. Watch `/flows`: criteria → session → PR → verification.
-4. Label a placeholder issue too — it comes back `menD:not-a-candidate` with reasons, having spent nothing.
-5. Reject one of menD's PRs with "changes requested". Watch it come back as `CHANGES_REQUESTED`, answer the
-   reviewer in the same session, and land a lesson in `/learnings`.
-6. `/api/report` — the leadership view.
 
 ## Limits, honestly
 

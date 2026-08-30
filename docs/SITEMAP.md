@@ -20,14 +20,14 @@ Issue/Pull request on a task, Print on the deck) sit beside that nav, never in p
 
 | Route | Template | Purpose | Linked from |
 |---|---|---|---|
-| `GET /` | `overview.html` | Landing page: what menD is, repo cards, KPIs, architecture + flywheel diagrams | nav on every page |
+| `GET /` | `overview.html` | Landing page: what menD is, repo cards, KPIs, architecture diagram | nav on every page |
 | `GET /flows?repo=` | `dashboard.html` | The board — tasks by state, KPI cards, live refresh. `repo` filters to one repository; absent means all | nav on every page, repo cards, task rows |
 | `GET /tasks/{id}` | `task.html` | One task: criteria contract, Devin sessions, attempts, ACU, lease, event history, verification evidence | `/flows` rows |
 | `GET /learnings` | `learnings.html` | What reviewers taught menD: repo-scoped and general lessons, recommended actions, retired lessons | nav on every page |
 | `GET /repositories/new` | `register.html` | Step-by-step registration instructions plus the register form | nav on every page, `/` |
 | `POST /repositories` | `register.html` | Registers + validates a repository, re-renders the same page with the verdict | form on `/repositories/new` |
 | `POST /engine` | — (redirects back) | Pauses or resumes new work | pause switch in the navigation |
-| `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | nav on every page |
+| `GET /deck` | `deck.html` | The pitch as slides (Problem / Why now / Product / Demo / Architecture / Why Devin / Extend). Numbers come from this instance's database | nav on every page |
 | `GET /fragments/live?repo=` | `fragments/live :: live` | htmx polling target — everything below the header on the board. Not a page a human opens | htmx on `/flows` |
 | `RequestMapping /error` | `error.html` | Branded error page for 404/500 | Spring's error dispatch |
 

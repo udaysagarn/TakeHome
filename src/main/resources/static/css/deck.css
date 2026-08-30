@@ -279,6 +279,13 @@ ul.tight.big li {
   padding: 12px;
 }
 
+.deck .diagram object {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 62vh;
+}
+
 .muted {
   color: rgb(var(--text-tertiary));
 }
