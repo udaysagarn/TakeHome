@@ -18,7 +18,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * Registration is the point where menD promises it can work on a repository, so the interesting
@@ -108,6 +111,19 @@ class RepositoryServiceTest {
         Repository repository = service.register(SLUG);
         assertThat(repository.getAccessState()).isEqualTo(AccessState.MISSING_PERMISSION);
         assertThat(repository.getAccessError()).contains("Issues are turned off");
+    }
+
+    @Test
+    void aRejectedCredentialLeavesTheRepositoryRegisteredWithTheReason() {
+        when(github.getRepo(SLUG))
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null));
+
+        Repository repository = service.register(SLUG);
+
+        assertThat(repository.getAccessState()).isEqualTo(AccessState.NO_ACCESS);
+        assertThat(repository.getAccessError()).contains("could not ask GitHub", "private key");
+        assertThat(repositories.findAll()).extracting(Repository::slug).containsExactly(SLUG);
     }
 
     @Test

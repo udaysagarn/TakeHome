@@ -90,9 +90,30 @@ public class RepositoryService {
         return validate(repository);
     }
 
-    /** Runs the access chain and stores the verdict on the repository. */
+    /**
+     * Runs the access chain and stores the verdict on the repository. An error GitHub was not asked
+     * about — a rejected app credential, a network failure — is a verdict too: it is stored the same
+     * way, because a registry that lost the repository leaves an operator with nothing to fix.
+     */
     @Transactional
     public Repository validate(Repository repository) {
+        try {
+            return interrogate(repository);
+        } catch (RuntimeException e) {
+            log.warn("could not validate {}: {}", repository.slug(), e.toString());
+            repository.markAccessFailure(AccessState.NO_ACCESS, unreachable(repository, e));
+            return repositories.save(repository);
+        }
+    }
+
+    private String unreachable(Repository repository, RuntimeException e) {
+        String detail = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        String message = "menD could not ask GitHub about " + repository.slug() + ": " + detail
+                + ". Check the GitHub App id, installation id and private key, then re-validate.";
+        return message.length() > 1024 ? message.substring(0, 1024) : message;
+    }
+
+    private Repository interrogate(Repository repository) {
         if (!github.isConfigured()) {
             repository.markAccessFailure(
                     AccessState.NO_ACCESS,
