@@ -1,12 +1,32 @@
-# menD — event-driven issue remediation control plane
+# menD
 
-menD turns a GitHub label into a merged pull request. It watches `udaysagarn/superset` for issues labelled
-`menD:fix`, refuses to spend anything on issues that have no machine-checkable definition of done, dispatches
-one Devin session per issue that survives that gate, supervises the session until a pull request has green CI,
-and reports throughput, success rate and ACU cost on a live dashboard.
+**Your backlog has hundreds of small, real, well-understood issues nobody will ever get to. menD closes them
+— with evidence, or not at all.**
 
-Devin is the execution engine. menD is the control plane around it: candidacy, budgets, retries, verification and
-the audit trail.
+menD is an event-driven control plane that turns a GitHub label into a verified pull request. It watches the
+repositories you register, refuses to spend anything on issues that have no machine-checkable definition of
+done, dispatches one Devin session per issue that survives that gate, supervises it to a pull request, waits
+for *independent* proof that the fix works, responds when a human reviewer pushes back, and learns from that
+review so the next issue goes better.
+
+Devin is the engineer. menD is everything a team needs around an engineer to trust the output: candidacy,
+budgets, leases, retries, verification, review response, and an audit trail.
+
+## The business case
+
+A mid-size platform team carries 200–500 issues that are individually worth ~1–4 engineer-hours and
+collectively worth nobody's quarter: dependency advisories, lint debt, error-handling gaps, flaky
+config. They are never prioritised, and they are exactly the class of work an agent can finish.
+
+menD's claim is narrow on purpose: *for issues with a machine-checkable definition of done, the cost of a fix
+drops to a few ACUs and zero engineer-hours, and the risk stays bounded because nothing is called done
+without independent evidence.* The dashboard reports the three numbers a VP asks for — success rate of
+attempted issues, median time from label to pull request, and ACU per successful remediation — plus the
+honest one: how much work menD **declined** because it could not be verified.
+
+## How it works
+
+![architecture](src/main/resources/static/img/architecture.svg)
 
 ```
 GitHub issue labelled menD:fix
@@ -19,17 +39,23 @@ GitHub issue labelled menD:fix
                                                           │
                                                         READY
                                                           ▼
-                                        Devin remediation session (criteria in the prompt)
+                             Devin remediation session (criteria + repo profile + lessons in the prompt)
                                                           ▼
-                                          PR_OPEN ──► VERIFYING ──► SUCCEEDED
-                                                       CI red ──► nudge session ──► retry ──► NEEDS_HUMAN
+                                    PR_OPEN ──► VERIFYING ──┬──► SUCCEEDED     (independent evidence)
+                                                            ├──► UNVERIFIED    (nothing could prove it)
+                                                            └──► CHANGES_REQUESTED
+                                                                      │  reviewer feedback → same session
+                                                                      └──► NEEDS_HUMAN after N rounds
+                                                          ▼
+                                          retrospective ──► learning store ──► next issue's prompt
 ```
 
-## Why the criteria gate exists
+## The candidate gate
 
 An automation that opens a pull request for every issue is a liability. Before any remediation session is
-created, an issue must have: a non-placeholder body, no denylisted label, bounded file scope, at least one
-acceptance criterion, at least one verification command, no blocking unknowns, and confidence ≥ 0.7.
+created, an issue must have a non-placeholder body, no denylisted label, bounded file scope, at least one
+acceptance criterion, at least one verification command, a stated test plan, no blocking unknowns, and
+confidence ≥ 0.7.
 
 Criteria come from a fenced block a human wrote in the issue:
 
@@ -41,6 +67,7 @@ Criteria come from a fenced block a human wrote in the issue:
   "problem_restatement": "...",
   "acceptance_criteria": ["..."],
   "verification_commands": ["..."],
+  "test_plan": "which test proves this, new or existing",
   "files_in_scope": ["..."],
   "risk": "low",
   "blocking_unknowns": [],
@@ -50,109 +77,195 @@ Criteria come from a fenced block a human wrote in the issue:
 ````
 
 or, when absent, from a short read-only Devin *scoping* session with a tight ACU cap that returns the same
-schema as structured output. If the gate fails, the issue is moved to `NOT_A_CANDIDATE`, labelled
-`menD:not-a-candidate`, and commented on with the exact reasons and what a human would need to add. Adding
-that detail and re-applying `menD:fix` re-enters the pipeline, so the gate teaches the team how to write
-automatable issues rather than silently dropping them.
+schema as structured output. If the gate fails, the issue moves to `NOT_A_CANDIDATE`, is labelled
+`menD:not-a-candidate`, and is commented on with the exact reasons and what a human would need to add.
+Adding that detail and re-applying `menD:fix` re-enters the pipeline, so the gate teaches the team how to
+write automatable issues instead of silently dropping them.
 
-The accepted criteria then become the contract: they are embedded in the remediation prompt, the session's
-structured output must assert each one with evidence, and CI is the independent check.
+The accepted criteria become the contract: embedded in the remediation prompt, asserted point by point in the
+session's structured output, and checked independently before anything is called done.
 
-## Issue state machine
+## Tests are part of the contract
 
-`DISCOVERED → CRITERIA_PENDING → READY → DISPATCHED → RUNNING/BLOCKED → PR_OPEN → VERIFYING → SUCCEEDED`,
-with `NOT_A_CANDIDATE`, `FAILED`, `NEEDS_HUMAN` and `CANCELLED` as the other outcomes. The table in
-`IssueState.canTransitionTo` is the single authority; `TaskService` is the only writer, and every transition is
-persisted, audited in `task_event`, logged and metered. The reconciler is level-triggered, so a restart resumes
-in-flight work from the database rather than losing it.
+A behavioural change without a test is not a finished change. The scoping session must state which test
+proves the fix, and the remediation session must report `tests_changed` with the test evidence. "No test
+change" is an outcome it has to *justify* (a lockfile pin, a docs-only edit), not one it can skip past — the
+justification is surfaced on the PR and the task page.
 
-## Worker leases
+## Verification: three tiers, and an honest fourth
 
-Workers coordinate through the database, so menD scales past one replica without two workers ever
-driving the same issue.
+`SUCCEEDED` requires evidence from something other than the session that wrote the code.
 
-- **Claim.** A worker only advances a task after a conditional `UPDATE ... WHERE owner_id IS NULL OR
-  lease_expires_at <= now`, which is atomic: in a race exactly one worker gets `1` row updated, the
-  rest get `0` and move on.
-- **Predicted completion.** The claim also writes `eta_at` — what the owner commits to, derived from
-  the state it is in (scoping, session, verification). Once it passes, the task shows as overdue on
-  the dashboard and in the logs; nothing silently sits forever.
-- **Heartbeat.** `LeaseManager.heartbeat` extends every lease the worker holds every 30s, so a Devin
-  call that outlives the 2 minute lease is not stolen from a healthy worker.
-- **Death.** A worker that dies stops heartbeating; after `lease_expires_at` any other worker claims
-  the task, increments `lease_takeovers`, and resumes from the persisted row — the Devin session id
-  is already stored, so the new worker keeps supervising the same session rather than starting a new
-  one. Ownership is per task, so a dead worker only stalls its own tasks for at most one lease.
-- **Release.** Terminal states release the lease, as does a clean shutdown, so a rolling restart
-  hands work over immediately instead of waiting for expiry.
+| Tier | What it is | When it applies |
+|---|---|---|
+| `REPO_CI` | the repository's own required checks on the PR head | preferred — it already knows the toolchain |
+| `CONTRACT_WORKFLOW` | `menD / contract`, a workflow the repo merges once (`deploy/target-repo/mend-verify.yml`), dispatched by menD with that task's verification commands | repos with thin or missing CI |
+| `VERIFIER_SESSION` | a separate command-only Devin session at the PR head that runs the commands and reports exit codes, never writing code | last resort; recorded as lower trust |
+| `NONE` → `UNVERIFIED` | no independent evidence exists | the PR stays open and honest; it is **not** counted as a success |
 
-## Components and where they run
+The evidence — tier, verdict, commands, exit codes, output, check URL — is persisted on the task, posted as a
+comment on the pull request, and shown on the task page.
 
-| Component | Runs in |
+menD deliberately does **not** run arbitrary repository test suites inside its own container: one image
+cannot hold every toolchain, and it would be a rich arbitrary-code-execution target. Verification runs in the
+repository's own CI environment or in a separately scoped session.
+
+## The human review loop
+
+Reviewers are the strongest signal menD gets, so rejection is a first-class state rather than a dead end.
+
+- `pull_request_review`, `pull_request_review_comment` and closed-unmerged `pull_request` events (or the
+  polling fallback) are read back from GitHub; deliveries are treated as hints, so a lost or duplicated
+  webhook changes nothing.
+- menD's own comments are filtered out — the loop cannot feed itself.
+- `CHANGES_REQUESTED` sends the review body and inline comments to the **existing** Devin session, which
+  still has the full context of the change it wrote. The prompt is explicit that the reviewer outranks the
+  acceptance criteria where the two conflict.
+- Rounds are bounded (`mend.learning.max-review-rounds`). Past that, or when a point needs a decision only a
+  human can make, the task escalates to `NEEDS_HUMAN`. A pull request closed without merging is a failure
+  signal, never a success.
+
+## The learning store
+
+After a terminal outcome with review feedback, a read-only retrospective session turns what happened into
+durable lessons, each one phrased as an instruction, carrying its evidence, provenance (repo, issue, PR) and
+a confidence — split into:
+
+- **Repository lessons** — "run `npm audit` from `superset-frontend`, not the repo root". Injected into that
+  repository's scoping and remediation prompts.
+- **General lessons** — "always show the resolved-version diff when a lockfile changes". Injected everywhere,
+  and candidates for promotion beyond menD.
+
+Lessons are deduplicated by normalised text and scope, sorted by confidence, and capped so prompts cannot
+grow without bound. Each one tracks how often it was applied and how often reviewers pushed back anyway; a
+lesson that keeps failing to earn its place is retired automatically and kept for the audit trail.
+
+Because some lessons are not menD's to act on, each carries a **recommended action**, surfaced at
+`/learnings` for a human to approve:
+
+| Action | Meaning |
 |---|---|
-| `ingest` — `POST /webhooks/github` (HMAC-SHA256 verified) | menD process |
-| `ingest` — 30s issue poller, used when GitHub cannot reach menD | menD process |
-| `triage` — `PreFilter`, `SuccessCriteriaService` (the gate) | menD process, calls the Devin API |
-| `engine` — `Orchestrator`, `TaskService`, `Reconciler` | menD process |
-| `web` — Thymeleaf + htmx dashboard, JSON API, markdown report | menD process |
-| state store — H2 file (demo) or PostgreSQL (prod), same schema | alongside menD |
-| remediation itself | Devin cloud (API v3, `POST/GET /v3/organizations/{org_id}/sessions`) — one session per issue, menD never runs the fix |
-| pull requests, comments, labels | GitHub |
+| `PROMPT_PREAMBLE` | menD applies it itself, immediately |
+| `DEVIN_KNOWLEDGE` | promote to an org-wide Devin knowledge note, so *every* session benefits — not just menD's |
+| `REPO_INSTRUCTIONS` | belongs in the repo's own `AGENTS.md` / `CLAUDE.md` / `CONTRIBUTING.md` |
+| `MEND_BACKLOG` | the lesson is about menD's own gate or prompts; file it against menD |
+| `RETIRE` | stop applying it |
 
-## Running it
+That is the closed loop: reviewers teach menD, menD teaches Devin, and the correction outlives the issue that
+produced it.
+
+## Multi-repository registry
+
+Repositories are registered at `/repositories/new` (step-by-step instructions included). On registration menD
+validates that its GitHub App installation can actually see the repository, then builds a **repository
+profile** in a read-only Devin session: build and test commands, layout, CI, conventions, and — importantly —
+whatever instruction files the repo already keeps for agents (`AGENTS.md`, `CLAUDE.md`, `codex.md`,
+`CONTRIBUTING.md`, `.cursor/rules`, `.agents/skills`).
+
+The profile is persisted and reused for every issue in that repository instead of re-read each time. Push
+events age it incrementally, and it is refreshed only when the changed paths warrant it.
+
+## State, leases and crash recovery
+
+The database is menD's system of record; GitHub labels are a human-visible projection of it, never the source
+of truth. Two tables: `remediation_task` (one durable row per issue, unique on `(repo, issue_number)`) and
+`task_event` (append-only audit of every transition). `IssueState.canTransitionTo` is the single authority on
+what may happen next, and `TaskService` is the only writer.
+
+Workers coordinate through the database, so menD scales past one replica without two workers driving the same
+issue:
+
+- **Claim** — a conditional `UPDATE ... WHERE owner_id IS NULL OR lease_expires_at <= now`. In a race exactly
+  one worker updates a row; the rest get zero and move on.
+- **Predicted completion** — the claim writes `eta_at`, what the owner commits to for the state it is in.
+  Past it, the task shows as overdue on the board; nothing silently sits forever.
+- **Heartbeat** — leases are extended every 30s while work is in flight.
+- **Death** — a dead worker stops heartbeating; after expiry any other stateless worker claims the task,
+  increments `lease_takeovers`, and resumes from the persisted row. The Devin session id is already stored,
+  so it keeps supervising the same session rather than starting a new one.
+- **Release** — terminal states and clean shutdowns release immediately, so a rolling restart hands work over
+  rather than waiting for expiry.
+
+## Run it on a laptop
+
+One container, one file-backed H2 database, `udaysagarn/superset` pre-registered.
 
 ```bash
-export DEVIN_API_KEY=cog_...      # service-user key; never committed
-export DEVIN_ORG_ID=org-...       # org the service user belongs to; scopes every v3 session route
-export GITHUB_APP_ID=...          # GitHub App installed on the target repo
-export GITHUB_APP_INSTALLATION_ID=...
-export GITHUB_APP_PRIVATE_KEY="$(cat mend-bot.private-key.pem)"
-export MEND_REPO=udaysagarn/superset
-mvn spring-boot:run
+cp .env.example .env       # fill in the Devin and GitHub App values
+docker compose up -d --build
+open http://localhost:8080
 ```
+
+Or `./deploy/demo.sh`, which does the above and prints the demo path. With no `.env` it starts in read-only
+mode (`MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false`) so you can browse the whole product without
+credentials, without touching GitHub, and without spending an ACU.
+
+State lives in the `mend-data` volume, so `docker compose down` and back up keeps your history. Behind a
+corporate mirror, build with `--build-arg MAVEN_MIRROR_URL=https://your/mirror`.
+
+### Secrets
+
+| Variable | What it is |
+|---|---|
+| `DEVIN_API_KEY` | Devin **service-user** key (`cog_…`), not a personal one |
+| `DEVIN_ORG_ID` | organisation the service user belongs to; scopes every v3 session route |
+| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY` | the GitHub App menD acts as |
+| `GITHUB_WEBHOOK_SECRET` | HMAC-SHA256 secret for `/webhooks/github` |
+| `MEND_REPO` | comma-separated repositories to seed into the registry on first boot |
 
 menD acts as a GitHub App rather than as a person: it signs an RS256 JWT with the app's private key, exchanges
-it for a one-hour installation token, and refreshes that token before it expires. Every label, comment and PR
-is therefore attributable to the bot identity in the audit log, and the permissions (Issues: write, Pull
-requests: write, Contents/Checks/Metadata: read) are scoped to the single installed repository. Both the
-PKCS#1 key GitHub hands out and a PKCS#8 key are accepted. `GITHUB_TOKEN=ghp_...` remains as a fallback for
-local development when no app is configured.
+it for a one-hour installation token, and refreshes before expiry. Every label, comment and PR is attributable
+to the bot identity in the audit log, and permissions (Issues: write, Pull requests: write, Contents / Checks
+/ Metadata: read) are scoped to the installed repositories. Both PKCS#1 and PKCS#8 keys are accepted.
+`GITHUB_TOKEN=ghp_…` remains a fallback for local development. No secret is ever written to the repository or
+to the database.
 
-| Endpoint | Purpose |
-|---|---|
-| `/` | monitoring view |
-| `/api/summary`, `/api/tasks`, `/api/tasks/{id}/events` | JSON read model |
-| `/api/report` | markdown report for a leadership audience |
-| `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
-| `/webhooks/github` | GitHub `issues.labeled` events |
-
-Configuration is environment-driven (`src/main/resources/application.yml`): ACU caps, concurrency, attempt and
-nudge budgets, confidence threshold, label names, poll and reconcile intervals. Without `DEVIN_API_KEY` and
-`DEVIN_ORG_ID` the control plane still runs and the gate still rejects, it just cannot create sessions.
-
-Session creation is not idempotent at the API level; menD gets idempotency from the unique `(repo,
-issue_number)` task row, so a replayed webhook or an overlapping poll never opens a second session.
-
-## Monitoring view
-
-The stylesheet reproduces Devin's own design tokens — `--bg-page`, `--bg-elevated`, `--text-primary`,
-`--bg-accent-primary`, `--text-green/red/orange`, the `--shadow-L*` elevation scale — under Devin's
-`.light` / `.dark` / `.high-contrast` class scheme, so the view is recognisably part of the product rather than
-an approximation of it. It shows the KPI strip, the pipeline board, the run table (issue → criteria → session →
-PR → CI), the exclusion panel with reasons, and the live state-transition stream.
-
-The three numbers a VP should look at: **success rate of attempted issues**, **median time from label to pull
-request**, and **ACU per successful remediation**. The exclusion panel is the honesty surface — it shows the
-system declining work it cannot verify.
-
-## Tests
+### Local development
 
 ```bash
-mvn test
+mvn spring-boot:run          # needs the same environment variables
+mvn -B verify                # 92 tests
 ```
 
-covers the transition table, the candidacy gate (placeholder bodies, denylisted labels, low confidence,
-blocking unknowns, missing verification commands, human-authored criteria), the Devin API wire format against a
-mock server, webhook signature verification, dashboard/report rendering, and the full pipeline against a mocked
-Devin and GitHub — including the property that matters most: an issue only reaches a remediation session after
-the criteria gate has passed.
+The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else
+changes.
+
+## What you see
+
+| Route | Purpose |
+|---|---|
+| `/` | product overview, registered repositories, architecture diagram |
+| `/pipeline` | the live board: KPIs, pipeline, run table, exclusions, transition stream |
+| `/tasks/{id}` | one issue end to end: criteria contract, sessions, verification evidence, lease, audit |
+| `/learnings` | what reviewers have taught menD, and what needs a human to promote |
+| `/repositories/new` | step-by-step registration |
+| `/api/report` | markdown report for a leadership audience |
+| `/api/summary`, `/api/tasks`, `/api/learnings`, `/api/repositories` | JSON read model |
+| `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
+| `/webhooks/github` | issues, push, review and pull-request events (HMAC verified) |
+
+The stylesheet uses Devin's own design tokens under its `.light` / `.dark` / `.high-contrast` scheme, so the
+view is recognisably part of the product rather than an approximation of it.
+
+## Demo path
+
+1. `/` — what it does, which repositories are connected.
+2. `/repositories/new` — register one; menD validates access and profiles the codebase.
+3. Label a real issue `menD:fix`. Watch `/pipeline`: criteria → session → PR → verification.
+4. Label a placeholder issue too — it comes back `menD:not-a-candidate` with reasons, having spent nothing.
+5. Reject one of menD's PRs with "changes requested". Watch it come back as `CHANGES_REQUESTED`, answer the
+   reviewer in the same session, and land a lesson in `/learnings`.
+6. `/api/report` — the leadership view.
+
+## Limits, honestly
+
+- Verification is only as strong as the repository's CI. Where none exists and the contract workflow is not
+  merged, menD reports `UNVERIFIED` rather than inflating its own numbers.
+- The contract workflow (`deploy/target-repo/mend-verify.yml`) is a starter template: a repository with an
+  unusual toolchain should adapt the setup steps before merging it.
+- Schema changes are applied by Hibernate `ddl-auto=update`, which is fine for the demo; a production
+  deployment wants explicit migrations.
+- Lesson effectiveness is tracked per repository, not per individual injected lesson — good enough to retire
+  bad advice, not yet a precise attribution.
+- General lessons are surfaced for human promotion rather than written straight into org-wide Devin knowledge;
+  that approval step is deliberate.
