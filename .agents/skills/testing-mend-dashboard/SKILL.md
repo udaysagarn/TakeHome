@@ -34,7 +34,27 @@ issue carrying the trigger label (default `menD:fix`). When testing:
 
 ## Fastest safe way to test (no credentials, no ACU spend)
 
-From the menD repo root:
+From the menD repo root, the sandbox profile in Docker — it also files the four demo
+scenarios, so nothing has to be seeded by hand:
+
+```
+docker compose down -v && ./deploy/simulate.sh   # container `mend`, port 8080
+```
+
+The four issues settle ~50s after the script returns. This mutates the demo data as you
+test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so re-run
+`simulate.sh` before an actual demo.
+
+Compose pins the container name, port 8080 and the `mend-data` volume, so a *second*
+revision has to run beside it with its own name, port and volume:
+
+```
+docker build -t mend-orchestrator:fix .
+docker run -d --name mend-fix -p 8083:8080 -v mend-fix-data:/app/data \
+  -e MEND_ENGINE_ENABLED=false -e MEND_POLLING_ENABLED=false mend-orchestrator:fix
+```
+
+The slower fallback, without Docker:
 
 ```
 MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false \
@@ -96,6 +116,28 @@ client (`java -cp ~/.m2/.../h2-*.jar org.h2.tools.Shell -url jdbc:h2:file:./data
   otherwise ages, ETAs and "overdue" markers look nonsensical.
 - Registering a nonexistent repo through `/repositories/new` is a safe way to exercise
   validation: with no credentials it persists with `NO_ACCESS` and a readable message.
+- `RepositoryBootstrap.seed()` runs on `ApplicationReadyEvent`, a beat *after*
+  `/actuator/health` goes green. Reading `/api/repositories` the instant health passes shows
+  an empty registry that fills a second later — wait before concluding anything about it.
+
+## The registry must survive a bad credential
+
+A repository is never dropped because menD could not talk to GitHub about it: whatever the
+verdict, the row persists with `NO_ACCESS` and a reason the operator can act on. Reproduce
+safely (no polling, no spend, real installation id and key with a deliberately wrong app id):
+
+```
+docker run -d --name mend-badcred -p 8083:8080 -v mend-badcred-data:/app/data \
+  -e MEND_ENGINE_ENABLED=false -e MEND_POLLING_ENABLED=false \
+  -e GITHUB_APP_ID=999999 -e GITHUB_APP_INSTALLATION_ID="$GITHUB_APP_INSTALLATION_ID" \
+  -e GITHUB_APP_PRIVATE_KEY="$GITHUB_APP_PRIVATE_KEY" mend-orchestrator:local
+```
+
+`/` must show the repo card with a red `NO_ACCESS` pill and "menD could not ask GitHub about
+… 401 Unauthorized … then re-validate", and `/repositories/new` the same row under "Already
+registered". An empty registry with only a `could not register` WARN in the log is the
+regression (fixed once: the exception escaped the transactional `register()` and rolled the
+seeded row back).
 
 ## Routes (current product revision)
 
@@ -127,6 +169,19 @@ curl -s localhost:8080/api/tasks/{id}/events   # full state history for one task
 curl -s localhost:8080/api/report         # markdown leadership report
 curl -s localhost:8080/actuator/prometheus | grep '^mend_'
 ```
+
+## Exercising the reviewer loop
+
+```
+curl -X POST localhost:8080/api/sandbox/pulls/<n>/request-changes \
+     -H 'content-type: application/json' -d '{"reviewer":"you","body":"add a test"}'
+```
+
+The target task must not be terminal: `SUCCEEDED` ignores the review silently, so on a fresh
+`simulate.sh` the right target is the pull request of the `UNVERIFIED` task (9002). The
+handback to the session takes ~1s, so the card is essentially never caught in the *In review*
+column by the 5s fragment poll — screenshot the on-page **State transitions** stream for
+proof of `CHANGES_REQUESTED` instead.
 
 ## Proving auto-refresh actually polls
 
@@ -166,6 +221,11 @@ state that says "verified" without a tier, verdict and provenance is a reportabl
 Central. If that happens, retry or pass the build arg `MAVEN_MIRROR_URL=<internal mirror>`
 (the Dockerfile supports it). Do not run `deploy/demo.sh` while a local instance is up — it
 binds port 8080 and the same H2 data dir.
+
+## Browser quirk on this box
+
+Chrome's omnibox drops the `:` when `localhost:8080` is typed in one go; type the full
+`http://127.0.0.1:8080/...` instead.
 
 ## Devin secrets needed
 
