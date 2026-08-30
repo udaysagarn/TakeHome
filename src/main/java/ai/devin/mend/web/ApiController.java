@@ -1,6 +1,7 @@
 package ai.devin.mend.web;
 
 import ai.devin.mend.domain.IssueState;
+import ai.devin.mend.domain.Learning;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.TaskEvent;
@@ -8,6 +9,7 @@ import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.engine.Orchestrator;
 import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.learning.LearningService;
 import ai.devin.mend.registry.RepositoryService;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +35,7 @@ public class ApiController {
     private final Orchestrator orchestrator;
     private final GitHubClient github;
     private final RepositoryService registry;
+    private final LearningService learnings;
 
     public ApiController(
             DashboardService dashboard,
@@ -41,8 +44,10 @@ public class ApiController {
             TaskService taskService,
             Orchestrator orchestrator,
             GitHubClient github,
-            RepositoryService registry) {
+            RepositoryService registry,
+            LearningService learnings) {
         this.registry = registry;
+        this.learnings = learnings;
         this.dashboard = dashboard;
         this.report = report;
         this.tasks = tasks;
@@ -92,6 +97,15 @@ public class ApiController {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(Map.of("task", orchestrator.onTriggerLabel(slug, issue).key())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /** Everything reviewers have taught menD, active first. */
+    @GetMapping("/learnings")
+    public Map<String, List<Learning>> learnings() {
+        return Map.of(
+                "active", learnings.active(),
+                "recommendedActions", learnings.recommendedActions(),
+                "retired", learnings.retired());
     }
 
     @GetMapping("/repositories")

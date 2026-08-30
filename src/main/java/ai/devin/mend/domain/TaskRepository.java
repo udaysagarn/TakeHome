@@ -13,6 +13,8 @@ public interface TaskRepository extends JpaRepository<RemediationTask, Long> {
 
     Optional<RemediationTask> findByRepoAndIssueNumber(String repo, int issueNumber);
 
+    Optional<RemediationTask> findByRepoAndPrUrl(String repo, String prUrl);
+
     List<RemediationTask> findByStateIn(Collection<IssueState> states);
 
     long countByStateIn(Collection<IssueState> states);

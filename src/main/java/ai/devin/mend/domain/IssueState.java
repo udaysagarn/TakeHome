@@ -36,6 +36,12 @@ public enum IssueState {
     /** CI is running against the pull request. */
     VERIFYING,
 
+    /**
+     * A human reviewer asked for changes. Not a failure: the reviewer's comments outrank the contract
+     * and are handed back to the session that wrote the code.
+     */
+    CHANGES_REQUESTED,
+
     /** Terminal: PR open, acceptance criteria asserted, and an independent verifier agreed. */
     SUCCEEDED,
 
@@ -88,10 +94,21 @@ public enum IssueState {
             case DISPATCHED -> next == RUNNING || next == BLOCKED || next == PR_OPEN || next == FAILED;
             case RUNNING -> next == BLOCKED || next == PR_OPEN || next == FAILED;
             case BLOCKED -> next == RUNNING || next == PR_OPEN || next == NEEDS_HUMAN || next == FAILED;
-            case PR_OPEN -> next == VERIFYING || next == SUCCEEDED || next == UNVERIFIED || next == FAILED;
-            case VERIFYING -> next == SUCCEEDED || next == UNVERIFIED || next == FAILED || next == RUNNING;
+            case PR_OPEN -> next == VERIFYING
+                    || next == SUCCEEDED
+                    || next == UNVERIFIED
+                    || next == CHANGES_REQUESTED
+                    || next == NEEDS_HUMAN
+                    || next == FAILED;
+            case VERIFYING -> next == SUCCEEDED
+                    || next == UNVERIFIED
+                    || next == CHANGES_REQUESTED
+                    || next == NEEDS_HUMAN
+                    || next == FAILED
+                    || next == RUNNING;
+            case CHANGES_REQUESTED -> next == RUNNING || next == PR_OPEN || next == NEEDS_HUMAN || next == FAILED;
             case FAILED -> next == DISPATCHED || next == NEEDS_HUMAN;
-            case UNVERIFIED -> next == VERIFYING || next == SUCCEEDED;
+            case UNVERIFIED -> next == VERIFYING || next == SUCCEEDED || next == CHANGES_REQUESTED;
             case SUCCEEDED, NOT_A_CANDIDATE, NEEDS_HUMAN, CANCELLED -> false;
         };
     }

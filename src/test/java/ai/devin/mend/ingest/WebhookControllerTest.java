@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.engine.Orchestrator;
+import ai.devin.mend.learning.ReviewLoop;
 import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.registry.RepositoryService;
 import java.nio.charset.StandardCharsets;
@@ -53,6 +54,19 @@ class WebhookControllerTest {
                       "html_url":"https://github.com/acme/superset/issues/42","labels":[{"name":"menD:fix"}]}}
             """;
 
+    private static final String REVIEW =
+            """
+            {"action":"submitted","repository":{"full_name":"acme/superset"},
+             "review":{"state":"changes_requested"},
+             "pull_request":{"number":7,"html_url":"https://github.com/acme/superset/pull/7"}}
+            """;
+
+    private static final String CLOSED_UNMERGED =
+            """
+            {"action":"closed","repository":{"full_name":"acme/superset"},
+             "pull_request":{"number":7,"merged":false,"html_url":"https://github.com/acme/superset/pull/7"}}
+            """;
+
     private static final String PUSH =
             """
             {"ref":"refs/heads/master","after":"deadbeef","repository":{"full_name":"acme/superset"},
@@ -71,6 +85,9 @@ class WebhookControllerTest {
 
     @MockBean
     private ContextService context;
+
+    @MockBean
+    private ReviewLoop reviewLoop;
 
     @BeforeEach
     void setUp() {
@@ -150,6 +167,41 @@ class WebhookControllerTest {
                         .content(body))
                 .andExpect(status().isOk());
         verify(orchestrator, never()).onTriggerLabel(anyString(), any());
+    }
+
+    @Test
+    void aReviewOnMenDsPullRequestIsHandedToTheReviewLoop() throws Exception {
+        mvc.perform(post("/webhooks/github")
+                        .header("X-GitHub-Event", "pull_request_review")
+                        .header("X-Hub-Signature-256", sign(REVIEW))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(REVIEW))
+                .andExpect(status().isAccepted());
+        verify(reviewLoop)
+                .onPullRequestEvent("acme/superset", "https://github.com/acme/superset/pull/7", false);
+    }
+
+    @Test
+    void closingAPullRequestWithoutMergingItIsReportedAsSuch() throws Exception {
+        mvc.perform(post("/webhooks/github")
+                        .header("X-GitHub-Event", "pull_request")
+                        .header("X-Hub-Signature-256", sign(CLOSED_UNMERGED))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(CLOSED_UNMERGED))
+                .andExpect(status().isAccepted());
+        verify(reviewLoop).onPullRequestEvent("acme/superset", "https://github.com/acme/superset/pull/7", true);
+    }
+
+    @Test
+    void mergingAPullRequestIsNotTreatedAsReviewFeedback() throws Exception {
+        String body = CLOSED_UNMERGED.replace("\"merged\":false", "\"merged\":true");
+        mvc.perform(post("/webhooks/github")
+                        .header("X-GitHub-Event", "pull_request")
+                        .header("X-Hub-Signature-256", sign(body))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isAccepted());
+        verify(reviewLoop, never()).onPullRequestEvent(anyString(), anyString(), any(Boolean.class));
     }
 
     private static String sign(String body) throws Exception {

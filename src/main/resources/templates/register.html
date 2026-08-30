@@ -29,7 +29,7 @@
         <p>
           menD acts on GitHub as its own bot identity, using a GitHub App installation rather than a
           personal token, so every comment, label and pull request is attributable and every
-          credential it holds is short lived. Five steps, once per repository.
+          credential it holds is short lived. Six steps, once per repository.
         </p>
       </section>
 
@@ -112,6 +112,21 @@
             <code>CONTRIBUTING.md</code> — and persists it as the repository profile. Every later
             scoping and remediation session is primed with that profile instead of re-reading the
             codebase, and pushes that touch those files mark only the affected slices stale.
+          </p>
+        </li>
+        <li>
+          <h3>Optional: merge the verification contract</h3>
+          <p>
+            If your repository already runs required checks on pull requests, skip this — menD waits on
+            them and treats them as authoritative. If it does not, copy
+            <code>deploy/target-repo/mend-verify.yml</code> into
+            <code>.github/workflows/mend-verify.yml</code> and merge it. menD then asks your CI to run
+            the commands agreed at scoping time, inside your own toolchain, and believes that check run.
+          </p>
+          <p class="note">
+            menD never executes your test suite inside its own container. Without either of these, a
+            pull request is reported as <strong>unverified</strong> rather than remediated — an honest
+            gap, not a green tick.
           </p>
         </li>
       </ol>

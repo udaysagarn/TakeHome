@@ -6,11 +6,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import ai.devin.mend.domain.IssueState;
+import ai.devin.mend.domain.LearningRepository;
+import ai.devin.mend.domain.LearningScope;
+import ai.devin.mend.domain.RecommendedAction;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
+import ai.devin.mend.domain.Retrospective;
 import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.engine.TaskService;
+import ai.devin.mend.learning.LearningService;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,10 +49,17 @@ class DashboardRenderTest {
     @Autowired
     private RepositoryRegistry repositories;
 
+    @Autowired
+    private LearningService learnings;
+
+    @Autowired
+    private LearningRepository learningRepository;
+
     @BeforeEach
     void seed() {
         tasks.deleteAll();
         repositories.deleteAll();
+        learningRepository.deleteAll();
         repositories.save(new Repository("acme", "superset"));
         repositories.save(new Repository("acme", "airflow"));
         RemediationTask succeeded = task(101, "chore(frontend): bump vulnerable transitive dependency");
@@ -141,6 +154,44 @@ class DashboardRenderTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"succeeded\":1")))
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("\"excluded\":1")));
+    }
+
+    @Test
+    void theLearningStorePageSeparatesRepositoryLessonsFromGeneralOnes() throws Exception {
+        learnings.absorb(
+                new Retrospective(
+                        "summary",
+                        List.of(
+                                new Retrospective.Lesson(
+                                        LearningScope.REPO,
+                                        "tests",
+                                        "Add a Jest spec beside every component change.",
+                                        "alice's review",
+                                        RecommendedAction.PROMPT_PREAMBLE,
+                                        null,
+                                        0.9),
+                                new Retrospective.Lesson(
+                                        LearningScope.GENERAL,
+                                        "lockfiles",
+                                        "Show the resolved-version diff for lockfile changes.",
+                                        "three reviewers asked",
+                                        RecommendedAction.DEVIN_KNOWLEDGE,
+                                        "promote to an org-wide knowledge note",
+                                        0.8))),
+                "acme/superset",
+                101,
+                "https://github.com/acme/superset/pull/9");
+
+        String html = mvc.perform(get("/learnings"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Add a Jest spec beside every component change.")
+                .contains("Show the resolved-version diff for lockfile changes.")
+                .contains("Devin knowledge note")
+                .contains("acme/superset");
     }
 
     @Test

@@ -30,6 +30,7 @@
              th:href="@{/pipeline(repo=${r.slug})}" th:text="${r.slug}">owner/name</a>
           <a class="btn" th:href="@{/repositories/new}">+</a>
         </span>
+        <a class="btn" th:href="@{/learnings}">Learnings</a>
         <a class="btn" th:href="@{/api/report}">Report</a>
         <a class="btn" th:href="@{/actuator/prometheus}">Metrics</a>
         <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
