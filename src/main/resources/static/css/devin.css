@@ -138,6 +138,10 @@ header.topbar {
   stroke: rgb(var(--text-on-accent));
 }
 
+.brand .mark-head {
+  fill: rgb(var(--text-on-accent));
+}
+
 .brand .wordmark {
   font-size: 15px;
   font-weight: 650;
