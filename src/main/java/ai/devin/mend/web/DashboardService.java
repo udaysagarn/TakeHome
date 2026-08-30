@@ -7,6 +7,7 @@ import ai.devin.mend.domain.SuccessCriteria;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.domain.Verification;
 import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,7 +40,9 @@ public class DashboardService {
         BOARD.put("Ready", List.of(IssueState.READY));
         BOARD.put("Devin working", List.of(IssueState.DISPATCHED, IssueState.RUNNING, IssueState.BLOCKED));
         BOARD.put("Verifying", List.of(IssueState.PR_OPEN, IssueState.VERIFYING));
+        BOARD.put("In review", List.of(IssueState.CHANGES_REQUESTED));
         BOARD.put("Done", List.of(IssueState.SUCCEEDED));
+        BOARD.put("Unverified", List.of(IssueState.UNVERIFIED));
         BOARD.put("Excluded / escalated", List.of(
                 IssueState.NOT_A_CANDIDATE, IssueState.NEEDS_HUMAN, IssueState.FAILED, IssueState.CANCELLED));
     }
@@ -127,7 +130,8 @@ public class DashboardService {
         long prsOpened = all.stream().filter(t -> t.getPrUrl() != null).count();
         long excluded = count(all, IssueState.NOT_A_CANDIDATE);
         long escalated = count(all, IssueState.NEEDS_HUMAN) + count(all, IssueState.FAILED);
-        long attempted = succeeded + escalated;
+        long unverified = count(all, IssueState.UNVERIFIED);
+        long attempted = succeeded + escalated + unverified;
 
         Double successRate = attempted == 0 ? null : (100.0 * succeeded) / attempted;
         Long medianToPr = median(all.stream()
@@ -142,8 +146,8 @@ public class DashboardService {
         Double exclusionRate = gated == 0 ? null : (100.0 * excluded) / gated;
 
         return new Kpis(
-                all.size(), inFlight, prsOpened, succeeded, excluded, escalated, successRate, medianToPr,
-                acu, acuPerSuccess, exclusionRate, succeeded * ENGINEER_HOURS_PER_FIX);
+                all.size(), inFlight, prsOpened, succeeded, unverified, excluded, escalated, successRate,
+                medianToPr, acu, acuPerSuccess, exclusionRate, succeeded * ENGINEER_HOURS_PER_FIX);
     }
 
     public List<BoardColumn> board(List<RemediationTask> all) {
@@ -223,8 +227,24 @@ public class DashboardService {
                     t.getPrOpenedAt(),
                     t.getCompletedAt(),
                     lease(t, now),
+                    verification(t),
+                    t.getVerificationTier(),
+                    t.getVerifierSessionUrl(),
+                    t.getReviewRounds(),
+                    t.getFeedbackJson(),
                     timeline(taskId));
         });
+    }
+
+    private Verification verification(RemediationTask t) {
+        if (t.getVerificationJson() == null || t.getVerificationJson().isBlank()) {
+            return null;
+        }
+        try {
+            return json.readValue(t.getVerificationJson(), Verification.class);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
     }
 
     private SuccessCriteria criteria(RemediationTask t) {
@@ -279,13 +299,50 @@ public class DashboardService {
                 t.getConfidence(),
                 t.getAttempts(),
                 t.getAcuBudget(),
-                t.getExclusionReason() != null ? t.getExclusionReason() : t.getLastError(),
+                note(t),
                 t.timeToPr() == null ? null : t.timeToPr().toMinutes(),
                 t.elapsed().toMinutes(),
                 t.getUpdatedAt(),
                 t.getOwnerId(),
                 t.getEtaAt(),
+                etaLabel(t),
                 t.isOverdue(Instant.now()));
+    }
+
+    /** "overdue by 6m" reads; "overdue since 2026-08-30T03:54:01.905221Z" does not. */
+    private static String etaLabel(RemediationTask t) {
+        if (t.getEtaAt() == null) {
+            return null;
+        }
+        Duration delta = Duration.between(Instant.now(), t.getEtaAt());
+        return delta.isNegative()
+                ? "overdue by " + humanize(delta.negated())
+                : "due in " + humanize(delta);
+    }
+
+    private static String humanize(Duration d) {
+        long minutes = Math.max(d.toMinutes(), 1);
+        if (minutes < 60) {
+            return minutes + "m";
+        }
+        long hours = minutes / 60;
+        return hours < 24 ? "%dh %dm".formatted(hours, minutes % 60) : "%dd %dh".formatted(hours / 24, hours % 24);
+    }
+
+    /**
+     * The one line that explains this row. An UNVERIFIED task has neither an exclusion reason nor an
+     * error, so without the verification summary the board and the report would say nothing about
+     * why menD refused to call it a success.
+     */
+    private String note(RemediationTask t) {
+        if (t.getExclusionReason() != null) {
+            return t.getExclusionReason();
+        }
+        if (t.getLastError() != null) {
+            return t.getLastError();
+        }
+        Verification v = verification(t);
+        return v == null ? null : v.summary();
     }
 
     private static long count(List<RemediationTask> all, IssueState state) {
@@ -332,6 +389,7 @@ public class DashboardService {
             long inFlight,
             long prsOpened,
             long succeeded,
+            long unverified,
             long excluded,
             long escalated,
             Double successRatePct,
@@ -369,6 +427,11 @@ public class DashboardService {
             Instant prOpenedAt,
             Instant completedAt,
             Lease lease,
+            Verification verification,
+            Verification.Tier verificationTier,
+            String verifierSessionUrl,
+            int reviewRounds,
+            String reviewerFeedback,
             List<TaskEvent> timeline) {}
 
     public record BoardColumn(String name, int count, List<TaskRow> tasks) {}
@@ -395,6 +458,7 @@ public class DashboardService {
             Instant updatedAt,
             String ownerId,
             Instant etaAt,
+            String etaLabel,
             boolean overdue) {}
 
     /** Convenience for the markdown report. */
