@@ -23,11 +23,11 @@ prompt_for() {
 }
 
 # The value already recorded in $ENV_FILE, if any. docker compose lets the last assignment win, so
-# read the file the same way — an operator appending a value below .env.example's blank placeholder
-# has supplied it, not left it missing.
+# read the last one here too: a value appended below .env.example's blank placeholder has been
+# supplied, and a blank appended below a value has been taken away.
 value_of() {
   [[ -f $ENV_FILE ]] || return 0
-  sed -n "s/^$1=//p" "$ENV_FILE" | { grep . || true; } | tail -1 | sed 's/^"//;s/"$//'
+  sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | sed 's/^"//;s/"$//'
 }
 
 missing() {
