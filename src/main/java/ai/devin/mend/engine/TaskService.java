@@ -24,11 +24,14 @@ public class TaskService {
     private final TaskRepository tasks;
     private final TaskEventRepository events;
     private final MendMetrics metrics;
+    private final LeaseManager leases;
 
-    public TaskService(TaskRepository tasks, TaskEventRepository events, MendMetrics metrics) {
+    public TaskService(
+            TaskRepository tasks, TaskEventRepository events, MendMetrics metrics, LeaseManager leases) {
         this.tasks = tasks;
         this.events = events;
         this.metrics = metrics;
+        this.leases = leases;
     }
 
     @Transactional
@@ -58,6 +61,7 @@ public class TaskService {
 
     private void applyTimestamps(RemediationTask task, IssueState next) {
         Instant now = Instant.now();
+        applyEta(task, next, now);
         switch (next) {
             case CRITERIA_PENDING -> task.setCriteriaStartedAt(now);
             case READY -> task.setReadyAt(now);
@@ -73,6 +77,20 @@ public class TaskService {
                 }
             }
         }
+    }
+
+    /**
+     * Re-predicts completion whenever the task changes phase, so the lease carries a fresh promise
+     * rather than the one made when the task was first claimed. A terminal task owes nothing.
+     */
+    private void applyEta(RemediationTask task, IssueState next, Instant now) {
+        if (next.isTerminal()) {
+            task.setEtaAt(null);
+            task.setOwnerId(null);
+            task.setLeaseExpiresAt(null);
+            return;
+        }
+        task.setEtaAt(now.plus(leases.estimatedRemaining(next)));
     }
 
     @Transactional

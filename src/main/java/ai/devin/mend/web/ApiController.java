@@ -59,6 +59,11 @@ public class ApiController {
         return dashboard.rows(tasks.findAllByOrderByUpdatedAtDesc());
     }
 
+    @GetMapping("/tasks/{id}")
+    public ResponseEntity<DashboardService.TaskDetail> task(@PathVariable long id) {
+        return ResponseEntity.of(dashboard.detail(id));
+    }
+
     @GetMapping("/tasks/{id}/events")
     public List<TaskEvent> events(@PathVariable long id) {
         return dashboard.timeline(id);

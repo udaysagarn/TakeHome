@@ -66,6 +66,26 @@ with `NOT_A_CANDIDATE`, `FAILED`, `NEEDS_HUMAN` and `CANCELLED` as the other out
 persisted, audited in `task_event`, logged and metered. The reconciler is level-triggered, so a restart resumes
 in-flight work from the database rather than losing it.
 
+## Worker leases
+
+Workers coordinate through the database, so menD scales past one replica without two workers ever
+driving the same issue.
+
+- **Claim.** A worker only advances a task after a conditional `UPDATE ... WHERE owner_id IS NULL OR
+  lease_expires_at <= now`, which is atomic: in a race exactly one worker gets `1` row updated, the
+  rest get `0` and move on.
+- **Predicted completion.** The claim also writes `eta_at` — what the owner commits to, derived from
+  the state it is in (scoping, session, verification). Once it passes, the task shows as overdue on
+  the dashboard and in the logs; nothing silently sits forever.
+- **Heartbeat.** `LeaseManager.heartbeat` extends every lease the worker holds every 30s, so a Devin
+  call that outlives the 2 minute lease is not stolen from a healthy worker.
+- **Death.** A worker that dies stops heartbeating; after `lease_expires_at` any other worker claims
+  the task, increments `lease_takeovers`, and resumes from the persisted row — the Devin session id
+  is already stored, so the new worker keeps supervising the same session rather than starting a new
+  one. Ownership is per task, so a dead worker only stalls its own tasks for at most one lease.
+- **Release.** Terminal states release the lease, as does a clean shutdown, so a rolling restart
+  hands work over immediately instead of waiting for expiry.
+
 ## Components and where they run
 
 | Component | Runs in |
