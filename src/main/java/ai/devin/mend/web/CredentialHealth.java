@@ -1,6 +1,7 @@
 package ai.devin.mend.web;
 
 import ai.devin.mend.devin.DevinApiClient;
+import ai.devin.mend.devin.DevinCredentialMonitor;
 import ai.devin.mend.domain.AccessState;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.github.GitHubClient;
@@ -27,11 +28,17 @@ public class CredentialHealth {
     private final RepositoryService repositories;
     private final GitHubClient github;
     private final DevinApiClient devin;
+    private final DevinCredentialMonitor devinCredential;
 
-    public CredentialHealth(RepositoryService repositories, GitHubClient github, DevinApiClient devin) {
+    public CredentialHealth(
+            RepositoryService repositories,
+            GitHubClient github,
+            DevinApiClient devin,
+            DevinCredentialMonitor devinCredential) {
         this.repositories = repositories;
         this.github = github;
         this.devin = devin;
+        this.devinCredential = devinCredential;
     }
 
     /** Empty when menD can do its job; otherwise every failure an operator can act on. */
@@ -51,6 +58,13 @@ public class CredentialHealth {
                     "DEVIN_API_KEY or DEVIN_ORG_ID is missing, so menD cannot dispatch a remediation"
                             + " session even for an issue that passes the gate.",
                     null));
+        } else {
+            // A present key can still be revoked, mistyped or from another organisation. menD only
+            // learns that from Devin refusing a call it was making anyway, so this appears after the
+            // first refused dispatch rather than at startup.
+            devinCredential
+                    .refusal()
+                    .ifPresent(reason -> problems.add(new Problem("Devin refused menD's credential", reason, null)));
         }
         if (githubConfigured) {
             // With no credentials at all every repository reports the same thing; naming them then

@@ -2,6 +2,7 @@ package ai.devin.mend.sandbox;
 
 import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.devin.DevinApiClient;
+import ai.devin.mend.devin.DevinCredentialMonitor;
 import ai.devin.mend.devin.DevinDtos;
 import ai.devin.mend.domain.ContextKind;
 import ai.devin.mend.github.GitHubDtos;
@@ -57,8 +58,12 @@ public class SandboxDevinClient extends DevinApiClient {
     private final ObjectMapper mapper;
 
     public SandboxDevinClient(
-            RestClient.Builder builder, ObjectMapper mapper, MendProperties props, SandboxHub hub) {
-        super(builder, mapper, props);
+            RestClient.Builder builder,
+            ObjectMapper mapper,
+            MendProperties props,
+            SandboxHub hub,
+            DevinCredentialMonitor credentials) {
+        super(builder, mapper, props, credentials);
         this.mapper = mapper;
         this.hub = hub;
     }
