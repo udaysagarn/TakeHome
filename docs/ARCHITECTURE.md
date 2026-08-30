@@ -123,7 +123,7 @@ contract that holds at that point.
 | `RemediationTask` | The aggregate: one issue under remediation | JPA entity, unique `(repo, issue_number)` | Carries criteria JSON + hash, session ids/urls (criteria, remediation, verifier, retrospective), PR url, verification tier + JSON, outcome JSON, feedback JSON, attempts, nudges, review rounds, ACU budget, lease owner/expiry |
 | `TaskEvent` | Append-only audit of every transition | Written only by `TaskService` | `(task, from, to, reason, actor, at)`; never updated or deleted |
 | `SuccessCriteria` | The machine-checkable definition of done | `JSON_SCHEMA` for Devin, snake_case JSON for storage | See [5.2](#52-devin-structured-output) |
-| `RemediationOutcome` | What a remediation session claims it did | `JSON_SCHEMA`, `allCriteriaSatisfied()` | A claim only; never sufficient for `SUCCEEDED`, and blocks it when present and unsatisfied (see [5.1](#51-state-machine)) |
+| `RemediationOutcome` | What a remediation session claims it did | `JSON_SCHEMA`, `allCriteriaSatisfied()` | A claim only; never sufficient for `SUCCEEDED`, and required for it — absent, unreadable or unsatisfied blocks the transition (see [5.1](#51-state-machine)) |
 | `Verification` | The verdict and where it came from | `tier`, `result`, evidence | `PASSED` / `FAILED` / `UNAVAILABLE` × `REPO_CI` / `CONTRACT_WORKFLOW` / `VERIFIER_SESSION` |
 | `Retrospective` | What one remediation should teach the next | `JSON_SCHEMA` | Lessons with `scope`, `topic`, `lesson`, `evidence`, `recommended_action`, `confidence` |
 | `ContextKind` | The nine slices of a repository profile | `invalidatedBy(path)` | Path triggers per slice (`pom.xml` → `STACK`, `.github/workflows/` → `CI`, `agents.md` → `AGENT_RULES`, …); a push refreshes only the slices it touches |
@@ -229,11 +229,10 @@ DISCOVERED → CRITERIA_PENDING → READY → DISPATCHED → RUNNING ⇄ BLOCKED
 | `CHANGES_REQUESTED` | `ReviewLoop`/`Orchestrator` | Feedback back into the same session | `RUNNING` |
 | `FAILED` | reconcile | Retry while `attempts < mend.engine.max-attempts` | `DISPATCHED`, else terminal |
 
-`SUCCEEDED` requires an independent `PASSED` verification, and is refused when a remediation outcome is
-present but does not assert every criterion. An outcome that is *absent or unreadable* (`outcome_json`
-null — a session can report a PR URL without returning parseable structured output) does not block the
-transition today: independent evidence alone carries it. The same asymmetry applies on the
-`UNAVAILABLE` → `UNVERIFIED` path.
+`SUCCEEDED` requires both an independent `PASSED` verification and a remediation outcome asserting every
+criterion. An outcome that is absent or unreadable (`outcome_json` null — a session can report a PR URL
+without returning parseable structured output) settles `UNVERIFIED`, with the reason recorded on the
+transition; the same rule applies on the `UNAVAILABLE` → `UNVERIFIED` path.
 
 ### 5.2 Devin structured output
 
@@ -328,7 +327,7 @@ sequenceDiagram
   M->>GH: read check runs / dispatch mend-verify.yml
   alt independent evidence passes and the outcome asserts every criterion
     M->>M: SUCCEEDED, label menD:done
-  else no tier could answer
+  else no tier could answer, or nothing asserted the criteria
     M->>M: UNVERIFIED, label and say so
   end
   H->>GH: requests changes
@@ -353,7 +352,7 @@ stops; anything ambiguous escalates to `NEEDS_HUMAN` rather than guessing.
 3. One task per `(repo, issueNumber)`, enforced in the schema, so replayed webhooks and the poller
    converge instead of duplicating.
 4. A task is advanced only by the worker holding its lease; terminal states release ownership.
-5. `SUCCEEDED` is unreachable without independent evidence (a *present* outcome must also assert every criterion; a missing one does not block it — see [5.1](#51-state-machine)).
+5. `SUCCEEDED` is unreachable without both independent evidence and an outcome asserting every criterion; a missing or unreadable outcome settles `UNVERIFIED` (see [5.1](#51-state-machine)).
 6. menD never executes a target repository's commands inside its own container.
 7. Sandbox links resolve inside menD.
 8. Nothing menD writes to GitHub is ever read back as authoritative state.
