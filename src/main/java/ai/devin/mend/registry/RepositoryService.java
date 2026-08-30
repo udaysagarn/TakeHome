@@ -18,6 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Registers the repositories menD watches and proves, at registration time, that it can actually do
@@ -92,12 +94,42 @@ public class RepositoryService {
     }
 
     /**
-     * Runs the access chain and stores the verdict on the repository. Credentials menD cannot use are
-     * a verdict too, not an exception: the operator sees the reason next to the repository and
-     * re-validates once the environment is fixed.
+     * Runs the access chain and stores the verdict on the repository. An error GitHub was not asked
+     * about — a private key menD cannot read, a network failure — is a verdict too: it is stored the
+     * same way, because a registry that lost the repository leaves an operator with nothing to fix.
      */
     @Transactional
     public Repository validate(Repository repository) {
+        try {
+            return interrogate(repository);
+        } catch (RuntimeException e) {
+            log.warn("could not validate {}: {}", repository.slug(), e.toString());
+            repository.markAccessFailure(AccessState.NO_ACCESS, unreachable(repository, e));
+            return repositories.save(repository);
+        }
+    }
+
+    /**
+     * The stored reason names the shape of the failure only. The full exception goes to the log,
+     * because {@code accessError} is rendered on pages nothing authenticates and a transport or
+     * parse error can carry request URLs, tokens and other configuration in its message.
+     */
+    private String unreachable(Repository repository, RuntimeException e) {
+        return "menD could not ask GitHub about " + repository.slug() + ": " + detail(e)
+                + ". Check the GitHub App id, installation id and private key, then re-validate.";
+    }
+
+    private static String detail(RuntimeException e) {
+        if (e instanceof HttpStatusCodeException http) {
+            return "GitHub answered " + http.getStatusCode().value();
+        }
+        if (e instanceof ResourceAccessException) {
+            return "GitHub could not be reached";
+        }
+        return "the request failed (" + e.getClass().getSimpleName() + ")";
+    }
+
+    private Repository interrogate(Repository repository) {
         if (!github.isConfigured()) {
             repository.markAccessFailure(
                     AccessState.NO_ACCESS,

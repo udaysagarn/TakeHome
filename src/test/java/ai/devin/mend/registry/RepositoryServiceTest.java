@@ -11,6 +11,7 @@ import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubCredentialsException;
 import ai.devin.mend.github.GitHubDtos;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,7 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.client.HttpClientErrorException;
 
 /**
  * Registration is the point where menD promises it can work on a repository, so the interesting
@@ -120,6 +124,26 @@ class RepositoryServiceTest {
 
         assertThat(repository.getAccessState()).isEqualTo(AccessState.NO_ACCESS);
         assertThat(repository.getAccessError()).contains("GITHUB_APP_PRIVATE_KEY");
+    }
+
+    @Test
+    void aRejectedCredentialLeavesTheRepositoryRegisteredWithTheReason() {
+        when(github.getRepo(SLUG))
+                .thenThrow(HttpClientErrorException.create(
+                        HttpStatus.UNAUTHORIZED,
+                        "Unauthorized",
+                        HttpHeaders.EMPTY,
+                        "{\"token\":\"eyJhbGciOi.secret\"}".getBytes(StandardCharsets.UTF_8),
+                        null));
+
+        Repository repository = service.register(SLUG);
+
+        assertThat(repository.getAccessState()).isEqualTo(AccessState.NO_ACCESS);
+        assertThat(repository.getAccessError())
+                .contains("could not ask GitHub", "GitHub answered 401", "private key")
+                // the reason is rendered on unauthenticated pages, so it names the failure only
+                .doesNotContain("eyJhbGciOi");
+        assertThat(repositories.findAll()).extracting(Repository::slug).containsExactly(SLUG);
     }
 
     @Test

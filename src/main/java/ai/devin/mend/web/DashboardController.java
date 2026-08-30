@@ -26,16 +26,19 @@ public class DashboardController {
     private final DashboardService dashboard;
     private final RepositoryService registry;
     private final LearningService learnings;
+    private final CredentialHealth credentials;
     private final MendProperties props;
 
     public DashboardController(
             DashboardService dashboard,
             RepositoryService registry,
             LearningService learnings,
+            CredentialHealth credentials,
             MendProperties props) {
         this.dashboard = dashboard;
         this.registry = registry;
         this.learnings = learnings;
+        this.credentials = credentials;
         this.props = props;
     }
 
@@ -97,6 +100,9 @@ public class DashboardController {
         } catch (IllegalArgumentException e) {
             model.addAttribute("error", e.getMessage());
         }
+        // The alarm was computed before this handler ran, so a repository that just validated would
+        // still be announced as failing on the page reporting its success.
+        model.addAttribute("credentialProblems", credentials.problems());
         return registerForm(model);
     }
 
