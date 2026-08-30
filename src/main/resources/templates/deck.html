@@ -8,11 +8,12 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
     <link rel="stylesheet" th:href="@{/css/deck.css}" />
+    <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
   </head>
   <body class="deck-body">
     <nav class="deck-bar">
-      <a class="brand" th:href="@{/}"><span class="mark">menD</span></a>
+      <a class="brand" th:href="@{/}"><span th:replace="~{fragments/brand :: markStatic}"></span></a>
       <span class="deck-progress"><span data-slide-position>1</span> / <span data-slide-count>0</span></span>
       <span class="spacer"></span>
       <a class="btn" th:href="@{/pipeline}">Live board</a>

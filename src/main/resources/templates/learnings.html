@@ -7,13 +7,14 @@
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
+    <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
   </head>
   <body>
     <div class="shell">
       <header class="topbar">
         <div class="brand">
-          <a th:href="@{/}" class="mark">menD</a>
+          <a th:replace="~{fragments/brand :: mark}"></a>
           <span>Learning store</span>
         </div>
         <span class="spacer"></span>
