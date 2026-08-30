@@ -116,41 +116,33 @@ header.topbar {
 
 .brand .mark {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 1px;
   text-decoration: none;
   white-space: nowrap;
   color: rgb(var(--text-primary));
 }
 
-.brand .mark-glyph {
-  width: 26px;
-  height: 26px;
-  flex: none;
-  display: block;
+.brand .wordmark {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
-.brand .mark-glyph rect {
-  fill: rgb(var(--bg-accent-primary));
+.brand .mark-glyph {
+  height: 16px;
+  width: 9px;
+  flex: none;
+  margin-bottom: -2px;
+  overflow: visible;
 }
 
 .brand .mark-glyph g {
-  stroke: rgb(var(--text-on-accent));
+  stroke: rgb(var(--bg-accent-primary));
 }
 
 .brand .mark-head {
-  fill: rgb(var(--text-on-accent));
-}
-
-.brand .wordmark {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-}
-
-.brand .wordmark b {
-  font-weight: 750;
-  color: rgb(var(--bg-accent-primary));
+  fill: rgb(var(--bg-accent-primary));
 }
 
 .subtitle {
