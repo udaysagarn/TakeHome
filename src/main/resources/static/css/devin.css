@@ -810,3 +810,40 @@ details summary {
   align-items: center;
   flex-wrap: wrap;
 }
+
+/* Credential alarm: shown on every page while menD cannot reach GitHub or Devin. */
+.alarm {
+  border: 1px solid rgb(var(--text-red));
+  background: rgb(var(--text-red) / 0.06);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 0 0 18px;
+}
+
+.alarm-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.alarm-list {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: rgb(var(--text-secondary));
+}
+
+.alarm-list li {
+  margin-bottom: 6px;
+}
+
+.alarm-list strong {
+  color: rgb(var(--text-primary));
+}
+
+.alarm-action {
+  display: inline;
+  margin-left: 6px;
+}
