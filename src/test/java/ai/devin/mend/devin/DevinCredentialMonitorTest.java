@@ -1,6 +1,7 @@
 package ai.devin.mend.devin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import ai.devin.mend.domain.DevinCredentialVerdicts;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +10,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.TransactionSystemException;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -72,6 +78,33 @@ class DevinCredentialMonitorTest {
         monitor.accepted();
 
         assertThat(monitor.refusal()).isEmpty();
+    }
+
+    @Test
+    void aDatabaseThatCannotCommitTheVerdictNeverBreaksTheCallThatProducedIt() {
+        PlatformTransactionManager cannotCommit = new PlatformTransactionManager() {
+            @Override
+            public TransactionStatus getTransaction(TransactionDefinition definition) {
+                return new SimpleTransactionStatus();
+            }
+
+            @Override
+            public void commit(TransactionStatus status) {
+                throw new TransactionSystemException("could not commit");
+            }
+
+            @Override
+            public void rollback(TransactionStatus status) {}
+        };
+        DevinCredentialMonitor broken = new DevinCredentialMonitor(verdicts, cannotCommit);
+
+        assertThatCode(() -> {
+                    broken.refused(
+                            "createSession",
+                            HttpClientErrorException.create(HttpStatus.UNAUTHORIZED, "", null, null, null));
+                    broken.accepted();
+                })
+                .doesNotThrowAnyException();
     }
 
     @Test
