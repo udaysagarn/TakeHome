@@ -14,7 +14,12 @@ import org.springframework.stereotype.Component;
 public class PromptBuilder {
 
     public String scopingPrompt(
-            String repo, int issueNumber, String issueTitle, String issueBody, String repositoryProfile) {
+            String repo,
+            int issueNumber,
+            String issueTitle,
+            String issueBody,
+            String repositoryProfile,
+            String lessons) {
         return """
                You are triaging a GitHub issue to decide whether it can be remediated autonomously and
                verified objectively. This is a READ-ONLY analysis task: do not modify files, do not
@@ -26,7 +31,7 @@ public class PromptBuilder {
                --- issue body ---
                %s
                --- end issue body ---
-               %s
+               %s%s
                Steps:
                1. Clone/inspect the repository and locate the code, dependencies or tests the issue refers to.
                2. Confirm the problem actually exists on the default branch. If you cannot reproduce or
@@ -53,7 +58,13 @@ public class PromptBuilder {
 
                Return only the structured output.
                """
-                .formatted(repo, issueNumber, issueTitle, truncate(issueBody, 6000), profileSection(repositoryProfile));
+                .formatted(
+                        repo,
+                        issueNumber,
+                        issueTitle,
+                        truncate(issueBody, 6000),
+                        profileSection(repositoryProfile),
+                        lessonsSection(lessons));
     }
 
     public String remediationPrompt(
@@ -62,7 +73,8 @@ public class PromptBuilder {
             String issueTitle,
             String issueBody,
             SuccessCriteria criteria,
-            String repositoryProfile) {
+            String repositoryProfile,
+            String lessons) {
         return """
                Remediate GitHub issue #%d in %s and open a pull request against the default branch.
 
@@ -71,7 +83,7 @@ public class PromptBuilder {
                --- issue body ---
                %s
                --- end issue body ---
-               %s
+               %s%s
                This work has already been scoped. You are being held to the following contract, which was
                posted publicly on the issue before you started.
 
@@ -113,6 +125,7 @@ public class PromptBuilder {
                         issueTitle,
                         truncate(issueBody, 6000),
                         profileSection(repositoryProfile),
+                        lessonsSection(lessons),
                         criteria.problemRestatement(),
                         bullets(criteria.acceptanceCriteria()),
                         bullets(criteria.verificationCommands()),
@@ -150,6 +163,71 @@ public class PromptBuilder {
                Return only the structured output.
                """
                 .formatted(repo, prUrl, bullets(criteria.verificationCommands()), bullets(criteria.acceptanceCriteria()));
+    }
+
+    /**
+     * Hands a human reviewer's verdict back to the session that wrote the code. The reviewer outranks
+     * the contract: menD does not let the session argue that the criteria were met and stop there.
+     */
+    public String reviewFeedbackMessage(String prUrl, int round, int maxRounds, String feedback) {
+        return """
+               A human reviewer has asked for changes on your pull request %s (round %d of %d).
+
+               --- reviewer feedback ---
+               %s
+               --- end reviewer feedback ---
+
+               The reviewer outranks the acceptance criteria you were given: where the two conflict, do what
+               the reviewer asked and say so. Address every point, push to the same branch, keep the tests
+               you added passing, and add tests for anything the reviewer says is untested. Reply on the pull
+               request describing what you changed for each point.
+
+               If a point needs a decision only a human can make, do not guess: state the decision you need
+               and finish with remediated=false and that as the blocked_reason.
+               """
+                .formatted(prUrl, round, maxRounds, truncate(feedback, 6000));
+    }
+
+    /**
+     * Turns one task's review history into reusable lessons. Kept read-only and cheap: it is a
+     * classification job, not an engineering one.
+     */
+    public String retrospectivePrompt(String repo, int issueNumber, String prUrl, String outcome, String feedback) {
+        return """
+               You are running a retrospective on one automated remediation so the next one goes better.
+               This is READ-ONLY: do not modify files, do not push, do not comment on GitHub.
+
+               Repository: %s
+               Issue: #%d
+               Pull request: %s
+
+               --- how it ended ---
+               %s
+               --- reviewer feedback, if any ---
+               %s
+               --- end ---
+
+               Extract only lessons that would have changed what the engineer did. Skip praise, skip
+               restating the change, skip anything already obvious from the repository's contributor guide.
+               For each lesson decide:
+
+               - scope REPO when it is about this codebase: its conventions, layout, reviewers' habits,
+                 the test framework, files that always need updating together.
+               - scope GENERAL when it would hold in any repository.
+
+               Then recommend where it belongs:
+               - PROMPT_PREAMBLE: menD should inject it into this repository's future sessions.
+               - DEVIN_KNOWLEDGE: worth a Devin knowledge note or playbook for the whole organisation.
+               - REPO_INSTRUCTIONS: belongs in the repository's own AGENTS.md / CLAUDE.md / CONTRIBUTING.md.
+               - MEND_BACKLOG: the lesson is about menD's own behaviour, for example it accepted an issue it
+                 should have rejected, or the acceptance criteria were wrong.
+
+               Phrase each lesson as an instruction a future session can act on, quote the evidence it came
+               from, and give an honest confidence. Zero lessons is a valid answer.
+
+               Return only the structured output.
+               """
+                .formatted(repo, issueNumber, prUrl == null ? "(none opened)" : prUrl, truncate(outcome, 4000), truncate(feedback, 4000));
     }
 
     public String ciFailureNudge(String prUrl, String failureSummary) {
@@ -194,6 +272,22 @@ public class PromptBuilder {
                and say so in your output.
                """
                 .formatted(profile.strip());
+    }
+
+    /** What earlier reviews taught menD about this repository, and about Devin's work in general. */
+    private static String lessonsSection(String lessons) {
+        if (lessons == null || lessons.isBlank()) {
+            return "";
+        }
+        return """
+
+               --- what human reviewers have already taught menD here ---
+               %s
+               --- end lessons ---
+               These came from real review comments on earlier menD pull requests. Follow them unless the
+               repository now contradicts them, in which case say so.
+               """
+                .formatted(lessons.strip());
     }
 
     private static String blankTo(String value, String fallback) {

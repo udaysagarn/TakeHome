@@ -1,7 +1,9 @@
 package ai.devin.mend.web;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.domain.LearningScope;
 import ai.devin.mend.domain.Repository;
+import ai.devin.mend.learning.LearningService;
 import ai.devin.mend.registry.RepositoryService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
@@ -21,11 +23,17 @@ public class DashboardController {
 
     private final DashboardService dashboard;
     private final RepositoryService registry;
+    private final LearningService learnings;
     private final MendProperties props;
 
-    public DashboardController(DashboardService dashboard, RepositoryService registry, MendProperties props) {
+    public DashboardController(
+            DashboardService dashboard,
+            RepositoryService registry,
+            LearningService learnings,
+            MendProperties props) {
         this.dashboard = dashboard;
         this.registry = registry;
+        this.learnings = learnings;
         this.props = props;
     }
 
@@ -66,6 +74,16 @@ public class DashboardController {
             model.addAttribute("error", e.getMessage());
         }
         return registerForm(model);
+    }
+
+    /** What human reviewers have taught menD, and the promotions a human still has to make. */
+    @GetMapping("/learnings")
+    public String learnings(Model model) {
+        model.addAttribute("repoLessons", learnings.byScope(LearningScope.REPO));
+        model.addAttribute("generalLessons", learnings.byScope(LearningScope.GENERAL));
+        model.addAttribute("actions", learnings.recommendedActions());
+        model.addAttribute("retired", learnings.retired());
+        return "learnings";
     }
 
     /** Everything menD persisted about one issue, including the contract Devin was held to. */
