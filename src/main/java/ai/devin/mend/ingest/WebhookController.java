@@ -1,13 +1,18 @@
 package ai.devin.mend.ingest;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.domain.Repository;
 import ai.devin.mend.engine.Orchestrator;
 import ai.devin.mend.github.GitHubDtos;
+import ai.devin.mend.registry.ContextService;
+import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
@@ -28,11 +33,20 @@ public class WebhookController {
     private static final Logger log = LoggerFactory.getLogger(WebhookController.class);
 
     private final Orchestrator orchestrator;
+    private final RepositoryService registry;
+    private final ContextService context;
     private final ObjectMapper mapper;
     private final MendProperties props;
 
-    public WebhookController(Orchestrator orchestrator, ObjectMapper mapper, MendProperties props) {
+    public WebhookController(
+            Orchestrator orchestrator,
+            RepositoryService registry,
+            ContextService context,
+            ObjectMapper mapper,
+            MendProperties props) {
         this.orchestrator = orchestrator;
+        this.registry = registry;
+        this.context = context;
         this.mapper = mapper;
         this.props = props;
     }
@@ -47,23 +61,53 @@ public class WebhookController {
             log.warn("rejected webhook with invalid signature");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("invalid signature");
         }
-        if (!"issues".equals(event)) {
+        if (!"issues".equals(event) && !"push".equals(event)) {
             return ResponseEntity.ok("ignored: " + event);
         }
         try {
             JsonNode root = mapper.readTree(payload);
+            String slug = root.path("repository").path("full_name").asText();
+            Repository repository = registry.find(slug).orElse(null);
+            if (repository == null || !repository.isOperational()) {
+                return ResponseEntity.ok("ignored: %s is not a registered repository".formatted(slug));
+            }
+            if ("push".equals(event)) {
+                return ResponseEntity.accepted().body(notePush(root, repository));
+            }
             String action = root.path("action").asText();
             String label = root.path("label").path("name").asText();
-            if (!"labeled".equals(action) || !props.getGithub().getTriggerLabel().equals(label)) {
+            if (!"labeled".equals(action) || !registry.triggerLabel(repository).equals(label)) {
                 return ResponseEntity.ok("ignored: %s/%s".formatted(action, label));
             }
             GitHubDtos.Issue issue = mapper.treeToValue(root.path("issue"), GitHubDtos.Issue.class);
-            orchestrator.onTriggerLabel(issue);
-            return ResponseEntity.accepted().body("queued issue #" + issue.number());
+            orchestrator.onTriggerLabel(repository.slug(), issue);
+            return ResponseEntity.accepted().body("queued %s#%d".formatted(repository.slug(), issue.number()));
         } catch (Exception e) {
             log.error("failed to handle webhook", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("error");
         }
+    }
+
+    /**
+     * A push to the default branch ages only the profile slices whose files it touched. The refresh
+     * itself happens on menD's own schedule, so a busy repository cannot drive Devin sessions from
+     * webhook traffic.
+     */
+    private String notePush(JsonNode root, Repository repository) {
+        String ref = root.path("ref").asText();
+        String defaultRef = "refs/heads/" + String.valueOf(repository.getDefaultBranch());
+        if (!defaultRef.equals(ref)) {
+            return "ignored: push to " + ref;
+        }
+        JsonNode commits = root.path("commits");
+        List<String> paths = new ArrayList<>();
+        for (JsonNode commit : commits) {
+            for (String field : List.of("added", "modified", "removed")) {
+                commit.path(field).forEach(path -> paths.add(path.asText()));
+            }
+        }
+        context.onPush(repository, commits.size(), paths, root.path("after").asText());
+        return "noted %d commit(s), %d changed path(s) on %s".formatted(commits.size(), paths.size(), repository.slug());
     }
 
     private boolean signatureValid(byte[] payload, String signature) {

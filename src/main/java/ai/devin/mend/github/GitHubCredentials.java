@@ -14,6 +14,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -44,6 +45,7 @@ public class GitHubCredentials {
 
     private volatile String installationToken;
     private volatile Instant installationTokenExpiry = Instant.EPOCH;
+    private volatile Map<String, String> permissions = Map.of();
 
     public GitHubCredentials(RestClient.Builder builder, MendProperties props) {
         this.props = props;
@@ -54,6 +56,25 @@ public class GitHubCredentials {
         return props.getGithub().getApp().isConfigured()
                 || (props.getGithub().getToken() != null
                         && !props.getGithub().getToken().isBlank());
+    }
+
+    /** The installation whose token is in use; empty when running on a personal access token. */
+    public String installationId() {
+        return props.getGithub().getApp().isConfigured()
+                ? props.getGithub().getApp().getInstallationId()
+                : "";
+    }
+
+    /**
+     * Permissions GitHub grants the installation, e.g. {@code issues -> write}. Empty on a personal
+     * access token, whose scopes GitHub does not report on this route.
+     */
+    public Map<String, String> installationPermissions() {
+        if (!props.getGithub().getApp().isConfigured()) {
+            return Map.of();
+        }
+        bearerToken();
+        return permissions;
     }
 
     /** The identity menD acts as, for logs and issue comments. */
@@ -82,6 +103,7 @@ public class GitHubCredentials {
             throw new IllegalStateException("GitHub returned no installation token for app " + app.getAppId());
         }
         installationToken = minted.token();
+        permissions = minted.permissions() == null ? Map.of() : Map.copyOf(minted.permissions());
         installationTokenExpiry = minted.expiresAt() == null
                 ? Instant.now().plus(Duration.ofHours(1))
                 : Instant.parse(minted.expiresAt());
@@ -164,5 +186,5 @@ public class GitHubCredentials {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-    record InstallationToken(String token, String expiresAt) {}
+    record InstallationToken(String token, String expiresAt, Map<String, String> permissions) {}
 }

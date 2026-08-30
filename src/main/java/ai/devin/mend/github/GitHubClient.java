@@ -39,7 +39,8 @@ public class GitHubClient {
         return credentials.isConfigured();
     }
 
-    public String repo() {
+    /** The repository menD watches when the registry is empty. */
+    public String defaultRepo() {
         return props.getGithub().getRepo();
     }
 
@@ -48,23 +49,23 @@ public class GitHubClient {
      * {@code {repo}} variable holding {@code owner/name} is percent-encoded to {@code owner%2Fname},
      * which GitHub answers with 404.
      */
-    private String owner() {
-        return repo().substring(0, repo().indexOf('/'));
+    private static String owner(String repo) {
+        return repo.substring(0, repo.indexOf('/'));
     }
 
-    private String repoName() {
-        return repo().substring(repo().indexOf('/') + 1);
+    private static String name(String repo) {
+        return repo.substring(repo.indexOf('/') + 1);
     }
 
     /** Open issues carrying the trigger label. Pull requests are filtered out. */
-    public List<GitHubDtos.Issue> listIssuesWithLabel(String label) {
+    public List<GitHubDtos.Issue> listIssuesWithLabel(String repo, String label) {
         GitHubDtos.Issue[] issues = http.get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/repos/{owner}/{name}/issues")
                         .queryParam("labels", label)
                         .queryParam("state", "open")
                         .queryParam("per_page", 100)
-                        .build(owner(), repoName()))
+                        .build(owner(repo), name(repo)))
                 .retrieve()
                 .body(GitHubDtos.Issue[].class);
         return issues == null
@@ -72,10 +73,10 @@ public class GitHubClient {
                 : java.util.Arrays.stream(issues).filter(i -> !i.isPullRequest()).toList();
     }
 
-    public Optional<GitHubDtos.Issue> getIssue(int number) {
+    public Optional<GitHubDtos.Issue> getIssue(String repo, int number) {
         try {
             return Optional.ofNullable(http.get()
-                    .uri("/repos/{owner}/{name}/issues/{n}", owner(), repoName(), number)
+                    .uri("/repos/{owner}/{name}/issues/{n}", owner(repo), name(repo), number)
                     .retrieve()
                     .body(GitHubDtos.Issue.class));
         } catch (HttpClientErrorException.NotFound e) {
@@ -83,54 +84,106 @@ public class GitHubClient {
         }
     }
 
-    public void comment(int issueNumber, String body) {
+    /** Repository metadata; empty when it does not exist or menD's identity cannot see it. */
+    public Optional<GitHubDtos.Repo> getRepo(String repo) {
+        try {
+            return Optional.ofNullable(http.get()
+                    .uri("/repos/{owner}/{name}", owner(repo), name(repo))
+                    .retrieve()
+                    .body(GitHubDtos.Repo.class));
+        } catch (HttpClientErrorException.NotFound | HttpClientErrorException.Forbidden e) {
+            return Optional.empty();
+        }
+    }
+
+    /** Repositories the current App installation can see; empty when running on a token. */
+    public List<GitHubDtos.Repo> installationRepos() {
+        try {
+            GitHubDtos.InstallationRepos body = http.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/installation/repositories")
+                            .queryParam("per_page", 100)
+                            .build())
+                    .retrieve()
+                    .body(GitHubDtos.InstallationRepos.class);
+            return body == null || body.repositories() == null ? List.of() : body.repositories();
+        } catch (HttpClientErrorException e) {
+            log.debug("installation repositories unavailable: {}", e.getStatusCode());
+            return List.of();
+        }
+    }
+
+    /** Permissions GitHub reports for the credentials in use; empty on a personal access token. */
+    public Map<String, String> installationPermissions() {
+        return credentials.installationPermissions();
+    }
+
+    /** Head commit of a branch, used to stamp a codebase profile with the sha it describes. */
+    public Optional<String> branchHeadSha(String repo, String branch) {
+        try {
+            GitHubDtos.Ref ref = http.get()
+                    .uri("/repos/{owner}/{name}/commits/{branch}", owner(repo), name(repo), branch)
+                    .retrieve()
+                    .body(GitHubDtos.Ref.class);
+            return Optional.ofNullable(ref).map(GitHubDtos.Ref::sha);
+        } catch (HttpClientErrorException e) {
+            return Optional.empty();
+        }
+    }
+
+    public void comment(String repo, int issueNumber, String body) {
         if (!props.getGithub().isCommentsEnabled()) {
-            log.info("comments disabled; would have commented on #{}: {}", issueNumber, abbreviate(body));
+            log.info("comments disabled; would have commented on {}#{}: {}", repo, issueNumber, abbreviate(body));
             return;
         }
         http.post()
-                .uri("/repos/{owner}/{name}/issues/{n}/comments", owner(), repoName(), issueNumber)
+                .uri("/repos/{owner}/{name}/issues/{n}/comments", owner(repo), name(repo), issueNumber)
                 .body(Map.of("body", body))
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    public void addLabels(int issueNumber, List<String> labels) {
+    public void addLabels(String repo, int issueNumber, List<String> labels) {
         http.post()
-                .uri("/repos/{owner}/{name}/issues/{n}/labels", owner(), repoName(), issueNumber)
+                .uri("/repos/{owner}/{name}/issues/{n}/labels", owner(repo), name(repo), issueNumber)
                 .body(Map.of("labels", labels))
                 .retrieve()
                 .toBodilessEntity();
     }
 
-    public void removeLabel(int issueNumber, String label) {
+    public void removeLabel(String repo, int issueNumber, String label) {
         try {
             http.delete()
-                    .uri("/repos/{owner}/{name}/issues/{n}/labels/{label}", owner(), repoName(), issueNumber, label)
+                    .uri(
+                            "/repos/{owner}/{name}/issues/{n}/labels/{label}",
+                            owner(repo),
+                            name(repo),
+                            issueNumber,
+                            label)
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound e) {
-            log.debug("label {} not present on #{}", label, issueNumber);
+            log.debug("label {} not present on {}#{}", label, repo, issueNumber);
         }
     }
 
     /** Ensures a label exists so the pipeline never fails on a fresh repository. */
-    public void ensureLabel(String name, String color, String description) {
+    public void ensureLabel(String repo, String label, String color, String description) {
         try {
             http.post()
-                    .uri("/repos/{owner}/{name}/labels", owner(), repoName())
-                    .body(Map.of("name", name, "color", color, "description", description))
+                    .uri("/repos/{owner}/{name}/labels", owner(repo), name(repo))
+                    .body(Map.of("name", label, "color", color, "description", description))
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException e) {
-            log.debug("label {} already exists or could not be created: {}", name, e.getStatusCode());
+            log.debug("label {} already exists or could not be created: {}", label, e.getStatusCode());
         }
     }
 
-    public Optional<GitHubDtos.PullRequest> getPullRequest(int number) {
+    public Optional<GitHubDtos.PullRequest> getPullRequest(String repo, int number) {
         try {
             return Optional.ofNullable(http.get()
-                    .uri("/repos/{owner}/{name}/pulls/{n}", owner(), repoName(), number)
+                    .uri("/repos/{owner}/{name}/pulls/{n}", owner(repo), name(repo), number)
                     .retrieve()
                     .body(GitHubDtos.PullRequest.class));
         } catch (HttpClientErrorException.NotFound e) {
@@ -138,22 +191,68 @@ public class GitHubClient {
         }
     }
 
+    /** Review verdicts on a pull request, oldest first. */
+    public List<GitHubDtos.Review> listReviews(String repo, int pullNumber) {
+        GitHubDtos.Review[] reviews = http.get()
+                .uri("/repos/{owner}/{name}/pulls/{n}/reviews", owner(repo), name(repo), pullNumber)
+                .retrieve()
+                .body(GitHubDtos.Review[].class);
+        return reviews == null ? List.of() : List.of(reviews);
+    }
+
+    /** Inline review comments left on a pull request's diff. */
+    public List<GitHubDtos.ReviewComment> listReviewComments(String repo, int pullNumber) {
+        GitHubDtos.ReviewComment[] comments = http.get()
+                .uri("/repos/{owner}/{name}/pulls/{n}/comments", owner(repo), name(repo), pullNumber)
+                .retrieve()
+                .body(GitHubDtos.ReviewComment[].class);
+        return comments == null ? List.of() : List.of(comments);
+    }
+
+    /** Files a pull request touches, used to check the diff stayed inside the agreed scope. */
+    public List<GitHubDtos.PrFile> listPullRequestFiles(String repo, int pullNumber) {
+        GitHubDtos.PrFile[] files = http.get()
+                .uri("/repos/{owner}/{name}/pulls/{n}/files", owner(repo), name(repo), pullNumber)
+                .retrieve()
+                .body(GitHubDtos.PrFile[].class);
+        return files == null ? List.of() : List.of(files);
+    }
+
+    /** Starts a {@code workflow_dispatch} run; false when the workflow or permission is absent. */
+    public boolean dispatchWorkflow(String repo, String workflowFile, String ref, Map<String, String> inputs) {
+        try {
+            http.post()
+                    .uri(
+                            "/repos/{owner}/{name}/actions/workflows/{workflow}/dispatches",
+                            owner(repo),
+                            name(repo),
+                            workflowFile)
+                    .body(Map.of("ref", ref, "inputs", inputs))
+                    .retrieve()
+                    .toBodilessEntity();
+            return true;
+        } catch (HttpClientErrorException e) {
+            log.info("workflow {} not dispatchable on {}: {}", workflowFile, repo, e.getStatusCode());
+            return false;
+        }
+    }
+
     /**
      * Aggregate CI verdict for the head commit of a pull request, combining check runs and legacy
      * commit statuses.
      */
-    public GitHubDtos.CiVerdict ciVerdict(int pullNumber) {
-        Optional<GitHubDtos.PullRequest> pr = getPullRequest(pullNumber);
+    public GitHubDtos.CiVerdict ciVerdict(String repo, int pullNumber) {
+        Optional<GitHubDtos.PullRequest> pr = getPullRequest(repo, pullNumber);
         if (pr.isEmpty() || pr.get().head() == null) {
             return GitHubDtos.CiVerdict.NONE;
         }
         String sha = pr.get().head().sha();
         GitHubDtos.CheckRuns runs = http.get()
-                .uri("/repos/{owner}/{name}/commits/{sha}/check-runs", owner(), repoName(), sha)
+                .uri("/repos/{owner}/{name}/commits/{sha}/check-runs", owner(repo), name(repo), sha)
                 .retrieve()
                 .body(GitHubDtos.CheckRuns.class);
         GitHubDtos.CombinedStatus status = http.get()
-                .uri("/repos/{owner}/{name}/commits/{sha}/status", owner(), repoName(), sha)
+                .uri("/repos/{owner}/{name}/commits/{sha}/status", owner(repo), name(repo), sha)
                 .retrieve()
                 .body(GitHubDtos.CombinedStatus.class);
 

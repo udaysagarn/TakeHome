@@ -19,6 +19,8 @@ public interface TaskRepository extends JpaRepository<RemediationTask, Long> {
 
     List<RemediationTask> findAllByOrderByUpdatedAtDesc();
 
+    List<RemediationTask> findByRepoOrderByUpdatedAtDesc(String repo);
+
     @Query("select t.state, count(t) from RemediationTask t group by t.state")
     List<Object[]> countByState();
 

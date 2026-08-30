@@ -29,14 +29,19 @@ public class Notifier {
         this.props = props;
     }
 
-    public void ensureLabels() {
+    public void ensureLabels(String repo) {
         MendProperties.Github cfg = props.getGithub();
-        github.ensureLabel(cfg.getTriggerLabel(), "1f6feb", "Queued for autonomous remediation by Devin");
-        github.ensureLabel(cfg.getInProgressLabel(), "fbca04", "A Devin session is working on this issue");
-        github.ensureLabel(cfg.getPrOpenLabel(), "0e8a16", "A Devin pull request is open for this issue");
-        github.ensureLabel(cfg.getDoneLabel(), "5319e7", "Remediated by Devin with green CI");
-        github.ensureLabel(cfg.getNotCandidateLabel(), "b60205", "Not automatable: success criteria could not be established");
-        github.ensureLabel(cfg.getNeedsHumanLabel(), "d93f0b", "Escalated from autonomous remediation to a human");
+        github.ensureLabel(repo, cfg.getTriggerLabel(), "1f6feb", "Queued for autonomous remediation by Devin");
+        github.ensureLabel(repo, cfg.getInProgressLabel(), "fbca04", "A Devin session is working on this issue");
+        github.ensureLabel(repo, cfg.getPrOpenLabel(), "0e8a16", "A Devin pull request is open for this issue");
+        github.ensureLabel(repo, cfg.getDoneLabel(), "5319e7", "Remediated by Devin with green CI");
+        github.ensureLabel(
+                repo,
+                cfg.getNotCandidateLabel(),
+                "b60205",
+                "Not automatable: success criteria could not be established");
+        github.ensureLabel(
+                repo, cfg.getNeedsHumanLabel(), "d93f0b", "Escalated from autonomous remediation to a human");
     }
 
     public void criteriaAccepted(RemediationTask task, SuccessCriteria criteria) {
@@ -52,6 +57,8 @@ public class Notifier {
                 **Verification commands**
                 %s
 
+                **Tests** — %s
+
                 **Files in scope:** %s
                 **Risk:** %s · **Confidence:** %.2f%s
 
@@ -61,6 +68,9 @@ public class Notifier {
                                 criteria.problemRestatement(),
                                 checklist(criteria.acceptanceCriteria()),
                                 code(criteria.verificationCommands()),
+                                criteria.testPlan() == null || criteria.testPlan().isBlank()
+                                        ? "no test plan was stated"
+                                        : criteria.testPlan(),
                                 inline(criteria.filesInScope()),
                                 criteria.risk(),
                                 criteria.confidence(),
@@ -132,8 +142,10 @@ public class Notifier {
 
                 %s
 
+                **Tests** — %s
+
                 Time from label to pull request: %s.%s"""
-                        .formatted(task.getPrUrl(), evidence, humanDuration(task), FOOTER));
+                        .formatted(task.getPrUrl(), evidence, testEvidence(outcome), humanDuration(task), FOOTER));
         swapLabels(
                 task,
                 List.of(props.getGithub().getDoneLabel()),
@@ -158,7 +170,7 @@ public class Notifier {
 
     private void comment(RemediationTask task, String body) {
         try {
-            github.comment(task.getIssueNumber(), body);
+            github.comment(task.getRepo(), task.getIssueNumber(), body);
         } catch (RuntimeException e) {
             log.warn("failed to comment on {}: {}", task.key(), e.getMessage());
         }
@@ -167,9 +179,9 @@ public class Notifier {
     private void swapLabels(RemediationTask task, List<String> add, List<String> remove) {
         try {
             if (!add.isEmpty()) {
-                github.addLabels(task.getIssueNumber(), add);
+                github.addLabels(task.getRepo(), task.getIssueNumber(), add);
             }
-            remove.forEach(label -> github.removeLabel(task.getIssueNumber(), label));
+            remove.forEach(label -> github.removeLabel(task.getRepo(), task.getIssueNumber(), label));
         } catch (RuntimeException e) {
             log.warn("failed to update labels on {}: {}", task.key(), e.getMessage());
         }
@@ -194,6 +206,22 @@ public class Notifier {
 
     private static String code(List<String> items) {
         return "```bash\n" + String.join("\n", items) + "\n```";
+    }
+
+    /**
+     * What the change did to the repository's tests. A remediation that touched no test is reported
+     * as exactly that, so the absence is visible to a reviewer rather than merely unmentioned.
+     */
+    private static String testEvidence(RemediationOutcome outcome) {
+        if (outcome == null) {
+            return "_no outcome was returned._";
+        }
+        String note = outcome.testEvidence() == null || outcome.testEvidence().isBlank()
+                ? "no explanation was given"
+                : outcome.testEvidence().strip();
+        return outcome.testsChanged().isEmpty()
+                ? "no test was added or changed — %s".formatted(note)
+                : "%s — %s".formatted(inline(outcome.testsChanged()), note);
     }
 
     private static String inline(List<String> items) {
