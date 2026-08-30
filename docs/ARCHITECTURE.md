@@ -291,6 +291,13 @@ Flyway owns the schema per dialect (`db/migration/h2`, `db/migration/postgresql`
 adding a state must be a code change, never a schema change — and are mapped
 `@Enumerated(STRING)` + `@JdbcTypeCode(SqlTypes.VARCHAR)`, guarded by `SchemaMigrationTest`.
 
+A data volume created before the migrations existed holds those tables as Hibernate's `ddl-auto`
+wrote them: no history table, and native `ENUM` columns. `baseline-on-migrate` adopts it at version 1
+and `V3__normalise_enum_columns` rewrites the enum columns to the declared varchar widths, so an
+existing deployment upgrades in place rather than refusing to start; `PreMigrationSchemaTest` starts
+the application against a dump of that schema, and the CI demo job restarts the container onto its
+existing volume.
+
 ### 5.7 Configuration
 
 Everything is bound to `MendProperties` under `mend.*` from environment variables; see

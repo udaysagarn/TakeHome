@@ -13,6 +13,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration/{vendor}
+    # A database created before the migrations existed holds the same tables with no history
+    # table. Adopt it at the baseline version instead of refusing to start; ddl-auto=validate
+    # is the check that it really matches.
+    baseline-on-migrate: true
+    baseline-version: 1
   h2:
     console:
       enabled: false
