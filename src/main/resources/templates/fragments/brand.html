@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <svg
+      th:fragment="glyph"
+      class="mark-glyph"
+      viewBox="0 0 64 64"
+      role="img"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <rect x="2" y="2" width="60" height="60" rx="16" />
+      <g fill="none" stroke-width="6.5" stroke-linecap="round">
+        <path d="M21 15 V49" />
+        <path d="M21 15 H31 a17 17 0 0 1 12 29" />
+        <path d="M36 49 H21" />
+      </g>
+    </svg>
+
+    <a th:fragment="mark" th:href="@{/}" class="mark" aria-label="menD home">
+      <svg th:replace="~{fragments/brand :: glyph}"></svg>
+      <span class="wordmark">men<b>D</b></span>
+    </a>
+
+    <span th:fragment="markStatic" class="mark">
+      <svg th:replace="~{fragments/brand :: glyph}"></svg>
+      <span class="wordmark">men<b>D</b></span>
+    </span>
+
+    <link th:fragment="favicon" rel="icon" type="image/svg+xml" th:href="@{/img/favicon.svg}" />
+  </body>
+</html>

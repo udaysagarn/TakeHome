@@ -110,22 +110,43 @@ header.topbar {
   gap: 10px;
   font-weight: 600;
   letter-spacing: -0.01em;
+  text-decoration: none;
+  color: rgb(var(--text-primary));
 }
 
 .brand .mark {
-  min-width: 26px;
-  height: 26px;
-  padding: 0 7px;
-  box-sizing: border-box;
-  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
   white-space: nowrap;
-  background: rgb(var(--bg-accent-primary));
-  color: rgb(var(--text-on-accent));
-  display: grid;
-  place-items: center;
-  font-size: 13px;
-  font-weight: 700;
+  color: rgb(var(--text-primary));
+}
+
+.brand .mark-glyph {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  display: block;
+}
+
+.brand .mark-glyph rect {
+  fill: rgb(var(--bg-accent-primary));
+}
+
+.brand .mark-glyph g {
+  stroke: rgb(var(--text-on-accent));
+}
+
+.brand .wordmark {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.brand .wordmark b {
+  font-weight: 750;
+  color: rgb(var(--bg-accent-primary));
 }
 
 .subtitle {

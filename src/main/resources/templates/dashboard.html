@@ -8,13 +8,14 @@
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="stylesheet" th:href="@{/css/devin.css}" />
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <link th:replace="~{fragments/brand :: favicon}" />
     <script th:src="@{/js/theme.js}"></script>
   </head>
   <body>
     <div class="shell">
       <header class="topbar">
         <div class="brand">
-          <a th:href="@{/}" class="mark">menD</a>
+          <a th:replace="~{fragments/brand :: mark}"></a>
           <span>Pipeline</span>
         </div>
         <span class="subtitle">
