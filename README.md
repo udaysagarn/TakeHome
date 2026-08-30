@@ -219,7 +219,8 @@ One container, one file-backed H2 database, `udaysagarn/superset` pre-registered
 3. **Fix a real issue.** Label one `menD:fix` and watch `/flows` walk it: criteria → session → PR →
    verification. `/tasks/{id}` shows the contract, the sessions, and the evidence behind the verdict.
 4. **Watch it decline one.** Label a placeholder issue too. It comes back `menD:not-a-candidate`, commented
-   with the reasons and what a human would need to add, having spent nothing.
+   with the reasons and what a human would need to add. A rejection the free pre-filter can make costs
+   nothing at all; one that needed the scoping session costs that session's cap and no more.
 5. **Push back on a PR.** Request changes on one of menD's pull requests. The task moves to
    `CHANGES_REQUESTED`, the reviewer's words go to the *same* Devin session, and the retrospective lands a
    lesson at `/learnings`.
@@ -229,10 +230,16 @@ The Mac walkthrough is [docs/DEMO-MAC.md](docs/DEMO-MAC.md), the issues the demo
 one was vetted, are in [docs/DEMO-ISSUES.md](docs/DEMO-ISSUES.md), and creating the credentials from scratch
 with the exact GitHub App permissions is [docs/CREDENTIALS.md](docs/CREDENTIALS.md).
 
-There is no credential-free mode: steps 3–6 need a real Devin key and a real GitHub App, because menD only
-learns whether a credential works by spending on it. What you *can* run without either is the test suite —
-`mvn -B verify` renders every surface (`/`, `/flows`, `/tasks/{id}`, `/learnings`, `/deck`, `/api/report`)
-against seeded state in `DashboardRenderTest`, which is how the pages are pinned rather than by a mocked run.
+Steps 3–6 need a real Devin key and a real GitHub App: menD only learns whether a credential works by
+spending on it, so there is no simulated remediation. Two things do run without either:
+
+- **The surfaces, read-only.** `MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false mvn spring-boot:run`
+  starts with no credentials, dispatches nothing and spends nothing; every page and `/api/report` render
+  against whatever the database already holds. On a fresh database that is the empty state, with the
+  credential alarm showing — which is the honest picture, not a demo fixture.
+- **The surfaces, populated.** `mvn -B verify` renders `/`, `/flows`, `/tasks/{id}`, `/learnings`, `/deck`
+  and `/api/report` against seeded state in `DashboardRenderTest`. That is where the pages are pinned, and
+  the only place a populated board exists without a real run.
 
 If Maven Central rate-limits the build (shared and cloud IPs get HTTP 429 regularly), the image retries
 through a mirror of Central by itself; behind a corporate proxy, force yours with
