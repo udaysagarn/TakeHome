@@ -199,6 +199,10 @@ h2.section {
   color: rgb(var(--text-red));
 }
 
+.kpi .value.orange {
+  color: rgb(var(--text-orange));
+}
+
 .kpi .hint {
   font-size: 11px;
   color: rgb(var(--text-tertiary));
@@ -206,7 +210,7 @@ h2.section {
 
 .board {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -248,6 +252,14 @@ a.card:hover {
   background: rgb(var(--bg-hover));
   text-decoration: none;
   border-color: rgb(var(--text-blue) / 0.4);
+}
+
+/* CHANGES_REQUESTED has no break point, so it has to shrink to fit a board column. */
+.card .pill {
+  max-width: 100%;
+  font-size: 9.5px;
+  letter-spacing: 0.01em;
+  padding: 2px 6px;
 }
 
 .card .num {
@@ -359,6 +371,17 @@ table.grid tr:last-child td {
   border-color: rgb(var(--text-blue) / 0.3);
 }
 
+.pill.green {
+  color: rgb(var(--text-green));
+  border-color: rgb(var(--text-green) / 0.3);
+}
+
+.pill.orange,
+.pill.unverified {
+  color: rgb(var(--text-orange));
+  border-color: rgb(var(--text-orange) / 0.3);
+}
+
 /* Task detail: the criteria contract and the raw row behind it. */
 table.kv th {
   width: 168px;
@@ -381,6 +404,7 @@ ul.contract li {
   margin-bottom: 3px;
 }
 
+pre.json,
 pre.raw {
   background: rgb(var(--bg-wash));
   border: 1px solid rgb(var(--border-subtle));

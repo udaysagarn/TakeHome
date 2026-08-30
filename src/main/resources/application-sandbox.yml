@@ -1,0 +1,17 @@
+# Everything a contributor needs to watch the pipeline run with no credentials: the GitHub and Devin
+# clients are replaced by in-memory simulations, and the loops tick fast enough to watch.
+mend:
+  github:
+    poll-interval: PT5S
+  engine:
+    reconcile-interval: PT5S
+    lease-duration: PT1M
+    heartbeat-interval: PT15S
+  verify:
+    tier-timeout: PT2M
+  learning:
+    review-poll-interval: PT5S
+
+logging:
+  level:
+    ai.devin.mend.sandbox: INFO

@@ -13,10 +13,16 @@
           <div class="value" th:text="${k.prsOpened}">0</div>
         </div>
         <div class="kpi">
-          <div class="label">Remediated · green CI</div>
+          <div class="label">Remediated · independently verified</div>
           <div class="value green" th:text="${k.succeeded}">0</div>
           <div class="hint" th:text="${k.successRatePct == null} ? 'no attempts yet'
-                : ${#numbers.formatDecimal(k.successRatePct, 1, 0)} + '% of attempts'">—</div>
+                : ${#numbers.formatDecimal(k.successRatePct, 1, 0)} + '% of attempts, '
+                  + ${k.unverified} + ' unverified'">—</div>
+        </div>
+        <div class="kpi">
+          <div class="label">Unverified</div>
+          <div class="value" th:classappend="${k.unverified > 0} ? 'orange'" th:text="${k.unverified}">0</div>
+          <div class="hint">fix opened, nothing independent proved it</div>
         </div>
         <div class="kpi">
           <div class="label">Median time to PR</div>
@@ -102,9 +108,9 @@
             <td class="muted">
               <span th:if="${t.ownerId}" class="mono" th:text="${t.ownerId}">worker</span>
               <span th:unless="${t.ownerId}">—</span>
-              <div class="note" th:if="${t.etaAt}"
+              <div class="note" th:if="${t.etaLabel}"
                    th:classappend="${t.overdue} ? 'red'"
-                   th:text="(${t.overdue} ? 'overdue since ' : 'due ') + ${t.etaAt}"></div>
+                   th:text="${t.etaLabel}" th:title="${t.etaAt}"></div>
             </td>
             <td class="note" th:text="${t.note}"></td>
           </tr>

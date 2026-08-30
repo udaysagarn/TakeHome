@@ -84,7 +84,7 @@
       <p class="note" th:if="${#lists.isEmpty(repoLessons)}">None yet.</p>
       <table class="grid" th:unless="${#lists.isEmpty(repoLessons)}">
         <thead>
-          <tr><th>Repository</th><th>Topic</th><th>Lesson</th><th>Confidence</th><th>Applied</th></tr>
+          <tr><th>Repository</th><th>Topic</th><th>Lesson</th><th>Confidence</th><th>Applied</th><th>Learned from</th></tr>
         </thead>
         <tbody>
           <tr th:each="l : ${repoLessons}">
@@ -93,6 +93,10 @@
             <td th:text="${l.lesson}">lesson</td>
             <td class="muted" th:text="${l.confidence}">0.8</td>
             <td class="muted" th:text="${l.timesApplied}">0</td>
+            <td class="muted">
+              <a th:if="${l.sourcePrUrl}" th:href="${l.sourcePrUrl}" target="_blank" th:text="${l.sourcePrUrl}">pr</a>
+              <div class="note" th:if="${l.evidence}" th:text="${l.evidence}"></div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -100,7 +104,7 @@
       <h2 class="section" th:unless="${#lists.isEmpty(retired)}">Retired</h2>
       <table class="grid" th:unless="${#lists.isEmpty(retired)}">
         <thead>
-          <tr><th>Lesson</th><th>Scope</th><th>Applied</th><th>Feedback after use</th></tr>
+          <tr><th>Lesson</th><th>Scope</th><th>Applied</th><th>Feedback after use</th><th>Left owing</th></tr>
         </thead>
         <tbody>
           <tr th:each="l : ${retired}">
@@ -108,6 +112,11 @@
             <td class="muted" th:text="${l.scope}">REPO</td>
             <td class="muted" th:text="${l.timesApplied}">4</td>
             <td class="muted" th:text="${l.timesFollowedByFeedback}">3</td>
+            <td class="muted">
+              <span th:if="${l.retiredBeforePromotion}"
+                    th:text="'retired before a human could ' + ${l.recommendedAction.label()}">pending</span>
+              <span th:unless="${l.retiredBeforePromotion}">—</span>
+            </td>
           </tr>
         </tbody>
       </table>

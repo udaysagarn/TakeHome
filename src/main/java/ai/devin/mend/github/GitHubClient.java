@@ -8,12 +8,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 /** Reads issues and writes the human-visible outputs: comments, labels, and CI verdicts. */
 @Component
+@Profile("!sandbox")
 public class GitHubClient {
 
     private static final Logger log = LoggerFactory.getLogger(GitHubClient.class);

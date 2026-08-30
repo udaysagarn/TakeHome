@@ -124,6 +124,20 @@ class ReviewLoopTest {
     }
 
     @Test
+    void aReviewStampedFinerThanTheDatabaseIsStillOnlyActedOnOnce() {
+        RemediationTask task = taskWithOpenPr(105);
+        Instant submitted = Instant.now().truncatedTo(ChronoUnit.MILLIS).plusNanos(335_368);
+        when(github.listReviews(REPO, 7))
+                .thenReturn(List.of(review("CHANGES_REQUESTED", "alice", "Add a regression test.", submitted)));
+
+        reviewLoop.collectFeedback(reload(task));
+        taskService.transition(reload(task), IssueState.RUNNING, "handed back", "test");
+        reviewLoop.collectFeedback(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.RUNNING);
+    }
+
+    @Test
     void menDsOwnCommentsCannotFeedTheLoop() {
         RemediationTask task = taskWithOpenPr(103);
         when(github.listReviews(REPO, 7))

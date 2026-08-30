@@ -1,10 +1,12 @@
 package ai.devin.mend.web;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.LearningScope;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.learning.LearningService;
 import ai.devin.mend.registry.RepositoryService;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -53,6 +55,28 @@ public class DashboardController {
         model.addAttribute("repo", repo == null ? "all repositories" : repo);
         model.addAttribute("triggerLabel", triggerLabel(repo));
         return "dashboard";
+    }
+
+    /**
+     * The pitch, as slides: what the problem is, how menD solves it, why an autonomous agent is the
+     * only way to, and where it would go next. The numbers and the finished tasks are read live from
+     * this instance, so the deck is never showing something the board disagrees with.
+     */
+    @GetMapping("/deck")
+    public String deck(Model model) {
+        model.addAttribute("kpis", dashboard.view(null).kpis());
+        model.addAttribute("repositories", dashboard.repoCards());
+        List<DashboardService.TaskRow> finished = dashboard.finished(50);
+        model.addAttribute("recent", finished.stream().limit(5).toList());
+        model.addAttribute(
+                "showcase",
+                finished.stream()
+                        .filter(r -> r.state() == IssueState.SUCCEEDED)
+                        .findFirst()
+                        .orElse(null));
+        model.addAttribute("triggerLabel", props.getGithub().getTriggerLabel());
+        model.addAttribute("notCandidateLabel", props.getGithub().getNotCandidateLabel());
+        return "deck";
     }
 
     /** Step-by-step instructions plus the form that registers and validates a repository. */

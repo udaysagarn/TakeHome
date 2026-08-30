@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>menD · the case for an autonomous remediation loop</title>
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="stylesheet" th:href="@{/css/devin.css}" />
+    <link rel="stylesheet" th:href="@{/css/deck.css}" />
+    <script th:src="@{/js/theme.js}"></script>
+  </head>
+  <body class="deck-body">
+    <nav class="deck-bar">
+      <a class="brand" th:href="@{/}"><span class="mark">menD</span></a>
+      <span class="deck-progress"><span data-slide-position>1</span> / <span data-slide-count>0</span></span>
+      <span class="spacer"></span>
+      <a class="btn" th:href="@{/pipeline}">Live board</a>
+      <button class="btn" onclick="cycleTheme()">Theme: <span data-theme-label>Light</span></button>
+      <button class="btn" onclick="window.print()" title="Print or save as PDF">Print</button>
+    </nav>
+
+    <main class="deck">
+      <!-- ACT 1 — WHAT -->
+      <section class="slide title-slide">
+        <span class="act">What</span>
+        <h1>Every engineering team carries a backlog of work that is too small to schedule and too real to close.</h1>
+        <p class="lede">
+          menD is an event-driven control plane that watches your repositories, decides which of that
+          work has a definition of done a machine can check, and uses Devin to do it — with the
+          evidence attached, or with the honest admission that nothing could prove it.
+        </p>
+        <p class="byline">
+          Every number and every link in this deck is read from the instance serving it, so the pitch
+          cannot drift from what the board says.
+        </p>
+      </section>
+
+      <section class="slide">
+        <span class="act">What</span>
+        <h2>The problem is not that the work is hard. It is that the work never gets picked.</h2>
+        <div class="two-col">
+          <div>
+            <h3>What actually happens today</h3>
+            <ul class="tight">
+              <li>A flaky lockfile pin, a deprecated call, a missing test — each an hour of work.</li>
+              <li>Each still costs a context switch, a review, a CI wait, a merge.</li>
+              <li>So it waits behind the roadmap, and the backlog only grows.</li>
+              <li>When it is finally picked up, the person doing it is your most expensive engineer
+                  on their least valuable day.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Why generic automation has not solved it</h3>
+            <ul class="tight">
+              <li>Bots that only open PRs move the work, they do not finish it.</li>
+              <li>Rules-based tooling cannot tell a bounded issue from one that needs a product decision.</li>
+              <li>Nothing in the usual stack can read the issue, write the fix, run the tests and
+                  answer the reviewer.</li>
+            </ul>
+            <p class="callout">
+              The hard part was never the code. It is the <em>judgement</em> about which issues are safe
+              to automate, and the <em>proof</em> that the fix is real.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <span class="act">What</span>
+        <h2>So menD is built around two refusals.</h2>
+        <div class="cards">
+          <div class="card">
+            <h3>It refuses ambiguous work</h3>
+            <p>
+              Before any code is written, a scoping session must produce a contract: acceptance
+              criteria, the commands that prove them, the files in scope, and the test that will cover
+              the fix. No contract, no session — the issue is labelled
+              <code th:text="${notCandidateLabel}">menD:not-a-candidate</code> with the reason, and a
+              human keeps it.
+            </p>
+          </div>
+          <div class="card">
+            <h3>It refuses unproven success</h3>
+            <p>
+              <code>SUCCEEDED</code> requires evidence from something other than the session that wrote
+              the code. Where no such evidence exists, the outcome is
+              <code>UNVERIFIED</code> — a column on the board, counted against the success rate, never
+              quietly rounded up to green.
+            </p>
+          </div>
+        </div>
+        <p class="callout wide">
+          Those two refusals are what make the rest of it safe to leave running.
+        </p>
+      </section>
+
+      <!-- ACT 2 — HOW -->
+      <section class="slide">
+        <span class="act">How</span>
+        <h2>One issue, end to end.</h2>
+        <ol class="trail">
+          <li>
+            <span class="step">Ingest</span>
+            <p>
+              A human labels an issue <code th:text="${triggerLabel}">menD:fix</code>. A webhook or the
+              30-second poller creates one durable row, keyed on <code>(repo, issue_number)</code> so a
+              duplicate event can never fork a second task.
+            </p>
+          </li>
+          <li>
+            <span class="step">Scope</span>
+            <p>
+              A Devin session reads the issue against the repository's stored profile and returns
+              structured JSON: <code>is_candidate</code>, acceptance criteria, verification commands,
+              files in scope, and a test plan. menD hashes that contract and stores it.
+            </p>
+          </li>
+          <li>
+            <span class="step">Remediate</span>
+            <p>
+              A second Devin session — clean context, held to the contract it did not write — implements
+              the fix, adds or updates the tests, runs the commands, and opens the pull request.
+            </p>
+          </li>
+          <li>
+            <span class="step">Verify</span>
+            <p>
+              menD waits on the repository's own required checks. If they exist and pass, that is the
+              verdict. If not, it falls through the tiers, and records what it actually got.
+            </p>
+          </li>
+          <li>
+            <span class="step">Answer the reviewer</span>
+            <p>
+              A human requests changes; menD hands the feedback back to the same session, which keeps
+              its full context. Bounded rounds — after that a human is asked for, not guessed at.
+            </p>
+          </li>
+          <li>
+            <span class="step">Learn</span>
+            <p>
+              A retrospective session turns the reviewer's objections into lessons, split into
+              repository-specific and general, and the repository ones are injected into the next
+              session on that repository.
+            </p>
+          </li>
+        </ol>
+        <p class="evidence" th:if="${showcase != null}">
+          This instance did exactly that on
+          <a th:href="${showcase.issueUrl}" target="_blank"
+             th:text="${showcase.repo} + '#' + ${showcase.issueNumber}">repo#2</a>:
+          <a th:href="${showcase.prUrl}" target="_blank">the pull request Devin opened</a> landed with
+          independent evidence behind it<span th:if="${showcase.minutesToPr != null}"
+             th:text="', ' + ${showcase.minutesToPr} + ' minutes after the label went on'"></span>.
+        </p>
+      </section>
+
+      <section class="slide">
+        <span class="act">How</span>
+        <h2>The architecture, in one picture.</h2>
+        <div class="diagram">
+          <object type="image/svg+xml" th:data="@{/img/architecture.svg}" width="100%">
+            menD architecture diagram
+          </object>
+        </div>
+      </section>
+
+      <section class="slide">
+        <span class="act">How</span>
+        <h2>Four decisions your senior engineers will ask about.</h2>
+        <div class="cards four">
+          <div class="card">
+            <h3>The database is the system of record — not GitHub labels</h3>
+            <p>
+              Labels are not transactional, are rate-limited, and hold no history. They are a
+              human-visible <em>projection</em> of state. The truth is a row: state, contract, session
+              ids, attempts, evidence, plus an append-only event per transition.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Every task is leased, with a deadline</h3>
+            <p>
+              A worker claims a task with a conditional update — <code>owner_id</code>,
+              <code>lease_expires_at</code>, <code>eta_at</code> — and renews by heartbeat. Two workers
+              can never hold one issue; a worker that dies has its lease expire and any other stateless
+              worker resumes from the persisted state.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Repositories are indexed once, not re-read per issue</h3>
+            <p>
+              At registration menD validates access and builds a profile — stack, commands, layout,
+              tests, CI, PR conventions, plus <code>AGENTS.md</code>, <code>CLAUDE.md</code>,
+              <code>codex.md</code> and <code>.cursor/rules</code>. Pushes refresh only the slices the
+              changed paths touch.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Verification is tiered, and the tier is recorded</h3>
+            <p>
+              Repo CI → a <code>menD / contract</code> workflow that runs the agreed commands in the
+              repository's own environment → a command-only verifier session → <code>UNVERIFIED</code>.
+              The tier and the raw exit codes are shown on the task page and posted to the PR.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <span class="act">How</span>
+        <h2>The board, live, from the database behind this page.</h2>
+        <section class="kpis deck-kpis" th:with="k=${kpis}">
+          <div class="kpi">
+            <div class="label">Repositories watched</div>
+            <div class="value" th:text="${repositories.size()}">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Issues ingested</div>
+            <div class="value" th:text="${k.total}">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Pull requests opened</div>
+            <div class="value" th:text="${k.prsOpened}">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Verified</div>
+            <div class="value green" th:text="${k.succeeded}">0</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Unverified</div>
+            <div class="value" th:text="${k.unverified}">0</div>
+            <div class="hint">landed, but nothing could prove it</div>
+          </div>
+          <div class="kpi">
+            <div class="label">Declined at the gate</div>
+            <div class="value" th:text="${k.excluded}">0</div>
+            <div class="hint">no session was spent</div>
+          </div>
+        </section>
+        <p class="evidence" th:if="${!recent.isEmpty()}">The most recent tasks menD finished:</p>
+        <table class="deck-table" th:if="${!recent.isEmpty()}">
+          <thead>
+            <tr><th>Issue</th><th>State</th><th>Pull request</th><th>Time to PR</th></tr>
+          </thead>
+          <tbody>
+            <tr th:each="r : ${recent}">
+              <td>
+                <a th:href="${r.issueUrl}" target="_blank"
+                   th:text="${r.repo} + '#' + ${r.issueNumber}">repo#1</a>
+              </td>
+              <td><span class="pill" th:text="${r.state}">SUCCEEDED</span></td>
+              <td>
+                <a th:if="${r.prUrl}" th:href="${r.prUrl}" target="_blank">view</a>
+                <span th:unless="${r.prUrl}" class="muted">—</span>
+              </td>
+              <td th:text="${r.minutesToPr != null} ? ${r.minutesToPr} + ' min' : '—'">—</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="callout wide" th:if="${recent.isEmpty()}">
+          This instance has not finished a task yet. Run
+          <code>./deploy/simulate.sh</code> to fill the board with no credentials and no ACU spend.
+        </p>
+      </section>
+
+      <!-- ACT 3 — WHY DEVIN -->
+      <section class="slide">
+        <span class="act">Why Devin</span>
+        <h2>Three things in this system are impossible without an autonomous coding agent.</h2>
+        <div class="cards">
+          <div class="card">
+            <h3>Judgement before code</h3>
+            <p>
+              The candidacy gate is not a rule set — it is a session reading an issue against a
+              codebase and deciding whether a machine-checkable definition of done exists. That is the
+              step that makes it safe to run unattended, and no amount of pattern matching produces it.
+            </p>
+          </div>
+          <div class="card">
+            <h3>The work itself, across N repositories</h3>
+            <p>
+              menD holds no toolchain. Devin brings its own environment per repository, so adding a
+              Python repo next to a TypeScript one costs a registration, not an integration.
+            </p>
+          </div>
+          <div class="card">
+            <h3>A session that survives the review</h3>
+            <p>
+              When a reviewer objects, menD replies to the <em>original</em> session — the one that still
+              holds why it made each choice. A stateless code generator would have to be re-briefed and
+              would happily re-make the same mistake.
+            </p>
+          </div>
+        </div>
+        <p class="callout wide">
+          menD's own contribution is the part Devin should not have to own: durability, leases,
+          budgets, verification tiers, and the refusal to claim a green it does not have.
+        </p>
+      </section>
+
+      <section class="slide">
+        <span class="act">Why Devin</span>
+        <h2>And it compounds, which is the actual business case.</h2>
+        <div class="diagram">
+          <object type="image/svg+xml" th:data="@{/img/flywheel.svg}" width="100%">
+            menD flywheel diagram
+          </object>
+        </div>
+        <p class="evidence">
+          Every review a human writes becomes a lesson. Repository lessons ride into the next session
+          on that repository; general lessons are surfaced for a human to promote into org-wide Devin
+          knowledge. Lessons that stop earning their keep are retired, so the prompt does not grow
+          without bound.
+        </p>
+      </section>
+
+      <!-- ACT 4 — WHEN -->
+      <section class="slide">
+        <span class="act">When</span>
+        <h2>What this is not, yet.</h2>
+        <ul class="tight big">
+          <li>Single-node by deployment, not by design — the leases are already the hard part; running
+              replicas needs Postgres and nothing else.</li>
+          <li>The contract workflow has to be merged into each target repository before it can be the
+              verification tier, which is deliberate: the harness is auditable in your repo, not hidden
+              in ours.</li>
+          <li>Promotion of a general lesson into org-wide Devin knowledge is a recommendation for a
+              human to accept. Nothing writes to your organisation's knowledge automatically.</li>
+          <li>Cost control is a per-task ACU budget and bounded attempts — real, but blunt.</li>
+        </ul>
+      </section>
+
+      <section class="slide">
+        <span class="act">When</span>
+        <h2>How I would extend this in a real engagement.</h2>
+        <div class="cards">
+          <div class="card">
+            <h3>Weeks 1–2 · Prove it on one repository</h3>
+            <p>
+              Register the repository, merge the contract workflow, and run in shadow mode: menD scopes
+              and declines, but a human dispatches every remediation. The output is a candidacy
+              precision number your team believes.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Weeks 3–6 · Widen the intake</h3>
+            <p>
+              Beyond labelled issues: failing flaky tests, dependency advisories, deprecation warnings,
+              lint debt with an owner. Each becomes an issue source with its own gate and its own
+              budget.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Quarter 2 · Make it a platform surface</h3>
+            <p>
+              Postgres and replicas, per-team budgets and quotas, SSO on the board, and the leadership
+              report piped into whatever your VPs already read on Monday morning.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Quarter 2 · Lessons become playbooks</h3>
+            <p>
+              Two Devin playbooks per repository — one for remediation, one for verification — proposed by
+              menD as a diff, approved and owned by your engineers, versioned, with the revision recorded on
+              every task so a change that makes reviews worse can be rolled back.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Ongoing · Close the loop on the loop</h3>
+            <p>
+              Track review comments per PR over time as the real quality metric. If lessons are working,
+              that number falls. If it does not fall, the learning store is decoration and should be
+              cut.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide title-slide">
+        <span class="act">When</span>
+        <h1>The pitch, in one sentence.</h1>
+        <p class="lede">
+          Give menD the work your team keeps deferring, and it will either return a pull request with
+          evidence attached, or tell you plainly that a human is needed — and it gets cheaper at both
+          every week it runs.
+        </p>
+        <div class="cta-row">
+          <a class="btn primary" th:href="@{/pipeline}">Open the live board</a>
+          <a class="btn" th:href="@{/learnings}">See what reviewers have taught it</a>
+          <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
+        </div>
+      </section>
+    </main>
+
+    <script th:src="@{/js/deck.js}"></script>
+  </body>
+</html>
