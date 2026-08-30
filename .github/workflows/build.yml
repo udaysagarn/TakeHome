@@ -17,3 +17,57 @@ jobs:
           distribution: temurin
           cache: maven
       - run: mvn -B verify
+      - name: Coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco
+          path: target/site/jacoco
+          if-no-files-found: warn
+
+  demo:
+    # The laptop demo is the thing people actually run, so CI runs it too: build the image the
+    # runbook builds, start the credential-free sandbox, and prove the four scenarios settle.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        run: docker compose build
+      - name: Start the sandbox
+        env:
+          SPRING_PROFILES_ACTIVE: sandbox
+          MEND_ENGINE_ENABLED: "true"
+          MEND_POLLING_ENABLED: "true"
+        run: docker compose up -d
+      - name: Wait for menD
+        run: |
+          for _ in $(seq 1 60); do
+            if curl -sf http://localhost:8080/actuator/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "menD never became healthy"; docker compose logs mend; exit 1
+      - name: File one issue per scenario and wait for the pipeline to settle
+        run: |
+          curl -sf -X POST http://localhost:8080/api/sandbox/issues/all >/dev/null
+          # The poller picks the issues up on its own schedule, so an empty board means "not
+          # started yet" rather than "settled" — wait for all four tasks to exist and be terminal.
+          for _ in $(seq 1 90); do
+            if curl -sf http://localhost:8080/api/tasks | jq -e '
+                  length >= 4
+                  and all(.[]; .state | IN("SUCCEEDED", "UNVERIFIED", "FAILED",
+                                           "NOT_A_CANDIDATE", "NEEDS_HUMAN", "CANCELLED"))' >/dev/null; then
+              break
+            fi
+            sleep 5
+          done
+          curl -sf http://localhost:8080/api/tasks | jq -r '.[] | "\(.issueNumber) \(.state)"'
+          for want in SUCCEEDED NOT_A_CANDIDATE UNVERIFIED; do
+            curl -sf http://localhost:8080/api/tasks | jq -e --arg s "$want" 'any(.[]; .state == $s)' >/dev/null \
+              || { echo "no task reached $want"; docker compose logs mend; exit 1; }
+          done
+      - name: Container logs
+        if: failure()
+        run: docker compose logs mend
+      - name: Stop the sandbox
+        if: always()
+        run: docker compose down -v

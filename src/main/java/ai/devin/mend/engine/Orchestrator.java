@@ -115,6 +115,7 @@ public class Orchestrator {
                 case PR_OPEN -> taskService.transition(task, IssueState.VERIFYING, "waiting for CI", ACTOR);
                 case VERIFYING -> verify(task);
                 case CHANGES_REQUESTED -> reviewLoop.respondToFeedback(task);
+                case FAILED -> retryIfBudgetRemains(task);
                 default -> {}
             }
         } catch (RuntimeException e) {
@@ -348,8 +349,7 @@ public class Orchestrator {
             escalate(task, "The pull request URL reported by the session could not be parsed: " + task.getPrUrl());
             return;
         }
-        SuccessCriteria criteria = criteriaService.fromJson(task.getCriteriaJson());
-        Verification verification = verifier.verify(task, criteria, pullNumber);
+        Verification verification = verifier.verify(task, readCriteria(task), pullNumber);
         task.setCiStatus(verification.verdict().name());
         task.setVerificationTier(verification.tier());
         task.setVerificationJson(writeJson(verification));
@@ -406,6 +406,30 @@ public class Orchestrator {
     }
 
     // --------------------------------------------------------------- helpers
+
+    /**
+     * A failed attempt is retried by the reconciler as well as inline, because the inline retry can
+     * be refused by the concurrency cap — without this the task would sit in a terminal state that
+     * nothing drives again.
+     */
+    private void retryIfBudgetRemains(RemediationTask task) {
+        if (task.getAttempts() < props.getEngine().getMaxAttempts()) {
+            dispatch(task);
+        }
+    }
+
+    /** A contract menD cannot read back is treated as absent, which verifies to UNVERIFIED. */
+    private SuccessCriteria readCriteria(RemediationTask task) {
+        if (task.getCriteriaJson() == null || task.getCriteriaJson().isBlank()) {
+            return null;
+        }
+        try {
+            return criteriaService.fromJson(task.getCriteriaJson());
+        } catch (RuntimeException e) {
+            log.warn("criteria for {} could not be read back: {}", task.key(), e.getMessage());
+            return null;
+        }
+    }
 
     private void failOrRetry(RemediationTask task, String reason) {
         task.setLastError(abbreviate(reason));

@@ -71,6 +71,10 @@ cp .env.example .env      # DEVIN_API_KEY, DEVIN_ORG_ID, GITHUB_APP_*, MEND_REPO
 docker compose up -d --build
 ```
 
+Creating those four things takes about fifteen minutes and is written out click by click in
+[docs/CREDENTIALS.md](CREDENTIALS.md), including the exact GitHub App permissions and how to check them before
+an audience is watching.
+
 Then label a real issue `menD:fix` in a registered repository. menD scopes it in one Devin session, writes the
 acceptance criteria as a comment, dispatches a second session to do the work, waits for independent
 verification, and reports back on `/pipeline`. Label a vague issue too — the contrast between the two is the
@@ -98,7 +102,7 @@ repository or the database.
 ## Contributing
 
 ```bash
-mvn -B verify                                  # 116 tests
+mvn -B verify                                  # the full suite, with a coverage floor
 SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run
 curl -X POST localhost:8080/api/sandbox/issues/all
 ```

@@ -233,13 +233,14 @@ it for a one-hour installation token, and refreshes before expiry. Every label, 
 to the bot identity in the audit log, and permissions (Issues: write, Pull requests: write, Contents / Checks
 / Metadata: read) are scoped to the installed repositories. Both PKCS#1 and PKCS#8 keys are accepted.
 `GITHUB_TOKEN=ghp_…` remains a fallback for local development. No secret is ever written to the repository or
-to the database.
+to the database. Creating all of these from scratch, with the exact permissions and a pre-flight check, is
+[docs/CREDENTIALS.md](docs/CREDENTIALS.md).
 
 ### Local development
 
 ```bash
 mvn spring-boot:run          # needs the same environment variables
-mvn -B verify                # 116 tests
+mvn -B verify                # the full suite, with a coverage floor
 ```
 
 The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else
