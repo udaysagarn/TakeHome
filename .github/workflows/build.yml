@@ -65,6 +65,22 @@ jobs:
             curl -sf http://localhost:8080/api/tasks | jq -e --arg s "$want" 'any(.[]; .state == $s)' >/dev/null \
               || { echo "no task reached $want"; docker compose logs mend; exit 1; }
           done
+      - name: Restart onto the existing volume
+        # CI always started from an empty volume, which is why a schema change that a carried-over
+        # database could not be started against reached a laptop. Restart without `down -v` so the
+        # upgrade path — the one every real deployment takes — is exercised on every PR.
+        env:
+          SPRING_PROFILES_ACTIVE: sandbox
+          MEND_ENGINE_ENABLED: "true"
+          MEND_POLLING_ENABLED: "true"
+        run: |
+          docker compose down
+          docker compose up -d
+          for _ in $(seq 1 60); do
+            if curl -sf http://localhost:8080/actuator/health >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "menD did not start against its existing database"; docker compose logs mend; exit 1
       - name: Container logs
         if: failure()
         run: docker compose logs mend
