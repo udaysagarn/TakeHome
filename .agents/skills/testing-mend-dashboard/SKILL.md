@@ -153,7 +153,7 @@ those strings, do not eyeball it.
 `CredentialHealth` + `CredentialAdvice` push `credentialProblems` into every `DashboardController`
 view, and `templates/fragments/alerts.html` renders the red "Credentials failing" banner with
 "N things are stopping menD from working", a "How to fix" link and a per-repository `Re-validate`
-button that POSTs the slug to `/repositories`. Three states worth covering, each needing its own
+button that POSTs the slug to `/repositories`. Four states worth covering, each needing its own
 container (name/port/volume of its own; never touch port 8080):
 
 - bad credential (recipe above): banner names `<slug> · Not visible to menD` with the sanitized

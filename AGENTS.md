@@ -157,6 +157,10 @@ API and contracts written from the controllers).
 - **`TaskService` is the only writer.** Anything else mutating a task is a bug.
 - **Terminal labels**: `settleLabel(...)` removes stale lifecycle labels before applying the terminal
   one, so an issue never carries `menD:changes-requested` *and* `menD:done`.
+- **The credential alarm is on every page except `/deck`**, deliberately: the deck is presented to an
+  audience, and the operator who can fix a credential is not looking at it. The deck cannot go
+  silently false either — its numbers come from the same live query, so a rejected credential shows
+  there as zeroes and a `NO_ACCESS` repository card.
 - **Sandbox URLs must stay inside menD** (`/sandbox/{owner}/{repo}/{issues|pull}/{n}`). Minting
   `github.com/...` URLs for simulated objects gives a 404 in the middle of a demo.
 - **Maven Central 429s** on shared IPs; the Dockerfile falls back to a mirror (`use-mirror.sh`,
@@ -220,6 +224,14 @@ arcs that do not start and end *at the labels* stop it reading as a wheel.
   `POST /api/issues/{number}/ingest`, is open to whoever reaches the port. Documented in
   `docs/SITEMAP.md` and the wiki; it is the single biggest gap before menD is exposed beyond a laptop
   or a private network.
+- **No Devin credential verdict is recorded anywhere.** GitHub access is interrogated per repository
+  at registration and the verdict stored on the row (`Repository.accessState`/`accessError`), which is
+  what the credential alarm reads. `DevinApiClient.isConfigured()` has no equivalent — it only checks
+  that `DEVIN_API_KEY` and `DEVIN_ORG_ID` are non-blank, so a revoked, mistyped or wrong-org key reads
+  as healthy on every page while every dispatch fails. Nothing claims a fix it cannot make (the task
+  stops in `DISPATCHED` and never reaches `SUCCEEDED`), so this is a diagnosis gap rather than a trust
+  gap. Closing it means deciding *when* menD may call the Devin API to find out: a probe at startup, a
+  periodic check, or persisting the outcome of the next real dispatch. Never from a page render.
 - **Lesson attribution is per repository, not per injected lesson** — good enough to retire bad
   advice, not precise enough to say which lesson helped.
 - **The contract workflow is a starter template**; a repo with an unusual toolchain must adapt its

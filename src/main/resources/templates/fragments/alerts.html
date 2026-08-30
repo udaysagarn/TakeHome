@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!--/* The credential alarm. Renders nothing while menD can do its job. */-->
+    <section th:fragment="credentials" class="alarm" role="alert"
+             th:if="${credentialProblems != null and !credentialProblems.isEmpty()}">
+      <div class="alarm-head">
+        <span class="pill bad">Credentials failing</span>
+        <span th:text="${credentialProblems.size()} + (${credentialProblems.size()} == 1
+              ? ' thing is stopping menD from working' : ' things are stopping menD from working')">
+          1 thing is stopping menD from working
+        </span>
+        <span class="spacer"></span>
+        <a class="btn" th:href="@{/repositories/new}">How to fix</a>
+      </div>
+      <ul class="alarm-list">
+        <li th:each="p : ${credentialProblems}">
+          <strong th:text="${p.subject}">owner/name</strong>
+          <span th:text="${p.detail}">why it failed</span>
+          <form th:if="${p.repo}" th:action="@{/repositories}" method="post" class="alarm-action">
+            <input type="hidden" name="repo" th:value="${p.repo}" />
+            <button class="btn" type="submit">Re-validate</button>
+          </form>
+        </li>
+      </ul>
+    </section>
+  </body>
+</html>
