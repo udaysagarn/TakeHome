@@ -24,6 +24,17 @@ without independent evidence.* The dashboard reports the three numbers a VP asks
 attempted issues, median time from label to pull request, and ACU per successful remediation — plus the
 honest one: how much work menD **declined** because it could not be verified.
 
+## Why it compounds
+
+![flywheel](src/main/resources/static/img/flywheel.svg)
+
+The first fix is the expensive one. Every turn of the loop makes the next turn cheaper: the repository profile
+is already built, the criteria gate has learned which issues in this repo are actually finishable, and the
+lessons from the last reviewer are already in the prompt. Cheaper fixes mean more of the backlog clears the
+bar for automation, which produces more reviewed pull requests, which produces more lessons. The
+uncomfortable half is just as important — work that cannot be proved lands in `UNVERIFIED`, so trust is
+earned by the evidence rather than by the volume.
+
 ## How it works
 
 ![architecture](src/main/resources/static/img/architecture.svg)
@@ -200,8 +211,10 @@ Or `./deploy/demo.sh`, which does the above and prints the demo path. With no `.
 mode (`MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false`) so you can browse the whole product without
 credentials, without touching GitHub, and without spending an ACU.
 
-State lives in the `mend-data` volume, so `docker compose down` and back up keeps your history. Behind a
-corporate mirror, build with `--build-arg MAVEN_MIRROR_URL=https://your/mirror`.
+State lives in the `mend-data` volume, so `docker compose down` and back up keeps your history. If Maven
+Central rate-limits the build (shared and cloud IPs get HTTP 429 regularly), the image retries through a
+read-only mirror of Central by itself; behind a corporate proxy, force yours with
+`--build-arg MAVEN_MIRROR_URL=https://your/mirror`.
 
 ### Secrets
 
@@ -224,7 +237,7 @@ to the database.
 
 ```bash
 mvn spring-boot:run          # needs the same environment variables
-mvn -B verify                # 92 tests
+mvn -B verify                # 101 tests
 ```
 
 The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else

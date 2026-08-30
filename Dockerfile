@@ -1,16 +1,18 @@
 # One container, one file-backed H2 database: the whole control plane runs on a laptop.
 FROM maven:3.9-eclipse-temurin-21 AS build
-# Point at an internal mirror when Maven Central is unreachable or rate-limited.
+# Force a specific mirror (e.g. an internal Nexus). Empty means "use Maven Central".
 ARG MAVEN_MIRROR_URL=
+# Shared IPs get HTTP 429 from Maven Central often enough that an unattended demo
+# build needs somewhere else to go; this read-only mirror is Google's copy of Central.
+ARG MAVEN_FALLBACK_MIRROR=https://maven-central.storage-download.googleapis.com/maven2
 WORKDIR /build
-RUN if [ -n "$MAVEN_MIRROR_URL" ]; then \
-      mkdir -p /root/.m2 && printf '%s\n' \
-        '<settings><mirrors><mirror><id>mirror</id><mirrorOf>central</mirrorOf>' \
-        "<url>$MAVEN_MIRROR_URL</url></mirror></mirrors></settings>" > /root/.m2/settings.xml; \
-    fi
+COPY use-mirror.sh .
+RUN if [ -n "$MAVEN_MIRROR_URL" ]; then ./use-mirror.sh "$MAVEN_MIRROR_URL"; fi
 COPY pom.xml .
 COPY src ./src
-RUN mvn -B -DskipTests package
+RUN mvn -B -DskipTests package \
+    || { echo "menD: Maven Central build failed, retrying through $MAVEN_FALLBACK_MIRROR"; \
+         ./use-mirror.sh "$MAVEN_FALLBACK_MIRROR" && mvn -B -DskipTests package; }
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
