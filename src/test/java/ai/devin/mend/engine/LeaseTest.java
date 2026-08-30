@@ -31,8 +31,7 @@ import org.springframework.transaction.support.TransactionTemplate;
             "mend.engine.enabled=false",
             "mend.github.polling-enabled=false",
             "mend.github.repo=acme/superset",
-            "spring.datasource.url=jdbc:h2:mem:lease;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:lease;DB_CLOSE_DELAY=-1"
         })
 class LeaseTest {
 

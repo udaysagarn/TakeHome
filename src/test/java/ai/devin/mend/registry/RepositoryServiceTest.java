@@ -30,8 +30,7 @@ import org.springframework.test.context.TestPropertySource;
             "mend.engine.enabled=false",
             "mend.github.polling-enabled=false",
             "mend.github.repos=",
-            "spring.datasource.url=jdbc:h2:mem:registry;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:registry;DB_CLOSE_DELAY=-1"
         })
 class RepositoryServiceTest {
 

@@ -12,6 +12,8 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** A GitHub repository menD has been asked to watch. */
 @Entity
@@ -41,6 +43,7 @@ public class Repository {
     private String installationId;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "access_state", nullable = false, length = 32)
     private AccessState accessState = AccessState.PENDING;
 
@@ -52,6 +55,7 @@ public class Repository {
     private String accessError;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "index_state", nullable = false, length = 32)
     private IndexState indexState = IndexState.NEVER_INDEXED;
 

@@ -13,6 +13,8 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Something menD learned from a human reviewer, kept so the next issue does not repeat the mistake.
@@ -40,6 +42,7 @@ public class Learning {
     private Long version;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 16)
     private LearningScope scope = LearningScope.REPO;
 
@@ -60,6 +63,7 @@ public class Learning {
     private String evidence;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "recommended_action", length = 32)
     private RecommendedAction recommendedAction = RecommendedAction.PROMPT_PREAMBLE;
 
@@ -68,6 +72,7 @@ public class Learning {
     private String actionDetail;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 16)
     private LearningStatus status = LearningStatus.ACTIVE;
 

@@ -25,8 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
         properties = {
             "mend.engine.enabled=false",
             "mend.github.polling-enabled=false",
-            "spring.datasource.url=jdbc:h2:mem:sandboxpages;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:sandboxpages;DB_CLOSE_DELAY=-1"
         })
 class SandboxPagesControllerTest {
 

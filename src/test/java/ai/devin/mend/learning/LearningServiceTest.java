@@ -23,8 +23,7 @@ import org.springframework.test.context.TestPropertySource;
             "mend.github.polling-enabled=false",
             "mend.learning.max-lessons-in-prompt=3",
             "mend.learning.min-applications-before-retiring=2",
-            "spring.datasource.url=jdbc:h2:mem:learning;DB_CLOSE_DELAY=-1",
-            "spring.jpa.hibernate.ddl-auto=create-drop"
+            "spring.datasource.url=jdbc:h2:mem:learning;DB_CLOSE_DELAY=-1"
         })
 class LearningServiceTest {
 

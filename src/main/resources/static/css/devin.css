@@ -113,9 +113,13 @@ header.topbar {
 }
 
 .brand .mark {
-  width: 26px;
+  min-width: 26px;
   height: 26px;
+  padding: 0 7px;
+  box-sizing: border-box;
   border-radius: 7px;
+  text-decoration: none;
+  white-space: nowrap;
   background: rgb(var(--bg-accent-primary));
   color: rgb(var(--text-on-accent));
   display: grid;
