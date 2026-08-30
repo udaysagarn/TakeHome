@@ -4,6 +4,12 @@
  * Everything here reuses the tokens in devin.css, so all three themes work on a projector.
  */
 
+/* The bar's height is declared once and the slides are measured from it, so the two cannot drift
+   apart as the navigation changes. */
+:root {
+  --deck-bar: 76px;
+}
+
 .deck-body {
   overflow: hidden;
   background: rgb(var(--bg-wash));
@@ -21,6 +27,7 @@ header.deck-bar {
   align-items: center;
   flex-wrap: nowrap;
   gap: 8px;
+  height: var(--deck-bar);
   padding: 10px 20px;
   background: rgb(var(--bg-elevated));
   border-bottom: 1px solid rgb(var(--border-primary));
@@ -51,12 +58,12 @@ header.deck-bar .nav {
 
 .deck {
   height: 100vh;
-  padding-top: 53px;
+  padding-top: var(--deck-bar);
 }
 
 .slide {
   display: none;
-  height: calc(100vh - 53px);
+  height: calc(100vh - var(--deck-bar));
   overflow-y: auto;
   padding: 40px clamp(24px, 6vw, 96px) 56px;
   max-width: 1240px;
