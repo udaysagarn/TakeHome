@@ -52,6 +52,10 @@ http://localhost:8080/pipeline and watch:
 - a reviewer reject a pull request, the same Devin session answer the feedback, and the lesson appear on
   `/learnings`.
 
+Issue and pull request links on the board are safe to click here: in the sandbox they point at menD's own
+`/sandbox/...` pages, which show the simulated issue, the branch, the checks and the reviews, rather than at a
+github.com url whose number does not exist.
+
 Play the reviewer yourself against any open simulated pull request:
 
 ```bash

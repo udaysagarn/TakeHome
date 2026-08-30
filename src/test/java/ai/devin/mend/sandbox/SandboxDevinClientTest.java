@@ -64,7 +64,7 @@ class SandboxDevinClientTest {
         DevinDtos.SessionDetails done = answer(id);
 
         String prUrl = done.structuredOutput().get("pr_url").asText();
-        assertThat(prUrl).startsWith("https://github.com/o/r/pull/");
+        assertThat(prUrl).startsWith("/sandbox/o/r/pull/");
         assertThat(hub.pull(Integer.parseInt(prUrl.substring(prUrl.lastIndexOf('/') + 1)))).isPresent();
     }
 

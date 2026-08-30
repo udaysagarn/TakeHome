@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" class="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title th:text="'menD sandbox · issue #' + ${issue.number()}">menD sandbox · issue</title>
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link rel="stylesheet" th:href="@{/css/devin.css}" />
+    <script th:src="@{/js/theme.js}"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <a th:href="@{/}" class="mark">menD</a>
+          <span>Simulated issue</span>
+        </div>
+        <span class="spacer"></span>
+        <a class="btn" th:href="@{/pipeline}">Pipeline</a>
+        <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
+          Theme: <span data-theme-label>Light</span>
+        </button>
+      </header>
+
+      <p class="note">
+        This issue exists only inside menD's sandbox. Nothing here was read from or written to
+        GitHub, and no Devin session was created.
+      </p>
+
+      <section class="hero">
+        <h1 th:text="${issue.title()}">Issue title</h1>
+        <p class="mono" th:text="${repo} + ' #' + ${issue.number()} + ' · ' + ${issue.state()}">repo #101 · open</p>
+        <p>
+          <span class="pill blue" th:each="l : ${issue.labels()}" th:text="${l.name()}">menD:fix</span>
+          <span class="pill" th:text="'scenario: ' + ${scenario}">scenario</span>
+        </p>
+      </section>
+
+      <h2 class="section">Body</h2>
+      <pre class="mono" th:text="${issue.body()}">body</pre>
+
+      <h2 class="section">What menD wrote back</h2>
+      <p class="note" th:if="${#lists.isEmpty(comments)}">No comment posted yet.</p>
+      <pre class="mono" th:each="c : ${comments}" th:text="${c}">comment</pre>
+    </div>
+  </body>
+</html>
