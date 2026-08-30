@@ -4,7 +4,7 @@ services:
     image: mend-orchestrator:local
     container_name: mend
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"
     environment:
       # Repositories seeded into the registry on first boot. Comma-separated.
       MEND_REPO: ${MEND_REPO:-udaysagarn/superset}

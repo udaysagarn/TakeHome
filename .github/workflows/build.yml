@@ -49,12 +49,16 @@ jobs:
       - name: File one issue per scenario and wait for the pipeline to settle
         run: |
           curl -sf -X POST http://localhost:8080/api/sandbox/issues/all >/dev/null
-          for _ in $(seq 1 60); do
-            states=$(curl -sf http://localhost:8080/api/tasks | jq -r '.[].state' | sort -u | tr '\n' ' ')
-            case "$states" in
-              *DISCOVERED*|*CRITERIA_PENDING*|*READY*|*DISPATCHED*|*RUNNING*|*PR_OPEN*|*VERIFYING*|*BLOCKED*|*CHANGES_REQUESTED*) sleep 5 ;;
-              *) echo "settled on: $states"; break ;;
-            esac
+          # The poller picks the issues up on its own schedule, so an empty board means "not
+          # started yet" rather than "settled" — wait for all four tasks to exist and be terminal.
+          for _ in $(seq 1 90); do
+            if curl -sf http://localhost:8080/api/tasks | jq -e '
+                  length >= 4
+                  and all(.[]; .state | IN("SUCCEEDED", "UNVERIFIED", "FAILED",
+                                           "NOT_A_CANDIDATE", "NEEDS_HUMAN", "CANCELLED"))' >/dev/null; then
+              break
+            fi
+            sleep 5
           done
           curl -sf http://localhost:8080/api/tasks | jq -r '.[] | "\(.issueNumber) \(.state)"'
           for want in SUCCEEDED NOT_A_CANDIDATE UNVERIFIED; do
