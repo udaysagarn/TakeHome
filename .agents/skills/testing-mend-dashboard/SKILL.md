@@ -82,6 +82,49 @@ an earlier branch, and templates/CSS are packaged *inside* it — so a Thymeleaf
 "pass" against the old UI. Run `mvn -B -DskipTests package` (~1-3 min) and check the jar's mtime
 before starting. `mvn spring-boot:run` avoids the trap entirely but holds the shell.
 
+## Run the jar from a copy, not from `target/`
+
+A running `java -jar target/mend-orchestrator-0.1.0.jar` reads classes and static resources
+*lazily out of that file*. If anyone (the lead agent, another session, an IDE) runs `mvn package`
+while it is up, the jar is replaced underneath the JVM and the instance half-dies: already-parsed
+pages still render, but every not-yet-read resource fails. Symptoms seen: `/img/*.svg` and
+`/css/*.css` requests hang until the client times out, `<object>` diagram embeds render as empty
+boxes, and the log fills with
+`NoClassDefFoundError: ch/qos/logback/classic/spi/ThrowableProxy`. That looks exactly like a
+broken-diagram UI bug, so before reporting one, check `ls -la target/*.jar` against the app's start
+time and `curl -m 5 -o /dev/null -w '%{http_code}' localhost:<port>/img/architecture.svg` (a healthy
+instance answers 200 in milliseconds). Avoid it altogether:
+
+```
+cp target/mend-orchestrator-0.1.0.jar /tmp/mendjar/app.jar
+setsid nohup env MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false SERVER_PORT=8083 \
+  java -jar /tmp/mendjar/app.jar > /tmp/mend.log 2>&1 < /dev/null & disown
+```
+
+`SERVER_PORT=<n>` is enough to move a jar run off 8080 — no need for Docker just to get a second
+instance. Note `pkill -f mend-orchestrator` in a compound shell command kills the calling shell
+too; run it as its own call, and it will not match a jar copied to another name.
+
+## Judging the diagrams (`static/img/*.svg`)
+
+`.diagram object` has `width="100%"` and no height, so the SVG is *scaled down* to the container —
+it never gets a horizontal scrollbar, and the 1460px-wide architecture diagram renders at ~72% on
+`/` and at ~46% in a 1024px-wide `/deck` window, putting 10.5px captions at ~5-8px on screen.
+Screenshots at browser scale therefore prove nothing about legibility; use a full-resolution `zoom`
+on regions instead.
+Collisions are much easier to prove from the source than by eye — parse the `<rect>`s and the
+`<path d="M …">` segments and report any axis-aligned segment whose span crosses a box rect, plus
+label bboxes overlapping rects. That catches connectors drawn straight through a box, which is the
+defect class this diagram has regressed into before.
+
+## Deck slide checks (`/deck`)
+
+`static/js/deck.js` sets `[data-slide-count]` from `document.querySelectorAll(".slide").length`, so
+the header `n / N` is a free assertion on slide count. Slides are `display:none` except `.current`,
+arrow keys/PageUp/PageDown/Home/End all work, and a **click anywhere in the right two-thirds of the
+slide advances it** — so clicking the slide "to give it focus" silently moves you on; press `Home`
+after clicking. Keyboard navigation needs no focus at all (the listener is on `document`).
+
 ## Seeding demo data into H2 directly
 
 This is the only way to get task rows without dispatching real work, so every board, task-page and

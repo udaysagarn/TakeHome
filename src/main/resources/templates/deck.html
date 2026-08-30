@@ -22,9 +22,9 @@
     </header>
 
     <main class="deck">
-      <!-- ACT 1 — WHAT -->
+      <!-- ACT 1 — PROBLEM -->
       <section class="slide title-slide">
-        <span class="act">What</span>
+        <span class="act">Problem</span>
         <h1>Every engineering team carries a backlog of work that is too small to schedule and too real to close.</h1>
         <p class="lede">
           menD is an event-driven control plane that watches your repositories, decides which of that
@@ -38,7 +38,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">What</span>
+        <span class="act">Problem</span>
         <h2>The problem is not that the work is hard. It is that the work never gets picked.</h2>
         <div class="two-col">
           <div>
@@ -67,12 +67,53 @@
         </div>
       </section>
 
+      <!-- ACT 2 — WHY NOW -->
       <section class="slide">
-        <span class="act">What</span>
-        <h2>So menD is built around two refusals.</h2>
+        <span class="act">Why now</span>
+        <h2>The backlog just stopped being cosmetic.</h2>
+        <ul class="tight big">
+          <li>Frontier models are finding real vulnerabilities in code people have read for decades — in
+              April 2026 a frontier model autonomously found and exploited an RCE in FreeBSD's NFS server, a
+              DoS in OpenBSD, a flaw in FFmpeg, and a 23-year-old heap overflow in the Linux kernel.</li>
+          <li>Disclosures are climbing faster than human review scales.</li>
+          <li>The fixes are small, well understood — and never scheduled.</li>
+          <li>That gap is what menD closes.</li>
+        </ul>
+      </section>
+
+      <!-- ACT 3 — PRODUCT -->
+      <section class="slide">
+        <span class="act">Product</span>
+        <h2>What menD is.</h2>
+        <p class="lede">
+          An event-driven control plane that turns a GitHub label into a verified pull request.
+        </p>
+        <div class="two-col">
+          <div>
+            <h3>Devin is the engineer</h3>
+            <ul class="tight">
+              <li>Reads the issue against the repository and decides whether it is finishable.</li>
+              <li>Writes the fix and the test, and opens the pull request.</li>
+              <li>Answers the reviewer, in the session that wrote the change.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>menD is everything around the engineer</h3>
+            <ul class="tight">
+              <li>Candidacy, ACU budgets, leases with deadlines, bounded retries.</li>
+              <li>Independent verification, review response, and an append-only audit trail.</li>
+              <li>One durable row per issue — the database is the system of record, not the labels.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <span class="act">Product</span>
+        <h2>So menD is built around two key principles.</h2>
         <div class="cards">
           <div class="card">
-            <h3>It refuses ambiguous work</h3>
+            <h3>It only acts on well-defined work</h3>
             <p>
               Before any code is written, a scoping session must produce a contract: acceptance
               criteria, the commands that prove them, the files in scope, and the test that will cover
@@ -82,7 +123,7 @@
             </p>
           </div>
           <div class="card">
-            <h3>It refuses unproven success</h3>
+            <h3>It only claims success with evidence</h3>
             <p>
               <code>SUCCEEDED</code> requires evidence from something other than the session that wrote
               the code. Where no such evidence exists, the outcome is
@@ -92,13 +133,13 @@
           </div>
         </div>
         <p class="callout wide">
-          Those two refusals are what make the rest of it safe to leave running.
+          Those two principles are what make the rest of it safe to leave running.
         </p>
       </section>
 
-      <!-- ACT 2 — HOW -->
+      <!-- ACT 4 — DEVIN AT WORK -->
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Devin at work</span>
         <h2>One issue, end to end.</h2>
         <ol class="trail">
           <li>
@@ -157,8 +198,9 @@
         </p>
       </section>
 
+      <!-- ACT 5 — ARCHITECTURE -->
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>The architecture, in one picture.</h2>
         <div class="diagram">
           <object type="image/svg+xml" th:data="@{/img/architecture.svg}" width="100%">
@@ -168,7 +210,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>Four decisions your senior engineers will ask about.</h2>
         <div class="cards four">
           <div class="card">
@@ -209,7 +251,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">How</span>
+        <span class="act">Architecture</span>
         <h2>The board, live, from the database behind this page.</h2>
         <section class="kpis deck-kpis" th:with="k=${kpis}">
           <div class="kpi">
@@ -265,7 +307,7 @@
         </p>
       </section>
 
-      <!-- ACT 3 — WHY DEVIN -->
+      <!-- ACT 6 — WHY DEVIN -->
       <section class="slide">
         <span class="act">Why Devin</span>
         <h2>Three things in this system are impossible without an autonomous coding agent.</h2>
@@ -296,7 +338,12 @@
         </div>
         <p class="callout wide">
           menD's own contribution is the part Devin should not have to own: durability, leases,
-          budgets, verification tiers, and the refusal to claim a green it does not have.
+          budgets, verification tiers, and the discipline to claim a green only when it has one.
+        </p>
+        <p class="evidence">
+          The same three properties open work menD does not do yet: an automated PR review on repositories
+          where test coverage is low, for instance, needs an agent that can read the change against the
+          codebase and judge what is untested — not a rule that counts lines.
         </p>
       </section>
 
@@ -316,9 +363,9 @@
         </p>
       </section>
 
-      <!-- ACT 4 — WHEN -->
+      <!-- ACT 7 — WHAT'S NEXT -->
       <section class="slide">
-        <span class="act">When</span>
+        <span class="act">What's next</span>
         <h2>What this is not, yet.</h2>
         <ul class="tight big">
           <li>Single-node by deployment, not by design — the leases are already the hard part; running
@@ -333,7 +380,7 @@
       </section>
 
       <section class="slide">
-        <span class="act">When</span>
+        <span class="act">What's next</span>
         <h2>How I would extend this in a real engagement.</h2>
         <div class="cards">
           <div class="card">
@@ -379,7 +426,7 @@
       </section>
 
       <section class="slide title-slide">
-        <span class="act">When</span>
+        <span class="act">What's next</span>
         <h1>The pitch, in one sentence.</h1>
         <p class="lede">
           Give menD the work your team keeps deferring, and it will either return a pull request with
@@ -391,6 +438,12 @@
           <a class="btn" th:href="@{/learnings}">See what reviewers have taught it</a>
           <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
         </div>
+      </section>
+
+      <section class="slide title-slide">
+        <span class="act">What's next</span>
+        <h1>Thank You</h1>
+        <p class="lede">Built with ❤️ using Devin</p>
       </section>
     </main>
 

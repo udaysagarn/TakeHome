@@ -1,8 +1,9 @@
 # menD — public API and contracts
 
-menD watches GitHub repositories, decides which issues are safely automatable, has Devin fix them,
-and refuses to call anything a success unless something other than the session that wrote the code
-says so.
+Your backlog has hundreds of small, real, well-understood issues nobody will ever get to. menD closes
+them — with evidence, or not at all: it watches GitHub repositories, decides which issues are safely
+automatable, has Devin fix them, and calls something a success only when something other than the
+session that wrote the code says so.
 
 This wiki is the contract surface: every route, payload and status code on these pages was read out
 of the controllers and exercised against a running instance, so nothing here is aspirational.

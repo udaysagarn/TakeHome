@@ -2,7 +2,7 @@
 
 Before menD spends anything on a fix, it insists on a machine-checkable definition of done. That
 contract is produced once, hashed, stored, injected into the remediation prompt, and checked at the
-end. If no such contract can be written, the issue is excluded — that refusal is a feature.
+end. If no such contract can be written, the issue is excluded — that exclusion is a feature.
 
 ## The schema
 
