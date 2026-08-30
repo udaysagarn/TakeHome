@@ -474,6 +474,12 @@ table.grid tr:last-child td {
   color: rgb(var(--text-red));
 }
 
+.note.urgency {
+  max-width: 820px;
+  margin: 0 0 4px;
+  line-height: 1.5;
+}
+
 .pill.red {
   color: rgb(var(--text-red));
   border-color: rgb(var(--text-red) / 0.3);

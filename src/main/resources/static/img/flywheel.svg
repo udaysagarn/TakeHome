@@ -1,32 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 790" width="1000" height="790"
-     font-family="'Segoe Print','Bradley Hand','Comic Sans MS',ui-rounded,sans-serif" role="img"
+     font-family="Inter, ui-sans-serif, system-ui, sans-serif" role="img"
      aria-label="menD flywheel: connected repositories feed a candidacy gate, fixes land with independent evidence, human review produces signal, learnings compound, cost per fix falls, and more of the backlog becomes worth automating">
   <defs>
-    <filter id="rough">
-      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="11" result="noise"/>
-      <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.2" xChannelSelector="R" yChannelSelector="G"/>
-    </filter>
     <marker id="spin" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 1 L 10 5 L 0 9 z" fill="#2f5fd0"/>
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="rgb(49,124,255)"/>
     </marker>
     <style>
-      .box  { fill: #ffffff; stroke: #2f2f2f; stroke-width: 2; filter: url(#rough); }
-      .b1   { fill: #f4f4f4; stroke: #3a3a3a; }
-      .b2   { fill: #eaf1ff; stroke: #2f5fd0; }
-      .b3   { fill: #e9f9f0; stroke: #10794a; }
-      .b4   { fill: #fff6e6; stroke: #a5670a; }
-      .b5   { fill: #f3f0ff; stroke: #5b3fd0; }
-      .b6   { fill: #eaf1ff; stroke: #2f5fd0; }
-      .h    { font-size: 24px; font-weight: 700; fill: #101010; }
-      .t    { font-size: 15px; font-weight: 700; fill: #101010; }
-      .s    { font-size: 12.5px; fill: #4a4a4a; }
-      .cap  { font-size: 14px; fill: #3a3a3a; }
-      .spin { fill: none; stroke: #2f5fd0; stroke-width: 3; marker-end: url(#spin); filter: url(#rough); }
-      .hub  { fill: #fbfaf7; stroke: #2f5fd0; stroke-width: 2; stroke-dasharray: 6 6; }
+      .box  { fill: #ffffff; stroke: rgba(0,0,0,0.12); stroke-width: 1.5; }
+      .b1   { stroke: rgba(0,0,0,0.12); }
+      .b2   { stroke: rgb(49,124,255); }
+      .b3   { stroke: rgb(0,165,88); }
+      .b4   { stroke: rgba(0,0,0,0.12); }
+      .b5   { stroke: rgb(49,124,255); }
+      .b6   { stroke: rgb(49,124,255); }
+      .h    { font-size: 22px; font-weight: 600; fill: rgb(25,25,25); }
+      .t    { font-size: 15px; font-weight: 600; fill: rgb(25,25,25); }
+      .s    { font-size: 12.5px; fill: #6b6b6b; }
+      .cap  { font-size: 13.5px; fill: #6b6b6b; }
+      .spin { fill: none; stroke: rgb(49,124,255); stroke-width: 2.5; marker-end: url(#spin); }
+      .hub  { fill: #ffffff; stroke: rgb(49,124,255); stroke-width: 1.5; stroke-dasharray: 6 6; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1000" height="790" fill="#fbfaf7"/>
+  <rect x="0" y="0" width="1000" height="790" fill="#fcfcfc"/>
 
   <text x="34" y="44" class="h">The menD flywheel</text>
   <text x="34" y="68" class="cap">Devin does the engineering. Every merged fix makes the next one cheaper — that compounding is the product.</text>
@@ -40,7 +36,7 @@
   <path class="spin" d="M 329.6 197.0 A 265 265 0 0 1 409.4 151.0"/>
 
   <circle cx="500" cy="400" r="118" class="hub"/>
-  <text x="500" y="378" class="t" text-anchor="middle" font-size="20">menD</text>
+  <text x="500" y="378" class="t" text-anchor="middle" font-size="20" fill="rgb(49,124,255)">menD</text>
   <text x="500" y="404" class="s" text-anchor="middle">Devin as the executor,</text>
   <text x="500" y="422" class="s" text-anchor="middle">evidence as the gate,</text>
   <text x="500" y="440" class="s" text-anchor="middle">review as the teacher</text>

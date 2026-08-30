@@ -27,7 +27,7 @@ Issue/Pull request on a task, Print on the deck) sit beside that nav, never in p
 | `GET /repositories/new` | `register.html` | Step-by-step registration instructions plus the register form | nav on every page, `/` |
 | `POST /repositories` | `register.html` | Registers + validates a repository, re-renders the same page with the verdict | form on `/repositories/new` |
 | `POST /engine` | — (redirects back) | Pauses or resumes new work | pause switch in the navigation |
-| `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | nav on every page |
+| `GET /deck` | `deck.html` | The pitch as slides (Problem / Why now / Product / Devin at work / Architecture / Why Devin / What's next). Numbers come from this instance's database | nav on every page |
 | `GET /fragments/live?repo=` | `fragments/live :: live` | htmx polling target — everything below the header on the board. Not a page a human opens | htmx on `/flows` |
 | `RequestMapping /error` | `error.html` | Branded error page for 404/500 | Spring's error dispatch |
 
