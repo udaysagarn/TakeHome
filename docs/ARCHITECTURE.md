@@ -102,7 +102,11 @@ flowchart TB
 Three schedulers drive everything: `Reconciler.tick` (15 s) advances tasks, `IssuePoller.poll` (30 s)
 discovers labelled issues, `ReviewLoop.tick` (2 min) reads human reviews. Each is level-triggered — it
 recomputes from persisted state — so a restart, a lost webhook or a duplicate delivery costs latency,
-never correctness. Horizontal scale is safe because work is claimed through database leases.
+never correctness.
+
+Only `Reconciler`'s task advancement is lease-protected (`LeaseManager`). `ContextReconciler` and
+`ReviewLoop` iterate their own work with no cross-process claim, so a second replica can start a
+duplicate profiling or retrospective session. Run one replica until they are claimed too.
 
 ---
 
@@ -119,7 +123,7 @@ contract that holds at that point.
 | `RemediationTask` | The aggregate: one issue under remediation | JPA entity, unique `(repo, issue_number)` | Carries criteria JSON + hash, session ids/urls (criteria, remediation, verifier, retrospective), PR url, verification tier + JSON, outcome JSON, feedback JSON, attempts, nudges, review rounds, ACU budget, lease owner/expiry |
 | `TaskEvent` | Append-only audit of every transition | Written only by `TaskService` | `(task, from, to, reason, actor, at)`; never updated or deleted |
 | `SuccessCriteria` | The machine-checkable definition of done | `JSON_SCHEMA` for Devin, snake_case JSON for storage | See [5.2](#52-devin-structured-output) |
-| `RemediationOutcome` | What a remediation session claims it did | `JSON_SCHEMA`, `allCriteriaSatisfied()` | A claim only; never sufficient for `SUCCEEDED` |
+| `RemediationOutcome` | What a remediation session claims it did | `JSON_SCHEMA`, `allCriteriaSatisfied()` | A claim only; never sufficient for `SUCCEEDED`, and blocks it when present and unsatisfied (see [5.1](#51-state-machine)) |
 | `Verification` | The verdict and where it came from | `tier`, `result`, evidence | `PASSED` / `FAILED` / `UNAVAILABLE` × `REPO_CI` / `CONTRACT_WORKFLOW` / `VERIFIER_SESSION` |
 | `Retrospective` | What one remediation should teach the next | `JSON_SCHEMA` | Lessons with `scope`, `topic`, `lesson`, `evidence`, `recommended_action`, `confidence` |
 | `ContextKind` | The nine slices of a repository profile | `invalidatedBy(path)` | Path triggers per slice (`pom.xml` → `STACK`, `.github/workflows/` → `CI`, `agents.md` → `AGENT_RULES`, …); a push refreshes only the slices it touches |
@@ -225,7 +229,11 @@ DISCOVERED → CRITERIA_PENDING → READY → DISPATCHED → RUNNING ⇄ BLOCKED
 | `CHANGES_REQUESTED` | `ReviewLoop`/`Orchestrator` | Feedback back into the same session | `RUNNING` |
 | `FAILED` | reconcile | Retry while `attempts < mend.engine.max-attempts` | `DISPATCHED`, else terminal |
 
-`SUCCEEDED` requires **both** an independent `PASSED` verification *and* `RemediationOutcome.allCriteriaSatisfied()`.
+`SUCCEEDED` requires an independent `PASSED` verification, and is refused when a remediation outcome is
+present but does not assert every criterion. An outcome that is *absent or unreadable* (`outcome_json`
+null — a session can report a PR URL without returning parseable structured output) does not block the
+transition today: independent evidence alone carries it. The same asymmetry applies on the
+`UNAVAILABLE` → `UNVERIFIED` path.
 
 ### 5.2 Devin structured output
 
@@ -345,7 +353,7 @@ stops; anything ambiguous escalates to `NEEDS_HUMAN` rather than guessing.
 3. One task per `(repo, issueNumber)`, enforced in the schema, so replayed webhooks and the poller
    converge instead of duplicating.
 4. A task is advanced only by the worker holding its lease; terminal states release ownership.
-5. `SUCCEEDED` is unreachable without independent evidence.
+5. `SUCCEEDED` is unreachable without independent evidence (a *present* outcome must also assert every criterion; a missing one does not block it — see [5.1](#51-state-machine)).
 6. menD never executes a target repository's commands inside its own container.
 7. Sandbox links resolve inside menD.
 8. Nothing menD writes to GitHub is ever read back as authoritative state.
