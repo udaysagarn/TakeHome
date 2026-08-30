@@ -108,9 +108,9 @@
             <td class="muted">
               <span th:if="${t.ownerId}" class="mono" th:text="${t.ownerId}">worker</span>
               <span th:unless="${t.ownerId}">—</span>
-              <div class="note" th:if="${t.etaAt}"
+              <div class="note" th:if="${t.etaLabel}"
                    th:classappend="${t.overdue} ? 'red'"
-                   th:text="(${t.overdue} ? 'overdue since ' : 'due ') + ${t.etaAt}"></div>
+                   th:text="${t.etaLabel}" th:title="${t.etaAt}"></div>
             </td>
             <td class="note" th:text="${t.note}"></td>
           </tr>

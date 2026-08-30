@@ -144,25 +144,24 @@
   <path class="flow" d="M438 356 V 382"/>
   <path class="flow" d="M438 484 V 510"/>
   <path class="flow" d="M250 505 C 285 505, 292 545, 318 552"/>
-  <path class="flow" d="M552 300 C 700 240, 830 210, 942 200"/>
-  <text x="690" y="232" class="lbl">POST /v3/.../sessions</text>
-  <path class="flow" d="M942 258 C 830 268, 700 282, 556 300" />
-  <text x="706" y="290" class="lbl">structured contract</text>
-  <path class="flow" d="M552 430 C 760 452, 860 400, 944 372"/>
-  <text x="640" y="460" class="lbl">dispatch on accepted contract</text>
-  <path class="flow dash" d="M944 400 C 800 420, 700 470, 556 470"/>
-  <path class="flow dash" d="M948 520 C 820 540, 700 560, 556 566"/>
+  <!-- menD → Devin over the top corridor, Devin → menD along the bottom, so nothing
+       crosses the boxes in the middle two columns -->
+  <path class="flow" d="M552 292 C 570 292, 574 128, 612 128 H 890 C 928 128, 944 150, 946 174"/>
+  <text x="600" y="119" class="lbl">POST /v3/…/sessions · scope · remediate · verify</text>
+
+  <path class="flow" d="M1068 570 C 1068 622, 1000 642, 900 642 H 520 C 470 642, 440 636, 438 622"/>
+  <text x="612" y="662" class="lbl">structured contract · outcome · verification verdict</text>
+
   <path class="flow" d="M552 200 H 590"/>
   <path class="flow" d="M552 340 H 590"/>
   <path class="flow" d="M552 470 H 590"/>
   <path class="flow" d="M552 590 H 590"/>
   <path class="flow" d="M330 596 C 300 596, 270 620, 254 614"/>
   <path class="flow dash" d="M330 560 C 290 560, 262 520, 252 500"/>
-  <path class="flow" d="M948 380 C 720 700, 420 704, 254 420"/>
-  <text x="584" y="706" class="lbl">Devin opens the pull request in your repository</text>
+  <path class="flow dash" d="M498 648 C 400 656, 288 664, 284 596 C 284 512, 272 442, 254 424"/>
 
   <!-- outcome badges -->
   <rect x="286" y="228" width="26" height="26" rx="8" class="box bad"/>
   <text x="292" y="247" class="t" font-size="14">✕</text>
-  <text x="150" y="672" class="lbl">✕ no checkable definition of done → menD:not-a-candidate</text>
+  <text x="34" y="650" class="lbl">✕ = no checkable “done” → excluded</text>
 </svg>

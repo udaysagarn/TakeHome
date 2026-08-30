@@ -91,12 +91,19 @@
         </tbody>
       </table>
 
-      <h2 class="section">Verification evidence</h2>
-      <div class="empty" th:if="${detail.verification == null}">
-        Nothing independent has reported on this change yet.
+      <h2 class="section" th:if="${t.prUrl != null or detail.verification != null}">Verification evidence</h2>
+      <div class="empty" th:if="${detail.verification == null and t.prUrl != null}">
         <span th:if="${t.state.name() == 'UNVERIFIED'}">
-          menD could not find any evidence outside the session that wrote the code, so this is
+          menD found no evidence outside the session that wrote the code, so this is
           <strong>UNVERIFIED</strong> rather than remediated.
+        </span>
+        <span th:if="${t.state.name() == 'SUCCEEDED'}">
+          This task closed before menD recorded structured evidence, so the verdict is only as good as
+          the audit trail below. Tasks completed since then carry a tier and command output here, and
+          land in <strong>UNVERIFIED</strong> when nothing independent can produce one.
+        </span>
+        <span th:unless="${t.state.name() == 'UNVERIFIED' or t.state.name() == 'SUCCEEDED'}">
+          Nothing independent has reported on this change yet.
         </span>
       </div>
       <table class="grid kv" th:if="${detail.verification != null}" th:with="v=${detail.verification}">
@@ -159,9 +166,9 @@
             <th>Rounds answered</th>
             <td th:text="${detail.reviewRounds}">0</td>
           </tr>
-          <tr th:if="${detail.reviewerFeedbackJson}">
+          <tr th:if="${detail.reviewerFeedback}">
             <th>Latest feedback</th>
-            <td><pre class="json" th:text="${detail.reviewerFeedbackJson}"></pre></td>
+            <td><pre class="raw" th:text="${detail.reviewerFeedback}"></pre></td>
           </tr>
         </tbody>
       </table>

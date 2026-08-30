@@ -90,7 +90,9 @@ class DashboardRenderTest {
                 "summary":"The repository has no required checks and the contract workflow is not merged.",\
                 "commands":[],"check_url":null}""");
         unverified.setReviewRounds(1);
-        unverified.setFeedbackJson("{\"body\":\"please add a regression test\"}");
+        unverified.setFeedbackJson(
+                "CHANGES_REQUESTED by @alice: please add a regression test\n\n"
+                        + "superset/utils/date_parser.py:88 by @alice: this branch is still unguarded");
         unverified = taskService.save(unverified);
         unverified = taskService.transition(unverified, IssueState.READY, "criteria", "test");
         unverified = taskService.transition(unverified, IssueState.DISPATCHED, "session", "test");
@@ -273,7 +275,48 @@ class DashboardRenderTest {
                 .contains("nothing independent of the session that wrote the code")
                 .contains("The repository has no required checks")
                 .contains("Human review")
-                .contains("please add a regression test");
+                .contains("CHANGES_REQUESTED by @alice: please add a regression test")
+                .doesNotContain("{&quot;body&quot;");
+    }
+
+    @Test
+    void theReportExplainsWhyEachUnverifiedFixIsUnverified() throws Exception {
+        String report = mvc.perform(get("/api/report"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String unverifiedSection = report.substring(report.indexOf("## Unverified"));
+        assertThat(unverifiedSection).contains("The repository has no required checks");
+    }
+
+    @Test
+    void aSucceededTaskWithoutStructuredEvidenceSaysSoRatherThanClaimingNothingReported() throws Exception {
+        long id = tasks.findAll().stream()
+                .filter(t -> t.getIssueNumber() == 101)
+                .findFirst()
+                .orElseThrow()
+                .getId();
+        String html = mvc.perform(get("/tasks/" + id))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("closed before menD recorded structured evidence")
+                .doesNotContain("Nothing independent has reported");
+    }
+
+    @Test
+    void anExcludedTaskShowsNoVerificationSectionBecauseNothingWasEverAttempted() throws Exception {
+        long id = tasks.findAll().stream()
+                .filter(t -> t.getIssueNumber() == 102)
+                .findFirst()
+                .orElseThrow()
+                .getId();
+        String html = mvc.perform(get("/tasks/" + id))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).doesNotContain("Verification evidence");
     }
 
     @Test

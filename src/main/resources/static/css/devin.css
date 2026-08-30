@@ -254,6 +254,14 @@ a.card:hover {
   border-color: rgb(var(--text-blue) / 0.4);
 }
 
+/* State names like CHANGES_REQUESTED are wider than a board column. */
+.card .pill {
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
+  font-size: 10px;
+}
+
 .card .num {
   font-size: 11px;
   color: rgb(var(--text-tertiary));
@@ -361,6 +369,11 @@ table.grid tr:last-child td {
 .pill.blue {
   color: rgb(var(--text-blue));
   border-color: rgb(var(--text-blue) / 0.3);
+}
+
+.pill.green {
+  color: rgb(var(--text-green));
+  border-color: rgb(var(--text-green) / 0.3);
 }
 
 .pill.orange,
