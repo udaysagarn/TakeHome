@@ -229,7 +229,7 @@ public class SandboxDevinClient extends DevinApiClient {
                       "scope": "GENERAL",
                       "topic": "lockfiles",
                       "lesson": "When a lockfile changes, show the resolved version diff in the pull request body.",
-                      "evidence": "Reviewer asked twice which transitive version was pinned.",
+                      "evidence": "Reviewer: 'which transitive version did the lockfile actually pin? Show the resolved diff'.",
                       "recommended_action": "DEVIN_KNOWLEDGE",
                       "action_detail": "Worth promoting to an organisation-wide Devin knowledge note.",
                       "confidence": 0.74

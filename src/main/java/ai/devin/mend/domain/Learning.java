@@ -29,6 +29,9 @@ import org.hibernate.annotations.ColumnDefault;
         indexes = {@Index(name = "idx_learning_repo", columnList = "repo,status")})
 public class Learning {
 
+    /** Twice-failed advice is not brought back a third time. */
+    private static final int MAX_RETIREMENTS = 2;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -85,6 +88,16 @@ public class Learning {
     @Column(nullable = false)
     private int timesFollowedByFeedback;
 
+    /** How often this advice has been retired and then relearned from a later review. */
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private int timesRetired;
+
+    /** True when the lesson was retired while a human promotion was still outstanding. */
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean retiredBeforePromotion;
+
     private Double confidence;
 
     private Instant createdAt = Instant.now();
@@ -122,8 +135,32 @@ public class Learning {
 
     public void retire(Instant when) {
         status = LearningStatus.RETIRED;
+        retiredBeforePromotion = needsHuman();
+        timesRetired++;
         retiredAt = when;
         updatedAt = when;
+    }
+
+    /**
+     * Brings retired advice back when a later review teaches it again, with its scorecard reset so it
+     * is judged on the evidence from here on. Advice that has already failed twice stays retired.
+     */
+    public boolean reinstate(Instant when) {
+        if (status != LearningStatus.RETIRED || timesRetired >= MAX_RETIREMENTS) {
+            return false;
+        }
+        status = LearningStatus.ACTIVE;
+        retiredAt = null;
+        timesApplied = 0;
+        timesFollowedByFeedback = 0;
+        updatedAt = when;
+        return true;
+    }
+
+    /** True when the recommendation is one only a human can carry out. */
+    public boolean needsHuman() {
+        return recommendedAction != RecommendedAction.PROMPT_PREAMBLE
+                && recommendedAction != RecommendedAction.RETIRE;
     }
 
     public Long getId() {
@@ -232,6 +269,14 @@ public class Learning {
 
     public int getTimesFollowedByFeedback() {
         return timesFollowedByFeedback;
+    }
+
+    public int getTimesRetired() {
+        return timesRetired;
+    }
+
+    public boolean isRetiredBeforePromotion() {
+        return retiredBeforePromotion;
     }
 
     public Double getConfidence() {

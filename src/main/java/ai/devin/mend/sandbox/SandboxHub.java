@@ -118,7 +118,8 @@ public class SandboxHub {
             requestChanges(
                     number,
                     "staff-engineer",
-                    "Please add a spec next to the component; that is where we keep them in this repository.");
+                    "Please add a spec next to the component; that is where we keep them in this repository. "
+                            + "Also, which transitive version did the lockfile actually pin? Show the resolved diff.");
         } else if (scenario != SandboxScenario.UNVERIFIED) {
             passChecks(repo, number);
         }

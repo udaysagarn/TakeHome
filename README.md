@@ -327,3 +327,21 @@ view is recognisably part of the product rather than an approximation of it.
   bad advice, not yet a precise attribution.
 - General lessons are surfaced for human promotion rather than written straight into org-wide Devin knowledge;
   that approval step is deliberate.
+
+## Next: lessons become playbooks
+
+Today a lesson ends up in a prompt menD assembles per session and then throws away. The next step is to make
+that procedure a first-class artefact — a Devin playbook the humans own and menD merely invokes.
+
+- **Two playbooks per repository**, not one per org: a remediation playbook (how a fix lands here) and a
+  verification playbook (what proof this repository accepts). Conventions differ per codebase, so scope
+  follows the codebase.
+- **Human approval, always.** menD proposes a playbook diff with the review comment that motivated it; a
+  human accepts, edits or rejects. A rejected proposal is not offered again.
+- **Versioned, and recorded per task.** Every task stores which playbook revision it ran under, so "did
+  review comments drop after v3?" is a question the data can answer — and a revision that makes things worse
+  can be rolled back.
+- **Humans own the artefact.** A hand edit is authoritative; menD reads it and stops proposing that change.
+
+The split that decides where a lesson goes: a *fact* about the repository belongs in knowledge or its
+instruction file; a *procedure* belongs in a playbook.

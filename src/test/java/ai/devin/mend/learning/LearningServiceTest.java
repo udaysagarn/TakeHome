@@ -175,6 +175,72 @@ class LearningServiceTest {
         });
     }
 
+    @Test
+    void adviceThatIsTaughtAgainAfterRetirementComesBackWithAFreshScorecard() {
+        String text = "Always squash the commits.";
+        learnings.absorb(retrospective(lesson(LearningScope.REPO, text, 0.9)), REPO, 1, null);
+        retireByFeedback(2);
+        assertThat(learnings.byScope(LearningScope.REPO)).isEmpty();
+
+        learnings.absorb(retrospective(lesson(LearningScope.REPO, text, 0.9)), REPO, 2, null);
+
+        assertThat(learnings.byScope(LearningScope.REPO))
+                .singleElement()
+                .satisfies(l -> {
+                    assertThat(l.getStatus()).isEqualTo(LearningStatus.ACTIVE);
+                    assertThat(l.getRetiredAt()).isNull();
+                    assertThat(l.getTimesApplied()).isZero();
+                    assertThat(l.getTimesFollowedByFeedback()).isZero();
+                });
+        assertThat(learnings.retired()).isEmpty();
+    }
+
+    @Test
+    void adviceThatFailsTwiceIsNotBroughtBackAThirdTime() {
+        String text = "Always squash the commits.";
+        learnings.absorb(retrospective(lesson(LearningScope.REPO, text, 0.9)), REPO, 1, null);
+        retireByFeedback(2);
+        learnings.absorb(retrospective(lesson(LearningScope.REPO, text, 0.9)), REPO, 2, null);
+        retireByFeedback(2);
+
+        learnings.absorb(retrospective(lesson(LearningScope.REPO, text, 0.9)), REPO, 3, null);
+
+        assertThat(learnings.byScope(LearningScope.REPO)).isEmpty();
+        assertThat(learnings.retired()).singleElement().satisfies(l -> assertThat(l.getTimesRetired()).isEqualTo(2));
+    }
+
+    @Test
+    void aLessonRetiredBeforeAHumanPromotedItSaysSoRatherThanVanishing() {
+        learnings.absorb(
+                retrospective(new Retrospective.Lesson(
+                        LearningScope.GENERAL,
+                        "lockfiles",
+                        "Show the resolved-version diff.",
+                        "a human reviewer said so",
+                        RecommendedAction.DEVIN_KNOWLEDGE,
+                        null,
+                        0.7)),
+                REPO,
+                1,
+                null);
+        retireByFeedback(2);
+
+        assertThat(learnings.recommendedActions()).isEmpty();
+        assertThat(learnings.retired())
+                .singleElement()
+                .satisfies(l -> {
+                    assertThat(l.isRetiredBeforePromotion()).isTrue();
+                    assertThat(l.getRecommendedAction()).isEqualTo(RecommendedAction.DEVIN_KNOWLEDGE);
+                });
+    }
+
+    private void retireByFeedback(int rounds) {
+        for (int i = 0; i < rounds; i++) {
+            learnings.markApplied(REPO);
+            learnings.recordFeedbackDespite(REPO);
+        }
+    }
+
     private static Retrospective retrospective(Retrospective.Lesson... lessons) {
         return new Retrospective("summary", List.of(lessons));
     }

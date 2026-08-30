@@ -104,6 +104,10 @@ public class LearningService {
                 Learning known = existing.get();
                 known.setConfidence(higher(known.getConfidence(), lesson.confidence()));
                 known.setUpdatedAt(Instant.now());
+                if (known.reinstate(Instant.now())) {
+                    log.info("reinstated learning {} — a later review taught it again", known.getId());
+                    stored.add(known);
+                }
                 continue;
             }
             LearningScope scope = lesson.scope() == null ? LearningScope.REPO : lesson.scope();

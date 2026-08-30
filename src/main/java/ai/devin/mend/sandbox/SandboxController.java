@@ -73,7 +73,8 @@ public class SandboxController {
             @PathVariable int pullNumber, @RequestBody(required = false) ReviewRequest request) {
         String reviewer = request == null || request.reviewer() == null ? "staff-engineer" : request.reviewer();
         String body = request == null || request.body() == null || request.body().isBlank()
-                ? "Please add a spec next to the component; that is where we keep them in this repository."
+                ? "Please add a spec next to the component; that is where we keep them in this repository. "
+                          + "Also, which transitive version did the lockfile actually pin? Show the resolved diff."
                 : request.body();
         return hub.requestChanges(pullNumber, reviewer, body)
                 .<ResponseEntity<?>>map(ResponseEntity::ok)
