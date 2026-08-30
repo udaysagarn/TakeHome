@@ -3,6 +3,7 @@
   <body>
     <div th:fragment="live">
       <!--/* Inside the polled fragment, so the alarm appears and clears without a page reload. */-->
+      <div th:replace="~{fragments/alerts :: paused}"></div>
       <div th:replace="~{fragments/alerts :: credentials}"></div>
       <section class="kpis" th:with="k=${view.kpis}">
         <div class="kpi">

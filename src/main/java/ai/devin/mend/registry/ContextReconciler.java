@@ -1,8 +1,8 @@
 package ai.devin.mend.registry;
 
-import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.IndexState;
 import ai.devin.mend.domain.Repository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.LeaseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,25 +25,30 @@ public class ContextReconciler {
     private final RepositoryService registry;
     private final ContextService context;
     private final LeaseManager leases;
-    private final MendProperties props;
+    private final EngineControl control;
 
     public ContextReconciler(
-            RepositoryService registry, ContextService context, LeaseManager leases, MendProperties props) {
+            RepositoryService registry, ContextService context, LeaseManager leases, EngineControl control) {
         this.registry = registry;
         this.context = context;
         this.leases = leases;
-        this.props = props;
+        this.control = control;
     }
 
     @Scheduled(fixedDelayString = "${mend.engine.context-interval:PT60S}")
     public void tick() {
-        if (!props.getEngine().isEnabled()) {
+        if (control.off()) {
             return;
         }
+        // A profiling session in flight is already paid for, so it is collected even while paused;
+        // only starting the next one is held.
         for (Repository repository : registry.operational()) {
             if (repository.getIndexState() == IndexState.INDEXING) {
                 leases.claimRepository(repository).ifPresent(this::collect);
             }
+        }
+        if (!control.newWorkAllowed()) {
+            return;
         }
         registry.operational().stream()
                 .filter(repository -> repository.getIndexState() != IndexState.INDEXING)

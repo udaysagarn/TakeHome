@@ -8,6 +8,7 @@ import ai.devin.mend.domain.Learning;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Retrospective;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.engine.EngineControl;
 import ai.devin.mend.engine.LeaseManager;
 import ai.devin.mend.engine.Notifier;
 import ai.devin.mend.engine.PromptBuilder;
@@ -61,6 +62,7 @@ public class ReviewLoop {
     private final Notifier notifier;
     private final LearningService learnings;
     private final ObjectMapper mapper;
+    private final EngineControl control;
     private final MendProperties props;
 
     public ReviewLoop(
@@ -73,6 +75,7 @@ public class ReviewLoop {
             Notifier notifier,
             LearningService learnings,
             ObjectMapper mapper,
+            EngineControl control,
             MendProperties props) {
         this.tasks = tasks;
         this.taskService = taskService;
@@ -83,12 +86,13 @@ public class ReviewLoop {
         this.notifier = notifier;
         this.learnings = learnings;
         this.mapper = mapper;
+        this.control = control;
         this.props = props;
     }
 
     @Scheduled(fixedDelayString = "${mend.learning.review-poll-interval:PT2M}")
     public void tick() {
-        if (!props.getEngine().isEnabled() || !github.isConfigured()) {
+        if (control.off() || !github.isConfigured()) {
             return;
         }
         for (RemediationTask task : tasks.findByStateIn(List.copyOf(WATCHED))) {
@@ -210,9 +214,13 @@ public class ReviewLoop {
         }
     }
 
-    /** True when a retrospective is owed: settled, fed back on, and not yet extracted. */
+    /**
+     * True when a retrospective is owed: settled, fed back on, and not yet extracted. One already
+     * started is read back even while paused; a new one is not begun, because it is a fresh session.
+     */
     boolean needsRetrospective(RemediationTask task) {
         return props.getLearning().isRetrospectiveEnabled()
+                && (task.getRetrospectiveSessionId() != null || !control.paused())
                 && !task.isLearningsExtracted()
                 && task.getState().isTerminal()
                 && task.getFeedbackJson() != null

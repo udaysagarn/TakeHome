@@ -6,6 +6,8 @@ Every route menD serves, on one page.
 
 | Method | Route | Purpose | Page |
 |---|---|---|---|
+| `GET` | `/api/engine` | Whether new work is allowed: `{"paused","off","reason","actor","since"}` | [Configuration](Configuration-Reference) |
+| `POST` | `/api/engine?paused=&reason=&actor=` | Pause or resume new work | [Configuration](Configuration-Reference) |
 | `GET` | `/api/summary` | KPI block | [Reports](Reports-and-Metrics) |
 | `GET` | `/api/states` | Count per state | [Polling](Polling-Task-Status) |
 | `GET` | `/api/tasks` | All tasks, newest activity first | [Polling](Polling-Task-Status) |
@@ -36,6 +38,7 @@ Every route menD serves, on one page.
 | `/learnings` | What reviewers taught menD |
 | `/deck` | Presentation deck, reading live numbers |
 | `/fragments/live?repo=` | htmx polling fragment |
+| `POST /engine` | The pause switch in the navigation (form-encoded `paused`, `from`, `repo`) |
 
 ## Operations
 

@@ -820,6 +820,22 @@ details summary {
   margin: 0 0 18px;
 }
 
+/* A pause is a choice an operator made, not a failure, so it is amber rather than red. */
+.alarm.paused {
+  border-color: rgb(var(--text-orange));
+  background: rgb(var(--text-orange) / 0.06);
+}
+
+.alarm.paused .pill {
+  color: rgb(var(--text-orange));
+  border-color: rgb(var(--text-orange) / 0.3);
+}
+
+.btn.paused {
+  color: rgb(var(--text-orange));
+  border-color: rgb(var(--text-orange) / 0.4);
+}
+
 .alarm-head {
   display: flex;
   align-items: center;
