@@ -66,7 +66,7 @@ class CredentialAlarmRenderTest {
                         + " Check the GitHub App id, installation id and private key, then re-validate.");
         repositories.save(rejected);
 
-        for (String page : new String[] {"/", "/pipeline", "/learnings", "/repositories/new"}) {
+        for (String page : new String[] {"/", "/flows", "/learnings", "/repositories/new"}) {
             assertThat(html(page))
                     .as(page)
                     .contains("Credentials failing")
@@ -135,7 +135,7 @@ class CredentialAlarmRenderTest {
         repositories.save(validated);
 
         assertThat(html("/")).doesNotContain("Credentials failing");
-        assertThat(html("/pipeline")).doesNotContain("Credentials failing");
+        assertThat(html("/flows")).doesNotContain("Credentials failing");
     }
 
     private String html(String path) throws Exception {
