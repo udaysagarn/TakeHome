@@ -122,14 +122,14 @@ class DashboardRenderTest {
 
     @Test
     void everyPageCarriesTheSameNavigationAndMarksTheOneYouAreOn() throws Exception {
-        long taskId = idOfIssue(101);
+        // A task has no entry of its own, so it marks nothing rather than claiming to be Pipeline.
         var expectedActive = new java.util.LinkedHashMap<String, String>();
         expectedActive.put("/", "Overview");
         expectedActive.put("/pipeline", "Pipeline");
         expectedActive.put("/learnings", "Learnings");
         expectedActive.put("/deck", "Deck");
         expectedActive.put("/repositories/new", "Register");
-        expectedActive.put("/tasks/" + taskId, "Pipeline");
+        expectedActive.put("/tasks/" + idOfIssue(101), null);
 
         for (var page : expectedActive.entrySet()) {
             String html = mvc.perform(get(page.getKey()))
@@ -146,9 +146,15 @@ class DashboardRenderTest {
                             ">Deck<",
                             ">Register<",
                             ">Report<",
-                            ">Metrics<")
-                    .containsOnlyOnce("aria-current=\"page\"")
-                    .contains("aria-current=\"page\">" + page.getValue() + "<");
+                            ">Metrics<");
+            if (page.getValue() == null) {
+                assertThat(html).as("nothing marked current on %s", page.getKey()).doesNotContain("aria-current");
+            } else {
+                assertThat(html)
+                        .as("current page marked on %s", page.getKey())
+                        .containsOnlyOnce("aria-current=\"page\"")
+                        .contains("aria-current=\"page\">" + page.getValue() + "<");
+            }
         }
     }
 

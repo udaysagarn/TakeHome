@@ -19,7 +19,7 @@
         <a class="btn" th:href="@{/pipeline(repo=${t.repo})}">This repository</a>
         <a class="btn" th:href="${t.issueUrl}" target="_blank">Issue</a>
         <a class="btn" th:if="${t.prUrl}" th:href="${t.prUrl}" target="_blank">Pull request</a>
-        <nav th:replace="~{fragments/nav :: links('pipeline')}"></nav>
+        <nav th:replace="~{fragments/nav :: links('task')}"></nav>
       </header>
 
       <h2 class="section">Status</h2>

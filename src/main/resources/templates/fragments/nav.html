@@ -3,7 +3,9 @@
   <body>
     <!--
       The one navigation every page uses. `active` is the calling page's own key, so the page you
-      are on is marked instead of offering a link to itself.
+      are on is marked instead of offering a link to itself. A page with no entry of its own (a
+      task, a sandbox object, an error) passes its own key and marks nothing: `aria-current="page"`
+      on a link that navigates elsewhere would be a lie.
     -->
     <nav th:fragment="links(active)" class="nav" aria-label="Primary">
       <a class="btn" th:href="@{/}"

@@ -16,7 +16,7 @@
         <div th:replace="~{fragments/nav :: heading(${status})}"></div>
         <span class="subtitle" th:text="${headline}">Something went wrong</span>
         <span class="spacer"></span>
-        <nav th:replace="~{fragments/nav :: links('')}"></nav>
+        <nav th:replace="~{fragments/nav :: links('error')}"></nav>
       </header>
 
       <h2 class="section" th:text="${headline}">Something went wrong</h2>
