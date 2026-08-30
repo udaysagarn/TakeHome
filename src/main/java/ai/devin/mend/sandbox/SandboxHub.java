@@ -37,6 +37,7 @@ public class SandboxHub {
 
     private final Map<Integer, GitHubDtos.PullRequest> pulls = new LinkedHashMap<>();
     private final Map<Integer, Integer> pullToIssue = new LinkedHashMap<>();
+    private final Map<Integer, String> pullToRepo = new LinkedHashMap<>();
     private final Map<Integer, List<GitHubDtos.CheckRun>> checks = new LinkedHashMap<>();
     private final Map<Integer, List<GitHubDtos.Review>> reviews = new LinkedHashMap<>();
 
@@ -53,7 +54,7 @@ public class SandboxHub {
                 titleFor(scenario),
                 bodyFor(scenario),
                 "open",
-                "https://github.com/%s/issues/%d".formatted(repo, number),
+                issueUrl(repo, number),
                 labelList(key),
                 null,
                 Instant.now(),
@@ -91,6 +92,10 @@ public class SandboxHub {
         return scenarios.getOrDefault(key(repo, number), SandboxScenario.CLEAN_FIX);
     }
 
+    public synchronized List<String> comments(String repo, int number) {
+        return List.copyOf(comments.getOrDefault(key(repo, number), List.of()));
+    }
+
     // ------------------------------------------------------- pull request side
 
     /** Opens the pull request the fake remediation session claims to have written. */
@@ -106,12 +111,13 @@ public class SandboxHub {
         int number = nextPull.getAndIncrement();
         GitHubDtos.PullRequest pull = new GitHubDtos.PullRequest(
                 number,
-                "https://github.com/%s/pull/%d".formatted(repo, number),
+                pullUrl(repo, number),
                 "open",
                 false,
                 new GitHubDtos.Head("0f1e2d3c4b5a", "mend/issue-" + issueNumber));
         pulls.put(number, pull);
         pullToIssue.put(number, issueNumber);
+        pullToRepo.put(number, repo);
         SandboxScenario scenario = scenario(repo, issueNumber);
         if (scenario == SandboxScenario.REVIEW_THEN_FIX) {
             // The reviewer gets there before CI does, which is what makes this scenario worth watching.
@@ -141,7 +147,7 @@ public class SandboxHub {
                         "ci / build-and-test",
                         "completed",
                         "success",
-                        "https://github.com/%s/pull/%d/checks".formatted(repo, pullNumber))));
+                        pullUrl(repo, pullNumber) + "#checks")));
     }
 
     public synchronized Optional<GitHubDtos.PullRequest> pull(int number) {
@@ -154,6 +160,14 @@ public class SandboxHub {
 
     public synchronized List<GitHubDtos.Review> reviews(int pullNumber) {
         return reviews.getOrDefault(pullNumber, List.of());
+    }
+
+    public synchronized Optional<Integer> issueBehind(int pullNumber) {
+        return Optional.ofNullable(pullToIssue.get(pullNumber));
+    }
+
+    public synchronized Optional<String> repoOf(int pullNumber) {
+        return Optional.ofNullable(pullToRepo.get(pullNumber));
     }
 
     /** Simulates a human reviewer rejecting the pull request menD opened. */
@@ -201,17 +215,34 @@ public class SandboxHub {
         return repo + "#" + number;
     }
 
+    /**
+     * Simulated issues and pull requests are served by menD itself rather than pointed at
+     * github.com, where the numbers do not exist: a link clicked during a demo has to lead
+     * somewhere honest.
+     */
+    public static String issueUrl(String repo, int number) {
+        return "/sandbox/%s/issues/%d".formatted(repo, number);
+    }
+
+    public static String pullUrl(String repo, int number) {
+        return "/sandbox/%s/pull/%d".formatted(repo, number);
+    }
+
     private GitHubDtos.Issue withLabels(GitHubDtos.Issue issue) {
         if (issue == null) {
             return null;
         }
+        return withLabels(repoOf(issue), issue);
+    }
+
+    private GitHubDtos.Issue withLabels(String repo, GitHubDtos.Issue issue) {
         return new GitHubDtos.Issue(
                 issue.number(),
                 issue.title(),
                 issue.body(),
                 issue.state(),
                 issue.htmlUrl(),
-                labelList(key(repoOf(issue), issue.number())),
+                labelList(key(repo, issue.number())),
                 issue.pullRequest(),
                 issue.createdAt(),
                 issue.updatedAt());
@@ -220,8 +251,7 @@ public class SandboxHub {
     /** The html url carries the slug, which is the only place the issue record keeps it. */
     private static String repoOf(GitHubDtos.Issue issue) {
         String url = issue.htmlUrl();
-        String path = url.substring("https://github.com/".length());
-        return path.substring(0, path.indexOf("/issues/"));
+        return url.substring("/sandbox/".length(), url.indexOf("/issues/"));
     }
 
     private List<GitHubDtos.Label> labelList(String key) {
