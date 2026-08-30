@@ -197,7 +197,7 @@ public class Notifier {
                 """
                 ### Fix proposed, not independently verified
 
-                %s is open and the session asserts the acceptance criteria are met, but %s.
+                %s is open. %s
 
                 menD deliberately does not count this as remediated. To close the gap, either add the
                 repository's own CI to this pull request, or merge the menD verification contract workflow
@@ -208,9 +208,7 @@ public class Notifier {
                 **Tests** — %s%s"""
                         .formatted(
                                 task.getPrUrl(),
-                                verification.summary() == null
-                                        ? "nothing independent could prove it"
-                                        : verification.summary(),
+                                whyNotCounted(verification, outcome),
                                 code(
                                         outcome == null || outcome.commandsRun().isEmpty()
                                                 ? List.of("# no verification command was run")
@@ -218,6 +216,21 @@ public class Notifier {
                                 testEvidence(outcome),
                                 FOOTER));
         settleLabel(task, props.getGithub().getUnverifiedLabel());
+    }
+
+    /**
+     * Either nothing independent could prove the change, or nothing asserted the criteria contract —
+     * a session can report a pull request without returning readable structured output at all.
+     */
+    private static String whyNotCounted(Verification verification, RemediationOutcome outcome) {
+        String evidence = verification.summary() == null || verification.summary().isBlank()
+                ? "nothing independent could prove it"
+                : verification.summary();
+        if (outcome == null) {
+            return "Nothing asserted the acceptance criteria: the session returned no readable outcome. "
+                    + "Independent verification says: %s.".formatted(evidence);
+        }
+        return "The session asserts the acceptance criteria are met, but %s.".formatted(evidence);
     }
 
     private static String commandTable(Verification verification) {
