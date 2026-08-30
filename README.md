@@ -295,6 +295,7 @@ and that Devin can actually write the fix. Those need credentials and a real rep
 | `/tasks/{id}` | one issue end to end: criteria contract, sessions, verification evidence, lease, audit |
 | `/learnings` | what reviewers have taught menD, and what needs a human to promote |
 | `/repositories/new` | step-by-step registration |
+| `/deck` | the twelve-slide walkthrough, drawn from this instance's own numbers — arrow keys, printable |
 | `/api/report` | markdown report for a leadership audience |
 | `/api/summary`, `/api/tasks`, `/api/learnings`, `/api/repositories` | JSON read model |
 | `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
