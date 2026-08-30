@@ -14,6 +14,7 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
+import org.hibernate.annotations.ColumnDefault;
 
 /** One remediation attempt lifecycle for one GitHub issue. */
 @Entity
@@ -76,6 +77,25 @@ public class RemediationTask {
     private int nudges;
     private Integer acuBudget;
 
+    /** Worker currently holding the lease on this task; null when unowned. */
+    @Column(name = "owner_id", length = 128)
+    private String ownerId;
+
+    @Column(name = "lease_expires_at")
+    private Instant leaseExpiresAt;
+
+    @Column(name = "lease_acquired_at")
+    private Instant leaseAcquiredAt;
+
+    /** When the owner predicts this task reaches a terminal state; drives the overdue signal. */
+    @Column(name = "eta_at")
+    private Instant etaAt;
+
+    /** How many times an expired lease was taken over from a dead worker. */
+    @ColumnDefault("0")
+    @Column(name = "lease_takeovers", nullable = false)
+    private int leaseTakeovers;
+
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -107,6 +127,15 @@ public class RemediationTask {
     /** Wall-clock time from discovery to a pull request being opened. */
     public Duration timeToPr() {
         return prOpenedAt == null ? null : Duration.between(createdAt, prOpenedAt);
+    }
+
+    public boolean isLeased(Instant now) {
+        return ownerId != null && leaseExpiresAt != null && leaseExpiresAt.isAfter(now);
+    }
+
+    /** True once the owner's own prediction of completion has passed. */
+    public boolean isOverdue(Instant now) {
+        return etaAt != null && !state.isTerminal() && now.isAfter(etaAt);
     }
 
     public Duration elapsed() {
@@ -336,6 +365,46 @@ public class RemediationTask {
 
     public void setLastPolledAt(Instant lastPolledAt) {
         this.lastPolledAt = lastPolledAt;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public Instant getLeaseExpiresAt() {
+        return leaseExpiresAt;
+    }
+
+    public void setLeaseExpiresAt(Instant leaseExpiresAt) {
+        this.leaseExpiresAt = leaseExpiresAt;
+    }
+
+    public Instant getLeaseAcquiredAt() {
+        return leaseAcquiredAt;
+    }
+
+    public void setLeaseAcquiredAt(Instant leaseAcquiredAt) {
+        this.leaseAcquiredAt = leaseAcquiredAt;
+    }
+
+    public Instant getEtaAt() {
+        return etaAt;
+    }
+
+    public void setEtaAt(Instant etaAt) {
+        this.etaAt = etaAt;
+    }
+
+    public int getLeaseTakeovers() {
+        return leaseTakeovers;
+    }
+
+    public void setLeaseTakeovers(int leaseTakeovers) {
+        this.leaseTakeovers = leaseTakeovers;
     }
 
     public Instant getLastNudgedAt() {

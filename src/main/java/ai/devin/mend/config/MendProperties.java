@@ -331,6 +331,16 @@ public class MendProperties {
         private Duration nudgeAfter = Duration.ofMinutes(10);
         private Duration sessionTimeout = Duration.ofHours(3);
 
+        /**
+         * How long a worker owns a task before other workers may take it over. Must comfortably
+         * exceed {@link #reconcileInterval} so a healthy worker always heartbeats in time.
+         */
+        private Duration leaseDuration = Duration.ofMinutes(2);
+        private Duration heartbeatInterval = Duration.ofSeconds(30);
+
+        private Duration criteriaEta = Duration.ofMinutes(15);
+        private Duration verifyEta = Duration.ofMinutes(30);
+
         public boolean isEnabled() {
             return enabled;
         }
@@ -385,6 +395,38 @@ public class MendProperties {
 
         public void setSessionTimeout(Duration sessionTimeout) {
             this.sessionTimeout = sessionTimeout;
+        }
+
+        public Duration getLeaseDuration() {
+            return leaseDuration;
+        }
+
+        public void setLeaseDuration(Duration leaseDuration) {
+            this.leaseDuration = leaseDuration;
+        }
+
+        public Duration getHeartbeatInterval() {
+            return heartbeatInterval;
+        }
+
+        public void setHeartbeatInterval(Duration heartbeatInterval) {
+            this.heartbeatInterval = heartbeatInterval;
+        }
+
+        public Duration getCriteriaEta() {
+            return criteriaEta;
+        }
+
+        public void setCriteriaEta(Duration criteriaEta) {
+            this.criteriaEta = criteriaEta;
+        }
+
+        public Duration getVerifyEta() {
+            return verifyEta;
+        }
+
+        public void setVerifyEta(Duration verifyEta) {
+            this.verifyEta = verifyEta;
         }
     }
 }

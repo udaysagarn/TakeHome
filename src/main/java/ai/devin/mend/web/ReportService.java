@@ -14,9 +14,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ReportService {
 
-    /** Conservative estimate of the engineer time one merged remediation would otherwise consume. */
-    private static final double ENGINEER_HOURS_PER_FIX = 2.5;
-
     private final DashboardService dashboard;
     private final MendProperties props;
 
@@ -49,7 +46,7 @@ public class ReportService {
                 .append(row("ACU per remediation", k.acuPerSuccess() == null
                         ? "n/a"
                         : "%.1f".formatted(k.acuPerSuccess())))
-                .append(row("Engineer-hours avoided (est.)", "%.1f".formatted(k.succeeded() * ENGINEER_HOURS_PER_FIX)))
+                .append(row("Engineer-hours avoided (est.)", "%.1f".formatted(k.engineerHoursAvoided())))
                 .append("\n");
 
         md.append("## Remediated\n\n");

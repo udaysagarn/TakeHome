@@ -46,9 +46,19 @@
   --shadow-L3: 0 8px 24px rgb(0 0 0 / 0.6);
 }
 
+/* Light variant with hard borders and near-black secondary text, for projectors and
+   accessibility review. Reachable from the Theme control. */
 .high-contrast {
-  --text-secondary: 25 25 25 / 0.8;
-  --border-primary: 0 0 0 / 0.35;
+  --bg-page: 255 255 255;
+  --bg-wash: 255 255 255;
+  --text-primary: 0 0 0;
+  --text-secondary: 25 25 25 / 0.85;
+  --text-tertiary: 25 25 25 / 0.7;
+  --text-green: 0 110 58;
+  --text-red: 197 15 31;
+  --text-blue: 0 71 187;
+  --border-primary: 0 0 0 / 0.55;
+  --border-subtle: 0 0 0 / 0.3;
 }
 
 * {
@@ -224,12 +234,20 @@ h2.section {
 }
 
 .card {
+  display: block;
   background: rgb(var(--bg-elevated));
   border: 1px solid rgb(var(--border-primary));
   border-radius: 10px;
   padding: 9px 10px;
   margin-bottom: 8px;
   box-shadow: var(--shadow-L1);
+  color: rgb(var(--text-primary));
+}
+
+a.card:hover {
+  background: rgb(var(--bg-hover));
+  text-decoration: none;
+  border-color: rgb(var(--text-blue) / 0.4);
 }
 
 .card .num {
@@ -325,6 +343,57 @@ table.grid tr:last-child td {
   font-size: 12px;
   color: rgb(var(--text-secondary));
   max-width: 520px;
+}
+
+.note.red {
+  color: rgb(var(--text-red));
+}
+
+.pill.red {
+  color: rgb(var(--text-red));
+  border-color: rgb(var(--text-red) / 0.3);
+}
+
+.pill.blue {
+  color: rgb(var(--text-blue));
+  border-color: rgb(var(--text-blue) / 0.3);
+}
+
+/* Task detail: the criteria contract and the raw row behind it. */
+table.kv th {
+  width: 168px;
+  vertical-align: top;
+  color: rgb(var(--text-secondary));
+  font-weight: 500;
+}
+
+table.kv td {
+  vertical-align: top;
+}
+
+ul.contract {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+}
+
+ul.contract li {
+  margin-bottom: 3px;
+}
+
+pre.raw {
+  background: rgb(var(--bg-wash));
+  border: 1px solid rgb(var(--border-subtle));
+  border-radius: 10px;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+details summary {
+  cursor: pointer;
+  margin: 12px 0 8px;
+  font-size: 12px;
 }
 
 .events {
