@@ -172,6 +172,18 @@ public class DashboardService {
                 .toList();
     }
 
+    /**
+     * The most recently finished tasks that actually produced a pull request, newest first. The deck
+     * shows these rather than prose, so the pitch can only claim what this instance really did.
+     */
+    public List<TaskRow> finished(int limit) {
+        return tasks.findAllByOrderByUpdatedAtDesc().stream()
+                .filter(t -> t.getState().isTerminal() && t.getPrUrl() != null)
+                .limit(limit)
+                .map(this::row)
+                .toList();
+    }
+
     public Map<IssueState, Long> stateCounts() {
         Map<IssueState, Long> counts = new EnumMap<>(IssueState.class);
         for (IssueState state : IssueState.values()) {

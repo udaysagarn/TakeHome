@@ -135,6 +135,18 @@ class DashboardRenderTest {
     }
 
     @Test
+    void theDeckShowsTheFourActsAndCitesWorkThisInstanceReallyDid() throws Exception {
+        String html = mvc.perform(get("/deck"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Why Devin", "/img/architecture.svg", "/img/flywheel.svg", "/js/deck.js")
+                .contains("https://github.com/acme/superset/pull/9");
+    }
+
+    @Test
     void theRegistrationGuideExplainsEveryPermissionItAsksFor() throws Exception {
         String html = mvc.perform(get("/repositories/new"))
                 .andExpect(status().isOk())

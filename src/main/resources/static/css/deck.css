@@ -1,0 +1,300 @@
+/*
+ * Presentation layer for /deck. One slide fills the viewport, arrow keys move between them, and
+ * printing lays every slide out on its own page so the deck can be handed round as a PDF.
+ * Everything here reuses the tokens in devin.css, so all three themes work on a projector.
+ */
+
+.deck-body {
+  overflow: hidden;
+  background: rgb(var(--bg-wash));
+}
+
+.deck-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: rgb(var(--bg-elevated));
+  border-bottom: 1px solid rgb(var(--border-primary));
+}
+
+.deck-bar .spacer {
+  flex: 1;
+}
+
+.deck-progress {
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--text-secondary));
+  margin-left: 12px;
+}
+
+.deck {
+  height: 100vh;
+  padding-top: 53px;
+}
+
+.slide {
+  display: none;
+  height: calc(100vh - 53px);
+  overflow-y: auto;
+  padding: 40px clamp(24px, 6vw, 96px) 56px;
+  max-width: 1240px;
+  margin: 0 auto;
+  animation: slide-in 180ms ease-out;
+}
+
+.slide.current {
+  display: block;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.act {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(var(--text-on-accent));
+  background: rgb(var(--bg-accent-primary));
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-bottom: 20px;
+}
+
+.slide h1 {
+  font-size: clamp(30px, 4vw, 46px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+  max-width: 22ch;
+}
+
+.slide h2 {
+  font-size: clamp(24px, 2.8vw, 34px);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  margin: 0 0 28px;
+  max-width: 34ch;
+}
+
+.slide h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.slide p,
+.slide li {
+  font-size: 15px;
+  color: rgb(var(--text-secondary));
+}
+
+.title-slide {
+  display: none;
+}
+
+.title-slide.current {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.lede {
+  font-size: clamp(16px, 1.6vw, 19px) !important;
+  line-height: 1.55;
+  max-width: 62ch;
+  color: rgb(var(--text-primary)) !important;
+}
+
+.byline {
+  margin-top: 24px;
+  color: rgb(var(--text-tertiary)) !important;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.cards.four {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.card {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 10px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-L1);
+}
+
+.card p {
+  margin: 0;
+}
+
+ul.tight {
+  margin: 0;
+  padding-left: 18px;
+}
+
+ul.tight li {
+  margin-bottom: 8px;
+}
+
+ul.tight.big li {
+  font-size: 16px;
+  margin-bottom: 14px;
+  max-width: 88ch;
+}
+
+.callout {
+  border-left: 3px solid rgb(var(--bg-accent-primary));
+  padding: 4px 0 4px 14px;
+  margin-top: 18px;
+  color: rgb(var(--text-primary)) !important;
+}
+
+.callout.wide {
+  margin-top: 24px;
+  max-width: 90ch;
+}
+
+.trail {
+  list-style: none;
+  counter-reset: trail;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.trail li {
+  counter-increment: trail;
+  position: relative;
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 10px;
+  padding: 16px 18px 16px 20px;
+}
+
+.trail li::before {
+  content: counter(trail);
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 26px;
+  font-weight: 700;
+  color: rgb(var(--border-primary));
+  line-height: 1;
+}
+
+.trail .step {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--text-blue));
+  margin-bottom: 6px;
+}
+
+.trail p {
+  margin: 0;
+}
+
+.evidence {
+  margin-top: 22px;
+  color: rgb(var(--text-primary)) !important;
+  max-width: 90ch;
+}
+
+.deck-kpis {
+  margin-bottom: 24px;
+}
+
+.deck-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.deck-table th,
+.deck-table td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgb(var(--border-subtle));
+  font-size: 14px;
+}
+
+.deck-table th {
+  color: rgb(var(--text-tertiary));
+  font-weight: 500;
+}
+
+.deck .diagram {
+  background: rgb(var(--bg-elevated));
+  border: 1px solid rgb(var(--border-primary));
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.muted {
+  color: rgb(var(--text-tertiary));
+}
+
+@media (max-width: 900px) {
+  .two-col,
+  .cards.four,
+  .trail {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Handing the deck round as a PDF: every slide on its own page, no chrome. */
+@media print {
+  .deck-bar {
+    display: none;
+  }
+
+  .deck-body,
+  .deck {
+    overflow: visible;
+    height: auto;
+    padding-top: 0;
+  }
+
+  .slide,
+  .title-slide,
+  .slide.current,
+  .title-slide.current {
+    display: block;
+    height: auto;
+    overflow: visible;
+    page-break-after: always;
+    animation: none;
+    padding: 24px 0;
+  }
+
+  .card,
+  .trail li {
+    break-inside: avoid;
+  }
+}
