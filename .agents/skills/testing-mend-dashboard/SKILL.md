@@ -42,8 +42,10 @@ docker compose down -v && ./deploy/simulate.sh   # container `mend`, port 8080
 ```
 
 The four issues settle ~50s after the script returns. This mutates the demo data as you
-test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so re-run
-`simulate.sh` before an actual demo.
+test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so run the whole
+line again — including `down -v` — before an actual demo: `simulate.sh` on its own does
+`compose up` and keeps the `mend-data` volume, and the four issues are then already known, so
+nothing resets.
 
 Compose pins the container name, port 8080 and the `mend-data` volume, so a *second*
 revision has to run beside it with its own name, port and volume:
@@ -161,6 +163,11 @@ container (name/port/volume of its own; never touch port 8080):
   entry (suppressed on purpose — the repo still shows `NO_ACCESS` further down the page) and no
   `Re-validate` button.
 - sandbox profile: both clients hardcode `isConfigured() == true`, so **no** banner at all.
+- Devin refused the key: the `devin_credential` row (id 1) is written by a 401/403 from a call menD
+  was already making, so a *present but invalid* key shows nothing until the first dispatch. Force
+  the state directly (a one-row insert / `update devin_credential set usable=false, reason='…'`)
+  rather than waiting on a dispatch; expect "Devin refused menD's credential" with the status and
+  **no** `Re-validate` button.
 
 Because the banner also sits inside the htmx-polled `fragments/live`, `/flows` must be watched
 for >10s (2+ polls) before concluding either way: a broken fragment would blank the board or drop
