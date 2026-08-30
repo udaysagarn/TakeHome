@@ -280,13 +280,15 @@ ul.tight.big li {
   overflow-x: auto;
 }
 
-/* Below the slide's own max width, the diagrams are the one thing whose legibility depends on
-   rendered width, so they step out of the centred column and take the viewport instead. */
-@media (max-width: 1400px) {
+/* Up to the slide's own max width the slide *is* the viewport, so the diagrams — the one thing
+   whose legibility depends on rendered width — step out of its padding and take the whole of it.
+   Past 1240px the column is already wider than the padding it would reclaim. */
+@media (max-width: 1240px) {
   .deck .diagram {
-    width: calc(100vw - 40px);
+    width: auto;
     max-width: none;
     margin-left: calc(50% - 50vw + 20px);
+    margin-right: calc(50% - 50vw + 20px);
     padding: 8px;
   }
 }
