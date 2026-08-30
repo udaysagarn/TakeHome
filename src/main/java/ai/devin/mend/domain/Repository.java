@@ -80,6 +80,21 @@ public class Repository {
     @Column(name = "commits_since_index", nullable = false)
     private int commitsSinceIndex;
 
+    /** Worker currently holding the lease on this repository's profile; null when unowned. */
+    @Column(name = "owner_id", length = 128)
+    private String ownerId;
+
+    @Column(name = "lease_acquired_at")
+    private Instant leaseAcquiredAt;
+
+    @Column(name = "lease_expires_at")
+    private Instant leaseExpiresAt;
+
+    /** How many times an expired profile lease was taken over from a dead worker. */
+    @ColumnDefault("0")
+    @Column(name = "lease_takeovers", nullable = false)
+    private int leaseTakeovers;
+
     @Column(name = "trigger_label", length = 128)
     private String triggerLabel;
 
@@ -110,6 +125,10 @@ public class Repository {
 
     public String htmlUrl() {
         return "https://github.com/" + slug();
+    }
+
+    public boolean isLeased(Instant now) {
+        return ownerId != null && leaseExpiresAt != null && leaseExpiresAt.isAfter(now);
     }
 
     /** Ready to have issues ingested and Devin sessions dispatched against it. */
@@ -239,6 +258,38 @@ public class Repository {
 
     public void setCommitsSinceIndex(int commitsSinceIndex) {
         this.commitsSinceIndex = commitsSinceIndex;
+    }
+
+    public String getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public Instant getLeaseAcquiredAt() {
+        return leaseAcquiredAt;
+    }
+
+    public void setLeaseAcquiredAt(Instant leaseAcquiredAt) {
+        this.leaseAcquiredAt = leaseAcquiredAt;
+    }
+
+    public Instant getLeaseExpiresAt() {
+        return leaseExpiresAt;
+    }
+
+    public void setLeaseExpiresAt(Instant leaseExpiresAt) {
+        this.leaseExpiresAt = leaseExpiresAt;
+    }
+
+    public int getLeaseTakeovers() {
+        return leaseTakeovers;
+    }
+
+    public void setLeaseTakeovers(int leaseTakeovers) {
+        this.leaseTakeovers = leaseTakeovers;
     }
 
     public String getTriggerLabel() {

@@ -3,6 +3,8 @@ package ai.devin.mend.engine;
 import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.RemediationTask;
+import ai.devin.mend.domain.Repository;
+import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.domain.TaskRepository;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -25,6 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
  * before touching it, must heartbeat while it works, and loses the task automatically if it dies:
  * the lease simply expires and any other worker reclaims it. Because all progress is in the task
  * row, the reclaiming worker resumes rather than restarts.
+ *
+ * <p>The same protocol covers repository profiles: a profiling session is as expensive as a
+ * remediation one, so the {@code repository} row carries the same lease columns and a worker claims
+ * it before creating the session rather than after.
  */
 @Service
 public class LeaseManager {
@@ -32,14 +38,19 @@ public class LeaseManager {
     private static final Logger log = LoggerFactory.getLogger(LeaseManager.class);
 
     private final TaskRepository tasks;
+    private final RepositoryRegistry repositories;
     private final MendProperties props;
     private final String workerId;
 
     /** Tasks this worker is actively advancing; the heartbeat keeps their leases alive. */
     private final Set<Long> held = ConcurrentHashMap.newKeySet();
 
-    public LeaseManager(TaskRepository tasks, MendProperties props) {
+    /** Repository profiles this worker is actively regenerating. */
+    private final Set<Long> heldRepositories = ConcurrentHashMap.newKeySet();
+
+    public LeaseManager(TaskRepository tasks, RepositoryRegistry repositories, MendProperties props) {
         this.tasks = tasks;
+        this.repositories = repositories;
         this.props = props;
         this.workerId = buildWorkerId();
     }
@@ -97,13 +108,53 @@ public class LeaseManager {
     }
 
     /**
+     * Atomically takes the lease on a repository's profile. Returns the freshly read repository when
+     * this worker won the race, or empty when another worker holds a live lease — in which case the
+     * caller must not create a profiling session.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Optional<Repository> claimRepository(Repository repository) {
+        Instant now = Instant.now();
+        int claimed = repositories.claim(
+                repository.getId(), workerId, now, now.plus(props.getEngine().getLeaseDuration()));
+        if (claimed == 0) {
+            return Optional.empty();
+        }
+        heldRepositories.add(repository.getId());
+        Repository fresh = repositories.findById(repository.getId()).orElse(null);
+        if (fresh != null && fresh.getLeaseTakeovers() > repository.getLeaseTakeovers()) {
+            log.warn(
+                    "reclaimed expired profile lease repo={} previousOwner={} takeovers={}",
+                    fresh.slug(),
+                    repository.getOwnerId(),
+                    fresh.getLeaseTakeovers());
+        }
+        return Optional.ofNullable(fresh);
+    }
+
+    /** Extends a profile lease. False means the lease was lost and the caller must stop working. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean renewRepository(Repository repository) {
+        Instant now = Instant.now();
+        return repositories.renew(
+                        repository.getId(), workerId, now, now.plus(props.getEngine().getLeaseDuration()))
+                == 1;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void releaseRepository(Repository repository) {
+        heldRepositories.remove(repository.getId());
+        repositories.release(repository.getId(), workerId);
+    }
+
+    /**
      * Extends every lease this worker holds, independently of the reconcile loop, so a task whose
      * Devin call outlives the lease duration is not stolen from a healthy worker.
      */
     @Scheduled(fixedDelayString = "${mend.engine.heartbeat-interval:PT30S}")
     @Transactional
     public void heartbeat() {
-        if (held.isEmpty()) {
+        if (held.isEmpty() && heldRepositories.isEmpty()) {
             return;
         }
         Instant now = Instant.now();
@@ -112,6 +163,12 @@ public class LeaseManager {
             if (tasks.renew(id, workerId, now, expiresAt) == 0) {
                 log.warn("worker {} no longer owns task id={}; stopping heartbeat", workerId, id);
                 held.remove(id);
+            }
+        }
+        for (Long id : heldRepositories) {
+            if (repositories.renew(id, workerId, now, expiresAt) == 0) {
+                log.warn("worker {} no longer owns repository id={}; stopping heartbeat", workerId, id);
+                heldRepositories.remove(id);
             }
         }
     }
