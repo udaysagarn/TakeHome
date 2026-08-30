@@ -173,8 +173,12 @@ the banner on the first swap. Confirm the polls really happened via
   `.high-contrast`. `static/js/theme.js` cycles light → dark → contrast and stores
   `localStorage['mend-theme']`; some pages have no `[data-theme-label]` span so the active
   theme may not be named there even though cycling works.
-- `src/main/java/ai/devin/mend/web/DashboardService.java` — the `BOARD` map defines the six board
-  columns and the `Kpis` record defines every number the UI and `/api/report` show.
+- `src/main/java/ai/devin/mend/web/DashboardService.java` — the `BOARD` map defines the board
+  columns (currently eight: Triage, Ready, Devin working, Verifying, In review, Done, Unverified,
+  Excluded / escalated) and the `Kpis` record defines every number the UI and `/api/report` show.
+- `src/main/resources/templates/deck.html` — the `/deck` pitch, 12 fragment-addressed slides. The
+  live-numbers slide (currently 7) holds the recent-finished-tasks table and, when nothing has
+  finished, the "Label an issue `menD:fix`" empty-state callout.
 
 ## Non-mutating verification surface
 
@@ -236,13 +240,64 @@ Central. If that happens, retry or pass the build arg `MAVEN_MIRROR_URL=<interna
 (the Dockerfile supports it). Do not run `deploy/setup.sh` while a local instance is up — it
 binds port 8080 and the same H2 data dir.
 
-## Browser quirk on this box
+## Browser quirks on this box
 
 Chrome's omnibox drops the `:` when `localhost:8080` is typed in one go; type the full
-`http://127.0.0.1:8080/...` instead.
+`http://127.0.0.1:8080/...` instead. It also drops a trailing `#N` fragment (typing
+`http://127.0.0.1:8083/deck#7` navigates to `/deck7`, a 404). Load `/deck` and page through the
+slides with `Page_Down`/`Page_Up` (click the slide body first so it has focus); the header shows
+`n / 12` and the URL fragment follows.
+
+## Bind-mounted H2 data directories
+
+If you bind-mount a host directory for H2 (handy when you want to seed with the H2 Shell from the
+host) the container user may not be able to write it — the container exits with
+`AccessDeniedException: /app/data/mend.lock.db`. Give the directory to the image's own user —
+`sudo chown -R 10001 <hostdir>` (uid 10001 is `mend` in the Dockerfile; `-R`, or host-seeded database
+files stay unwritable) — or use a named docker volume instead. Do not `chmod 777` it: every local
+user could then rewrite the database under the test.
+
+## Seeding gotcha: enum values inside JSON columns
+
+`verification_json` / `feedback_json` are deserialised into `Verification` / criteria records, so an
+invented enum value makes the task page blow up rather than degrade. Valid tiers are `REPO_CI`,
+`CONTRACT_WORKFLOW`, `VERIFIER_SESSION`, `NONE`; valid verdicts are `PASSED`, `FAILED`, `PENDING`,
+`UNAVAILABLE` (there is no `INCONCLUSIVE`). Field names in those JSON blobs are snake_case.
+
+## Exercising `deploy/setup.sh` without touching the real stack
+
+`setup.sh` does `cd "$(dirname "$0")/.."`, so a throwaway probe must mirror the repo layout:
+`<probe>/deploy/setup.sh` plus `<probe>/.env.example`. Then
+`ENV_FILE=./env.test PORT=9099 bash ./deploy/setup.sh` with the answers piped in exercises the
+prompting (bad Devin key rejected and re-prompted, empty webhook secret auto-generated, PEM path
+inlined as a `\n`-escaped one-liner) and fails at `docker compose up` with `no configuration file
+provided` — a non-zero exit, which is the expected outcome. It never touches the real `.env` or
+port 8080. Always confirm afterwards with `git status --short` and `ss -ltn | grep :8080`.
+
+## When the credentialed happy path will not validate
+
+`accessState` stuck on `NO_ACCESS` with real credentials is usually a *stale installation id*, not a
+bug: `GITHUB_APP_INSTALLATION_ID` in the environment can belong to an installation that was deleted
+and recreated. Distinguish the two read-only, without dispatching anything, by minting the App JWT
+yourself and asking GitHub which installations the App actually has:
+
+```
+GET /app                         -> 200 + the app slug proves app id + private key are good
+GET /app/installations           -> the live installation ids for that app
+GET /app/installations/{id}      -> 404 means the configured id is not this app's
+GET /installation/repositories   -> (with an installation token) the repos it can see
+```
+
+Two shape notes for that script: the stored PEM may arrive with newlines flattened to spaces, so
+re-wrap the base64 body at 64 chars before `jwt.encode`, and menD maps a 401 to "GitHub answered
+401 …" but a 404 to "menD cannot see `<slug>` … install the menD GitHub App on this repository" —
+the wording tells you which failure you have. Once the right installation id is used the card turns
+green `VALIDATED` / `operational: true` within a couple of seconds of health, with no banner.
 
 ## Devin secrets needed
 
 - `DEVIN_API_KEY`
-- `GITHUB_APP_INSTALLATION_ID`
+- `DEVIN_ORG_ID`
+- `GITHUB_APP_ID`
+- `GITHUB_APP_INSTALLATION_ID` (may be stale — see the section above)
 - `GITHUB_APP_PRIVATE_KEY`
