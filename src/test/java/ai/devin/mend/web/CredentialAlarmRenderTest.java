@@ -3,12 +3,17 @@ package ai.devin.mend.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import ai.devin.mend.devin.DevinApiClient;
 import ai.devin.mend.domain.AccessState;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
+import ai.devin.mend.github.GitHubDtos;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,6 +98,34 @@ class CredentialAlarmRenderTest {
                 .contains("GitHub credentials are not configured")
                 .contains("Devin credentials are not configured")
                 .doesNotContain("Re-validate");
+    }
+
+    @Test
+    void aRetryThatSucceedsDoesNotStillAnnounceTheOldFailure() throws Exception {
+        Repository rejected = new Repository("acme", "superset");
+        rejected.markAccessFailure(AccessState.NO_ACCESS, "menD cannot see acme/superset.");
+        repositories.save(rejected);
+        GitHubDtos.Repo remote = new GitHubDtos.Repo(
+                1L,
+                "superset",
+                "acme/superset",
+                "https://github.com/acme/superset",
+                "main",
+                false,
+                false,
+                "public",
+                true,
+                "Python");
+        when(github.getRepo("acme/superset")).thenReturn(Optional.of(remote));
+        when(github.installationRepos()).thenReturn(List.of(remote));
+        when(github.installationPermissions()).thenReturn(Map.of("issues", "write", "pull_requests", "write"));
+
+        String html = mvc.perform(post("/repositories").param("repo", "acme/superset"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        assertThat(html).doesNotContain("Credentials failing", "menD cannot see acme/superset.");
     }
 
     @Test
