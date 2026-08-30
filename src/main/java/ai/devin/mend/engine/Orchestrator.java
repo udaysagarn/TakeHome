@@ -11,6 +11,8 @@ import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.domain.Verification;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
+import ai.devin.mend.learning.LearningService;
+import ai.devin.mend.learning.ReviewLoop;
 import ai.devin.mend.metrics.MendMetrics;
 import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.triage.PreFilter;
@@ -45,6 +47,8 @@ public class Orchestrator {
     private final PromptBuilder prompts;
     private final Notifier notifier;
     private final Verifier verifier;
+    private final LearningService learnings;
+    private final ReviewLoop reviewLoop;
     private final ContextService context;
     private final MendMetrics metrics;
     private final ObjectMapper mapper;
@@ -60,6 +64,8 @@ public class Orchestrator {
             PromptBuilder prompts,
             Notifier notifier,
             Verifier verifier,
+            LearningService learnings,
+            ReviewLoop reviewLoop,
             ContextService context,
             MendMetrics metrics,
             ObjectMapper mapper,
@@ -73,6 +79,8 @@ public class Orchestrator {
         this.prompts = prompts;
         this.notifier = notifier;
         this.verifier = verifier;
+        this.learnings = learnings;
+        this.reviewLoop = reviewLoop;
         this.context = context;
         this.metrics = metrics;
         this.mapper = mapper;
@@ -106,6 +114,7 @@ public class Orchestrator {
                 case DISPATCHED, RUNNING, BLOCKED -> pollRemediationSession(task);
                 case PR_OPEN -> taskService.transition(task, IssueState.VERIFYING, "waiting for CI", ACTOR);
                 case VERIFYING -> verify(task);
+                case CHANGES_REQUESTED -> reviewLoop.respondToFeedback(task);
                 default -> {}
             }
         } catch (RuntimeException e) {
@@ -150,7 +159,8 @@ public class Orchestrator {
                         issue.number(),
                         issue.title(),
                         issue.body(),
-                        context.profileFor(task.getRepo())),
+                        context.profileFor(task.getRepo()),
+                        learnings.lessonsFor(task.getRepo())),
                 "menD scoping — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("mend", "criteria", task.getRepo()),
                 props.getDevin().getCriteriaAcuLimit(),
@@ -242,7 +252,8 @@ public class Orchestrator {
                         issue.title(),
                         issue.body(),
                         criteria,
-                        context.profileFor(task.getRepo())),
+                        context.profileFor(task.getRepo()),
+                        learnings.lessonsFor(task.getRepo())),
                 "menD remediation — %s#%d".formatted(task.getRepo(), issue.number()),
                 List.of("mend", "remediation", task.getRepo(), "criteria:" + task.getCriteriaHash()),
                 acu,
@@ -255,6 +266,7 @@ public class Orchestrator {
         task.setAcuBudget(acu * task.getAttempts());
         task.setNudges(0);
         task = taskService.save(task);
+        learnings.markApplied(task.getRepo());
         metrics.recordAcuBudget(acu, "remediation");
         task = taskService.transition(task, IssueState.DISPATCHED, "session " + session.sessionId(), ACTOR);
         notifier.dispatched(task);

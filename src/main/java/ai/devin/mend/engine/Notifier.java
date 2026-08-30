@@ -1,6 +1,7 @@
 package ai.devin.mend.engine;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.domain.Learning;
 import ai.devin.mend.domain.RemediationOutcome;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.SuccessCriteria;
@@ -48,6 +49,11 @@ public class Notifier {
                 cfg.getUnverifiedLabel(),
                 "8b6914",
                 "Fix proposed but nothing independent could prove it; needs a human verdict");
+        github.ensureLabel(
+                repo,
+                cfg.getChangesRequestedLabel(),
+                "e99695",
+                "A human reviewer asked for changes; menD handed the feedback back to the session");
     }
 
     public void criteriaAccepted(RemediationTask task, SuccessCriteria criteria) {
@@ -229,6 +235,59 @@ public class Notifier {
         return verification.commands().stream()
                 .map(c -> "- %s `%s` → exit %d".formatted(c.passed() ? "✔" : "✘", c.command(), c.exitCode()))
                 .collect(Collectors.joining("\n"));
+    }
+
+    /** Tells the issue thread that a human reviewer's verdict was handed back to the session. */
+    public void changesRequested(RemediationTask task, int round, int maxRounds, String feedbackSummary) {
+        comment(
+                task,
+                """
+                ### Reviewer asked for changes (round %d of %d)
+
+                menD handed the review back to the session that wrote %s. Reviewer comments outrank the
+                acceptance criteria: where they conflict, the session is told to do what the reviewer asked.
+
+                %s%s"""
+                        .formatted(round, maxRounds, task.getPrUrl(), quote(feedbackSummary), FOOTER));
+        swapLabels(
+                task,
+                List.of(props.getGithub().getChangesRequestedLabel()),
+                List.of(props.getGithub().getPrOpenLabel(), props.getGithub().getDoneLabel()));
+    }
+
+    /** Publishes what menD learned, including the parts a human has to act on. */
+    public void learned(RemediationTask task, List<Learning> lessons) {
+        if (lessons.isEmpty()) {
+            return;
+        }
+        String body =
+                """
+                ### What menD learned here
+
+                %s%s"""
+                        .formatted(
+                                lessons.stream()
+                                        .map(l -> "- **%s** (%s) — %s\n  _Recommended:_ %s%s"
+                                                .formatted(
+                                                        l.getTopic() == null ? "lesson" : l.getTopic(),
+                                                        l.getScope(),
+                                                        l.getLesson(),
+                                                        l.getRecommendedAction().label(),
+                                                        l.getActionDetail() == null
+                                                                        || l.getActionDetail()
+                                                                                .isBlank()
+                                                                ? ""
+                                                                : " — " + l.getActionDetail()))
+                                        .collect(Collectors.joining("\n")),
+                                FOOTER);
+        comment(task, body);
+    }
+
+    private static String quote(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+        return text.lines().map(line -> "> " + line).collect(Collectors.joining("\n"));
     }
 
     public void escalated(RemediationTask task, String reason) {

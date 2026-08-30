@@ -88,6 +88,24 @@ public class RemediationTask {
     /** When the repository's menD contract workflow was asked to run for this pull request. */
     private Instant contractDispatchedAt;
 
+    /** Newest human review or review comment already handed to the session; null until one arrives. */
+    private Instant lastReviewAt;
+
+    /** The reviewer feedback of the current round, as menD passed it to Devin. */
+    @Lob
+    private String feedbackJson;
+
+    @ColumnDefault("0")
+    @Column(nullable = false)
+    private int reviewRounds;
+
+    /** Set once the retrospective has turned this task's history into learnings. */
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean learningsExtracted;
+
+    private String retrospectiveSessionId;
+
     private int attempts;
     private int nudges;
     private Integer acuBudget;
@@ -320,6 +338,46 @@ public class RemediationTask {
 
     public void setVerifierSessionUrl(String verifierSessionUrl) {
         this.verifierSessionUrl = verifierSessionUrl;
+    }
+
+    public Instant getLastReviewAt() {
+        return lastReviewAt;
+    }
+
+    public void setLastReviewAt(Instant lastReviewAt) {
+        this.lastReviewAt = lastReviewAt;
+    }
+
+    public String getFeedbackJson() {
+        return feedbackJson;
+    }
+
+    public void setFeedbackJson(String feedbackJson) {
+        this.feedbackJson = feedbackJson;
+    }
+
+    public int getReviewRounds() {
+        return reviewRounds;
+    }
+
+    public void setReviewRounds(int reviewRounds) {
+        this.reviewRounds = reviewRounds;
+    }
+
+    public boolean isLearningsExtracted() {
+        return learningsExtracted;
+    }
+
+    public void setLearningsExtracted(boolean learningsExtracted) {
+        this.learningsExtracted = learningsExtracted;
+    }
+
+    public String getRetrospectiveSessionId() {
+        return retrospectiveSessionId;
+    }
+
+    public void setRetrospectiveSessionId(String retrospectiveSessionId) {
+        this.retrospectiveSessionId = retrospectiveSessionId;
     }
 
     public Instant getContractDispatchedAt() {

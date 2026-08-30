@@ -16,6 +16,7 @@ public class MendProperties {
     private Triage triage = new Triage();
     private Engine engine = new Engine();
     private Verify verify = new Verify();
+    private Learning learning = new Learning();
 
     public Devin getDevin() {
         return devin;
@@ -47,6 +48,14 @@ public class MendProperties {
 
     public void setEngine(Engine engine) {
         this.engine = engine;
+    }
+
+    public Learning getLearning() {
+        return learning;
+    }
+
+    public void setLearning(Learning learning) {
+        this.learning = learning;
     }
 
     public Verify getVerify() {
@@ -142,6 +151,7 @@ public class MendProperties {
         private String doneLabel = "menD:done";
         private String needsHumanLabel = "menD:needs-human";
         private String unverifiedLabel = "menD:unverified";
+        private String changesRequestedLabel = "menD:changes-requested";
         private boolean commentsEnabled = true;
 
         public String getApiUrl() {
@@ -261,6 +271,14 @@ public class MendProperties {
             this.unverifiedLabel = unverifiedLabel;
         }
 
+        public String getChangesRequestedLabel() {
+            return changesRequestedLabel;
+        }
+
+        public void setChangesRequestedLabel(String changesRequestedLabel) {
+            this.changesRequestedLabel = changesRequestedLabel;
+        }
+
         public void setNeedsHumanLabel(String needsHumanLabel) {
             this.needsHumanLabel = needsHumanLabel;
         }
@@ -359,6 +377,75 @@ public class MendProperties {
 
         public void setMaxFilesInScope(int maxFilesInScope) {
             this.maxFilesInScope = maxFilesInScope;
+        }
+    }
+
+    /** The closed loop: reviewer feedback in, lessons out, lessons back into the next session. */
+    public static class Learning {
+
+        /** How often menD checks open pull requests for human reviews. */
+        private Duration reviewPollInterval = Duration.ofMinutes(2);
+
+        /** Rounds of reviewer feedback menD hands back before escalating to a human. */
+        private int maxReviewRounds = 3;
+
+        /** Run a retrospective session on terminal tasks that drew review feedback. */
+        private boolean retrospectiveEnabled = true;
+
+        private Integer retrospectiveAcuLimit = 2;
+
+        /** Prompts are a budget: only the strongest lessons ride along. */
+        private int maxLessonsInPrompt = 12;
+
+        /** Chances a lesson gets before its record of not helping is held against it. */
+        private int minApplicationsBeforeRetiring = 4;
+
+        public Duration getReviewPollInterval() {
+            return reviewPollInterval;
+        }
+
+        public void setReviewPollInterval(Duration reviewPollInterval) {
+            this.reviewPollInterval = reviewPollInterval;
+        }
+
+        public int getMaxReviewRounds() {
+            return maxReviewRounds;
+        }
+
+        public void setMaxReviewRounds(int maxReviewRounds) {
+            this.maxReviewRounds = maxReviewRounds;
+        }
+
+        public boolean isRetrospectiveEnabled() {
+            return retrospectiveEnabled;
+        }
+
+        public void setRetrospectiveEnabled(boolean retrospectiveEnabled) {
+            this.retrospectiveEnabled = retrospectiveEnabled;
+        }
+
+        public Integer getRetrospectiveAcuLimit() {
+            return retrospectiveAcuLimit;
+        }
+
+        public void setRetrospectiveAcuLimit(Integer retrospectiveAcuLimit) {
+            this.retrospectiveAcuLimit = retrospectiveAcuLimit;
+        }
+
+        public int getMaxLessonsInPrompt() {
+            return maxLessonsInPrompt;
+        }
+
+        public void setMaxLessonsInPrompt(int maxLessonsInPrompt) {
+            this.maxLessonsInPrompt = maxLessonsInPrompt;
+        }
+
+        public int getMinApplicationsBeforeRetiring() {
+            return minApplicationsBeforeRetiring;
+        }
+
+        public void setMinApplicationsBeforeRetiring(int minApplicationsBeforeRetiring) {
+            this.minApplicationsBeforeRetiring = minApplicationsBeforeRetiring;
         }
     }
 
