@@ -15,6 +15,7 @@ import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -130,7 +131,7 @@ public class ReviewLoop {
         if (pull == null) {
             return;
         }
-        Instant since = task.getLastReviewAt();
+        Instant since = watermark(task.getLastReviewAt());
         List<GitHubDtos.Review> reviews = github.listReviews(task.getRepo(), pull).stream()
                 .filter(r -> r.user() == null || !r.user().isBot())
                 .filter(r -> isNewer(r.submittedAt(), since))
@@ -146,9 +147,8 @@ public class ReviewLoop {
         }
 
         String feedback = render(reviews, comments);
-        Instant newest = newest(reviews, comments);
         task.setFeedbackJson(feedback);
-        task.setLastReviewAt(newest);
+        task.setLastReviewAt(newest(reviews, comments));
         task = taskService.save(task);
         learnings.recordFeedbackDespite(task.getRepo());
 
@@ -290,11 +290,20 @@ public class ReviewLoop {
                 newest = comment.createdAt();
             }
         }
-        return newest == Instant.EPOCH ? Instant.now() : newest;
+        return watermark(newest == Instant.EPOCH ? Instant.now() : newest);
     }
 
     private static boolean isNewer(Instant when, Instant since) {
-        return since == null || when == null || when.isAfter(since);
+        return since == null || when == null || watermark(when).isAfter(since);
+    }
+
+    /**
+     * The watermark survives a round trip through the database, so it is only ever compared at a
+     * precision the database keeps. Without this a clock finer than the column would make every
+     * review look new on the next poll, and menD would answer the same reviewer forever.
+     */
+    private static Instant watermark(Instant when) {
+        return when == null ? null : when.truncatedTo(ChronoUnit.MILLIS);
     }
 
     private static boolean hasBody(String body) {

@@ -207,6 +207,8 @@ docker compose up -d --build
 open http://localhost:8080
 ```
 
+A Mac walkthrough of all three modes — read-only, simulated and live — is in [docs/DEMO-MAC.md](docs/DEMO-MAC.md).
+
 Or `./deploy/demo.sh`, which does the above and prints the demo path. With no `.env` it starts in read-only
 mode (`MEND_ENGINE_ENABLED=false MEND_POLLING_ENABLED=false`) so you can browse the whole product without
 credentials, without touching GitHub, and without spending an ACU.
@@ -237,11 +239,52 @@ to the database.
 
 ```bash
 mvn spring-boot:run          # needs the same environment variables
-mvn -B verify                # 101 tests
+mvn -B verify                # 116 tests
 ```
 
 The state store is plain JPA: point `MEND_DB_URL` at PostgreSQL for a multi-replica deployment; nothing else
 changes.
+
+### Simulate the whole workflow locally (no credentials, no ACUs)
+
+A contributor should be able to change the orchestrator and watch the consequences without a GitHub App, a
+Devin key, or a network. The `sandbox` Spring profile swaps two beans — the GitHub client and the Devin
+client — for in-memory simulations. Everything else is the production code path: the same pre-filter,
+candidacy gate, state machine, leases, verification tiers, review loop and learning store.
+
+```bash
+./deploy/simulate.sh         # docker compose up in sandbox mode, then files one issue per scenario
+```
+
+or, without Docker:
+
+```bash
+SPRING_PROFILES_ACTIVE=sandbox mvn spring-boot:run
+curl -X POST localhost:8080/api/sandbox/issues/all
+```
+
+Four issues are filed, each written to exercise one path, and the set settles in about a minute on
+`/pipeline`:
+
+| Scenario | What it proves | Path |
+|---|---|---|
+| `CLEAN_FIX` | the happy path, proved by the repository's own CI | `DISCOVERED → READY → RUNNING → PR_OPEN → VERIFYING → SUCCEEDED` |
+| `NOT_A_CANDIDATE` | the gate declines work no test could settle, before spending a session | `DISCOVERED → NOT_A_CANDIDATE` |
+| `UNVERIFIED` | a pull request nothing can prove is not called a success | `… → VERIFYING → UNVERIFIED` |
+| `REVIEW_THEN_FIX` | a reviewer rejects it, the same session answers, the lesson is kept | `… → PR_OPEN → CHANGES_REQUESTED → RUNNING → SUCCEEDED` |
+
+The sandbox is also a control surface, so you can play the human parts yourself:
+
+```bash
+curl localhost:8080/api/sandbox                       # every label, comment, PR and review menD wrote
+curl -X POST 'localhost:8080/api/sandbox/issues?scenario=UNVERIFIED'
+curl -X POST localhost:8080/api/sandbox/pulls/9001/request-changes \
+     -H 'content-type: application/json' -d '{"reviewer":"you","body":"add a test next to the component"}'
+```
+
+The loops tick every five seconds under this profile instead of every thirty, so a run is watchable. What the
+sandbox does *not* prove is the two things only the real services can: that GitHub's API contract still holds,
+and that Devin can actually write the fix. Those need credentials and a real repository.
 
 ## What you see
 
@@ -256,6 +299,7 @@ changes.
 | `/api/summary`, `/api/tasks`, `/api/learnings`, `/api/repositories` | JSON read model |
 | `/actuator/prometheus` | `mend_issues{state}`, `mend_sessions_active`, `mend_time_to_pr`, `mend_transitions`, `mend_acu_budget` |
 | `/webhooks/github` | issues, push, review and pull-request events (HMAC verified) |
+| `/api/sandbox` | simulated GitHub, `sandbox` profile only — file issues, play the reviewer, read the world |
 
 The stylesheet uses Devin's own design tokens under its `.light` / `.dark` / `.high-contrast` scheme, so the
 view is recognisably part of the product rather than an approximation of it.
