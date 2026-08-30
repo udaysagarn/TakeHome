@@ -112,6 +112,46 @@ class DashboardRenderTest {
                 "acme/superset", number, title, "https://github.com/acme/superset/issues/" + number, "bug");
     }
 
+    private long idOfIssue(int number) {
+        return tasks.findAll().stream()
+                .filter(t -> t.getIssueNumber() == number)
+                .findFirst()
+                .orElseThrow()
+                .getId();
+    }
+
+    @Test
+    void everyPageCarriesTheSameNavigationAndMarksTheOneYouAreOn() throws Exception {
+        long taskId = idOfIssue(101);
+        var expectedActive = new java.util.LinkedHashMap<String, String>();
+        expectedActive.put("/", "Overview");
+        expectedActive.put("/pipeline", "Pipeline");
+        expectedActive.put("/learnings", "Learnings");
+        expectedActive.put("/deck", "Deck");
+        expectedActive.put("/repositories/new", "Register");
+        expectedActive.put("/tasks/" + taskId, "Pipeline");
+
+        for (var page : expectedActive.entrySet()) {
+            String html = mvc.perform(get(page.getKey()))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString();
+            assertThat(html)
+                    .as("navigation on %s", page.getKey())
+                    .contains(
+                            ">Overview<",
+                            ">Pipeline<",
+                            ">Learnings<",
+                            ">Deck<",
+                            ">Register<",
+                            ">Report<",
+                            ">Metrics<")
+                    .containsOnlyOnce("aria-current=\"page\"")
+                    .contains("aria-current=\"page\">" + page.getValue() + "<");
+        }
+    }
+
     @Test
     void theMonitoringViewRendersEveryPanel() throws Exception {
         mvc.perform(get("/pipeline"))

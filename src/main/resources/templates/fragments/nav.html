@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+  <body>
+    <!--
+      The one navigation every page uses. `active` is the calling page's own key, so the page you
+      are on is marked instead of offering a link to itself.
+    -->
+    <nav th:fragment="links(active)" class="nav" aria-label="Primary">
+      <a class="btn" th:href="@{/}"
+         th:attr="aria-current=${active == 'overview'} ? 'page' : null">Overview</a>
+      <a class="btn" th:href="@{/pipeline}"
+         th:attr="aria-current=${active == 'pipeline'} ? 'page' : null">Pipeline</a>
+      <a class="btn" th:href="@{/learnings}"
+         th:attr="aria-current=${active == 'learnings'} ? 'page' : null">Learnings</a>
+      <a class="btn" th:href="@{/deck}"
+         th:attr="aria-current=${active == 'deck'} ? 'page' : null">Deck</a>
+      <a class="btn" th:href="@{/repositories/new}"
+         th:attr="aria-current=${active == 'register'} ? 'page' : null">Register</a>
+      <span class="nav-divider" aria-hidden="true"></span>
+      <a class="btn" th:href="@{/api/report}">Report</a>
+      <a class="btn" th:href="@{/actuator/prometheus}">Metrics</a>
+      <button class="btn" type="button" onclick="cycleTheme()" title="Light → Dark → High contrast">
+        Theme: <span data-theme-label>Light</span>
+      </button>
+    </nav>
+
+    <div th:fragment="heading(label)" class="brand">
+      <a th:replace="~{fragments/brand :: mark}"></a>
+      <span th:text="${label}">menD</span>
+    </div>
+  </body>
+</html>

@@ -13,19 +13,9 @@
   <body>
     <div class="shell">
       <header class="topbar">
-        <div class="brand">
-          <a th:replace="~{fragments/brand :: mark}"></a>
-          <span>Autonomous remediation</span>
-        </div>
+        <div th:replace="~{fragments/nav :: heading('Autonomous remediation')}"></div>
         <span class="spacer"></span>
-        <a class="btn" th:href="@{/pipeline}">Pipeline</a>
-        <a class="btn" th:href="@{/learnings}">Learnings</a>
-        <a class="btn" th:href="@{/deck}">Deck</a>
-        <a class="btn" th:href="@{/repositories/new}">Register a repository</a>
-        <a class="btn" th:href="@{/api/report}">Report</a>
-        <button class="btn" onclick="cycleTheme()" title="Light → Dark → High contrast">
-          Theme: <span data-theme-label>Light</span>
-        </button>
+        <nav th:replace="~{fragments/nav :: links('overview')}"></nav>
       </header>
 
       <section class="hero">

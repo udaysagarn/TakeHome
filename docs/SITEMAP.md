@@ -10,15 +10,21 @@ Controllers: `web/DashboardController` (pages), `web/ApiController` (JSON under 
 
 ## Pages (HTML)
 
+Every page renders the same header navigation from `templates/fragments/nav.html`
+(`links(active)`): Overview, Pipeline, Learnings, Deck, Register, then Report and Metrics. The page
+you are on is marked with `aria-current="page"` instead of linking to itself. Page-specific controls
+(the repository switch on the board, Issue/Pull request on a task, Print on the deck) sit beside that
+nav, never in place of it.
+
 | Route | Template | Purpose | Linked from |
 |---|---|---|---|
-| `GET /` | `overview.html` | Landing page: what menD is, repo cards, KPIs, architecture + flywheel diagrams | brand mark on every page |
-| `GET /pipeline?repo=` | `dashboard.html` | The board — tasks by state, KPI cards, live refresh. `repo` filters to one repository; absent means all | `/`, header on every page, repo cards, task rows |
+| `GET /` | `overview.html` | Landing page: what menD is, repo cards, KPIs, architecture + flywheel diagrams | nav on every page |
+| `GET /pipeline?repo=` | `dashboard.html` | The board — tasks by state, KPI cards, live refresh. `repo` filters to one repository; absent means all | nav on every page, repo cards, task rows |
 | `GET /tasks/{id}` | `task.html` | One task: criteria contract, Devin sessions, attempts, ACU, lease, event history, verification evidence | `/pipeline` rows |
-| `GET /learnings` | `learnings.html` | What reviewers taught menD: repo-scoped and general lessons, recommended actions, retired lessons | header |
-| `GET /repositories/new` | `register.html` | Step-by-step registration instructions plus the register form | `/`, header |
+| `GET /learnings` | `learnings.html` | What reviewers taught menD: repo-scoped and general lessons, recommended actions, retired lessons | nav on every page |
+| `GET /repositories/new` | `register.html` | Step-by-step registration instructions plus the register form | nav on every page, `/` |
 | `POST /repositories` | `register.html` | Registers + validates a repository, re-renders the same page with the verdict | form on `/repositories/new` |
-| `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | header |
+| `GET /deck` | `deck.html` | The pitch as slides (What / How / Why Devin / When). Numbers come from this instance's database | nav on every page |
 | `GET /fragments/live?repo=` | `fragments/live :: live` | htmx polling target — everything below the header on the board. Not a page a human opens | htmx on `/pipeline` |
 | `RequestMapping /error` | `error.html` | Branded error page for 404/500 | Spring's error dispatch |
 

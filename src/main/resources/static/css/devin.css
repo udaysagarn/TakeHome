@@ -99,9 +99,31 @@ a:hover {
 header.topbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   padding-bottom: 20px;
   border-bottom: 1px solid rgb(var(--border-primary));
+}
+
+header.topbar .nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 20px;
+  margin-inline: 2px;
+  background: rgb(var(--border-primary));
+}
+
+.nav .btn[aria-current='page'] {
+  font-weight: 600;
+  border-color: rgb(var(--bg-accent-primary));
+  color: rgb(var(--text-primary));
+  box-shadow: inset 0 -2px 0 rgb(var(--bg-accent-primary));
 }
 
 .brand {
