@@ -24,6 +24,13 @@ spring:
   threads:
     virtual:
       enabled: true
+  task:
+    scheduling:
+      # One thread per @Scheduled loop and room to spare: the heartbeat has to renew a lease
+      # while the reconcile loop is inside a blocking Devin or GitHub call. Read by the
+      # scheduler SchedulingConfig declares, which is why that bean exists.
+      pool:
+        size: ${MEND_SCHEDULER_POOL_SIZE:8}
 
 server:
   port: ${PORT:8080}
