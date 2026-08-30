@@ -254,12 +254,12 @@ a.card:hover {
   border-color: rgb(var(--text-blue) / 0.4);
 }
 
-/* State names like CHANGES_REQUESTED are wider than a board column. */
+/* CHANGES_REQUESTED has no break point, so it has to shrink to fit a board column. */
 .card .pill {
   max-width: 100%;
-  white-space: normal;
-  word-break: break-all;
-  font-size: 10px;
+  font-size: 9.5px;
+  letter-spacing: 0.01em;
+  padding: 2px 6px;
 }
 
 .card .num {
