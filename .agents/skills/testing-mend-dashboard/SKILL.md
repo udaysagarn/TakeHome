@@ -275,7 +275,8 @@ If you bind-mount a host directory for H2 (handy when you want to seed with the 
 host) the container user may not be able to write it — the container exits with
 `AccessDeniedException: /app/data/mend.lock.db`. Give the directory to the image's own user —
 `sudo chown -R 10001 <hostdir>` (uid 10001 is `mend` in the Dockerfile; `-R`, or host-seeded database
-files stay unwritable) — or use a named docker volume instead. Do not `chmod 777` it: every local user could then rewrite the database under the test.
+files stay unwritable) — or use a named docker volume instead. Do not `chmod 777` it: every local
+user could then rewrite the database under the test.
 
 ## Seeding gotcha: enum values inside JSON columns
 
