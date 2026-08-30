@@ -42,8 +42,10 @@ docker compose down -v && ./deploy/simulate.sh   # container `mend`, port 8080
 ```
 
 The four issues settle ~50s after the script returns. This mutates the demo data as you
-test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so re-run
-`simulate.sh` before an actual demo.
+test it (the reviewer loop below turns the `UNVERIFIED` task into `SUCCEEDED`), so run the whole
+line again — including `down -v` — before an actual demo: `simulate.sh` on its own does
+`compose up` and keeps the `mend-data` volume, and the four issues are then already known, so
+nothing resets.
 
 Compose pins the container name, port 8080 and the `mend-data` volume, so a *second*
 revision has to run beside it with its own name, port and volume:
@@ -134,10 +136,43 @@ docker run -d --name mend-badcred -p 8083:8080 -v mend-badcred-data:/app/data \
 ```
 
 `/` must show the repo card with a red `NO_ACCESS` pill and "menD could not ask GitHub about
-… 401 Unauthorized … then re-validate", and `/repositories/new` the same row under "Already
+… GitHub answered 401 … then re-validate", and `/repositories/new` the same row under "Already
 registered". An empty registry with only a `could not register` WARN in the log is the
 regression (fixed once: the exception escaped the transactional `register()` and rolled the
 seeded row back).
+
+The stored `accessError` names only the *shape* of the failure (`GitHub answered 401`,
+`GitHub could not be reached`, `the request failed (X)`) because it is rendered on pages
+nothing authenticates. Raw exception text (`401 Unauthorized: [no body]`), request URLs,
+`Bearer …` or a JWT appearing on `/`, `/flows`, `/learnings`, `/repositories/new`,
+`/fragments/live` or `/api/repositories` is a leak worth reporting — grep those routes for
+those strings, do not eyeball it.
+
+## The credential alarm (banner on every page)
+
+`CredentialHealth` + `CredentialAdvice` push `credentialProblems` into every `DashboardController`
+view, and `templates/fragments/alerts.html` renders the red "Credentials failing" banner with
+"N things are stopping menD from working", a "How to fix" link and a per-repository `Re-validate`
+button that POSTs the slug to `/repositories`. Four states worth covering, each needing its own
+container (name/port/volume of its own; never touch port 8080):
+
+- bad credential (recipe above): banner names `<slug> · Not visible to menD` with the sanitized
+  reason and a `Re-validate` button. Note a container without `DEVIN_API_KEY` also reports
+  "Devin credentials are not configured", so the expected count is usually 2, not 1.
+- no `GITHUB_APP_*`/Devin env at all: exactly the two "not configured" problems, no per-repo
+  entry (suppressed on purpose — the repo still shows `NO_ACCESS` further down the page) and no
+  `Re-validate` button.
+- sandbox profile: both clients hardcode `isConfigured() == true`, so **no** banner at all.
+- Devin refused the key: the `devin_credential` row (id 1) is written by a 401/403 from a call menD
+  was already making, so a *present but invalid* key shows nothing until the first dispatch. Force
+  the state directly (a one-row insert / `update devin_credential set usable=false, reason='…'`)
+  rather than waiting on a dispatch; expect "Devin refused menD's credential" with the status and
+  **no** `Re-validate` button.
+
+Because the banner also sits inside the htmx-polled `fragments/live`, `/flows` must be watched
+for >10s (2+ polls) before concluding either way: a broken fragment would blank the board or drop
+the banner on the first swap. Confirm the polls really happened via
+`http_server_requests_seconds_count{uri="/fragments/live"}` on `/actuator/prometheus`.
 
 ## Routes (current product revision)
 
