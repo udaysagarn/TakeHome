@@ -10,6 +10,7 @@ import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -117,12 +118,19 @@ class RepositoryServiceTest {
     void aRejectedCredentialLeavesTheRepositoryRegisteredWithTheReason() {
         when(github.getRepo(SLUG))
                 .thenThrow(HttpClientErrorException.create(
-                        HttpStatus.UNAUTHORIZED, "Unauthorized", HttpHeaders.EMPTY, new byte[0], null));
+                        HttpStatus.UNAUTHORIZED,
+                        "Unauthorized",
+                        HttpHeaders.EMPTY,
+                        "{\"token\":\"eyJhbGciOi.secret\"}".getBytes(StandardCharsets.UTF_8),
+                        null));
 
         Repository repository = service.register(SLUG);
 
         assertThat(repository.getAccessState()).isEqualTo(AccessState.NO_ACCESS);
-        assertThat(repository.getAccessError()).contains("could not ask GitHub", "private key");
+        assertThat(repository.getAccessError())
+                .contains("could not ask GitHub", "GitHub answered 401", "private key")
+                // the reason is rendered on unauthenticated pages, so it names the failure only
+                .doesNotContain("eyJhbGciOi");
         assertThat(repositories.findAll()).extracting(Repository::slug).containsExactly(SLUG);
     }
 

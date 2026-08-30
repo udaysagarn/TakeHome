@@ -17,6 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * Registers the repositories menD watches and proves, at registration time, that it can actually do
@@ -106,11 +108,24 @@ public class RepositoryService {
         }
     }
 
+    /**
+     * The stored reason names the shape of the failure only. The full exception goes to the log,
+     * because {@code accessError} is rendered on pages nothing authenticates and a transport or
+     * parse error can carry request URLs, tokens and other configuration in its message.
+     */
     private String unreachable(Repository repository, RuntimeException e) {
-        String detail = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-        String message = "menD could not ask GitHub about " + repository.slug() + ": " + detail
+        return "menD could not ask GitHub about " + repository.slug() + ": " + detail(e)
                 + ". Check the GitHub App id, installation id and private key, then re-validate.";
-        return message.length() > 1024 ? message.substring(0, 1024) : message;
+    }
+
+    private static String detail(RuntimeException e) {
+        if (e instanceof HttpStatusCodeException http) {
+            return "GitHub answered " + http.getStatusCode().value();
+        }
+        if (e instanceof ResourceAccessException) {
+            return "GitHub could not be reached";
+        }
+        return "the request failed (" + e.getClass().getSimpleName() + ")";
     }
 
     private Repository interrogate(Repository repository) {
