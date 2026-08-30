@@ -20,7 +20,7 @@
   </g>
   <g font-size="13" font-weight="600" fill="#6b6b6b" letter-spacing="0.4">
     <text x="44" y="60">GITHUB (YOUR ORG)</text>
-    <text x="44" y="280">MEND CONTROL PLANE (ONE CONTAINER)</text>
+    <text x="170" y="280">MEND CONTROL PLANE (ONE CONTAINER)</text>
     <text x="44" y="620">DEVIN API (API.DEVIN.AI)</text>
   </g>
 
@@ -161,7 +161,7 @@
   <g font-size="11.5" fill="#6b6b6b">
     <text x="1258" y="142">humans review it</text>
     <text x="912" y="884">CHANGES_REQUESTED &#8212; the reviewer's words go back to the same session, in bounded rounds</text>
-    <text x="1018" y="580">retrospective becomes a lesson</text>
-    <text x="1024" y="470">lessons ride into the next prompt</text>
+    <text x="1150" y="580">retrospective becomes a lesson</text>
+    <text x="1150" y="470">lessons ride into the next prompt</text>
   </g>
 </svg>
