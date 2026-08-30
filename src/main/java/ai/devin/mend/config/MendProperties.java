@@ -15,6 +15,7 @@ public class MendProperties {
     private Github github = new Github();
     private Triage triage = new Triage();
     private Engine engine = new Engine();
+    private Verify verify = new Verify();
 
     public Devin getDevin() {
         return devin;
@@ -46,6 +47,14 @@ public class MendProperties {
 
     public void setEngine(Engine engine) {
         this.engine = engine;
+    }
+
+    public Verify getVerify() {
+        return verify;
+    }
+
+    public void setVerify(Verify verify) {
+        this.verify = verify;
     }
 
     public static class Devin {
@@ -132,6 +141,7 @@ public class MendProperties {
         private String notCandidateLabel = "menD:not-a-candidate";
         private String doneLabel = "menD:done";
         private String needsHumanLabel = "menD:needs-human";
+        private String unverifiedLabel = "menD:unverified";
         private boolean commentsEnabled = true;
 
         public String getApiUrl() {
@@ -243,6 +253,14 @@ public class MendProperties {
             return needsHumanLabel;
         }
 
+        public String getUnverifiedLabel() {
+            return unverifiedLabel;
+        }
+
+        public void setUnverifiedLabel(String unverifiedLabel) {
+            this.unverifiedLabel = unverifiedLabel;
+        }
+
         public void setNeedsHumanLabel(String needsHumanLabel) {
             this.needsHumanLabel = needsHumanLabel;
         }
@@ -341,6 +359,64 @@ public class MendProperties {
 
         public void setMaxFilesInScope(int maxFilesInScope) {
             this.maxFilesInScope = maxFilesInScope;
+        }
+    }
+
+    /** How menD decides whether to believe a pull request. */
+    public static class Verify {
+
+        /** Workflow menD asks the target repository to run when its own CI proves nothing. */
+        private String contractWorkflow = "mend-verify.yml";
+
+        /** Check runs whose name starts with this are menD's own contract runs, not repo CI. */
+        private String contractCheckPrefix = "menD";
+
+        /** Last resort: a separate Devin session that only runs the commands and reports exit codes. */
+        private boolean verifierSessionEnabled = true;
+
+        private Integer verifierAcuLimit = 3;
+
+        /** How long to wait for a tier to produce a verdict before dropping to the next one. */
+        private Duration tierTimeout = Duration.ofMinutes(45);
+
+        public String getContractWorkflow() {
+            return contractWorkflow;
+        }
+
+        public void setContractWorkflow(String contractWorkflow) {
+            this.contractWorkflow = contractWorkflow;
+        }
+
+        public String getContractCheckPrefix() {
+            return contractCheckPrefix;
+        }
+
+        public void setContractCheckPrefix(String contractCheckPrefix) {
+            this.contractCheckPrefix = contractCheckPrefix;
+        }
+
+        public boolean isVerifierSessionEnabled() {
+            return verifierSessionEnabled;
+        }
+
+        public void setVerifierSessionEnabled(boolean verifierSessionEnabled) {
+            this.verifierSessionEnabled = verifierSessionEnabled;
+        }
+
+        public Integer getVerifierAcuLimit() {
+            return verifierAcuLimit;
+        }
+
+        public void setVerifierAcuLimit(Integer verifierAcuLimit) {
+            this.verifierAcuLimit = verifierAcuLimit;
+        }
+
+        public Duration getTierTimeout() {
+            return tierTimeout;
+        }
+
+        public void setTierTimeout(Duration tierTimeout) {
+            this.tierTimeout = tierTimeout;
         }
     }
 

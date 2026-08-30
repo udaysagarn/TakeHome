@@ -237,6 +237,21 @@ public class GitHubClient {
         }
     }
 
+    /** Check runs reported against the head commit of a pull request, newest run per check. */
+    public List<GitHubDtos.CheckRun> checkRuns(String repo, int pullNumber) {
+        Optional<GitHubDtos.PullRequest> pr = getPullRequest(repo, pullNumber);
+        if (pr.isEmpty() || pr.get().head() == null) {
+            return List.of();
+        }
+        GitHubDtos.CheckRuns runs = http.get()
+                .uri("/repos/{owner}/{name}/commits/{sha}/check-runs", owner(repo), name(repo), pr.get()
+                        .head()
+                        .sha())
+                .retrieve()
+                .body(GitHubDtos.CheckRuns.class);
+        return runs == null || runs.checkRuns() == null ? List.of() : runs.checkRuns();
+    }
+
     /**
      * Aggregate CI verdict for the head commit of a pull request, combining check runs and legacy
      * commit statuses.

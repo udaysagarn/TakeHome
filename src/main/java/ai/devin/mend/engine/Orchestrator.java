@@ -8,6 +8,7 @@ import ai.devin.mend.domain.RemediationOutcome;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.SuccessCriteria;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.domain.Verification;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
 import ai.devin.mend.metrics.MendMetrics;
@@ -43,6 +44,7 @@ public class Orchestrator {
     private final SuccessCriteriaService criteriaService;
     private final PromptBuilder prompts;
     private final Notifier notifier;
+    private final Verifier verifier;
     private final ContextService context;
     private final MendMetrics metrics;
     private final ObjectMapper mapper;
@@ -57,6 +59,7 @@ public class Orchestrator {
             SuccessCriteriaService criteriaService,
             PromptBuilder prompts,
             Notifier notifier,
+            Verifier verifier,
             ContextService context,
             MendMetrics metrics,
             ObjectMapper mapper,
@@ -69,6 +72,7 @@ public class Orchestrator {
         this.criteriaService = criteriaService;
         this.prompts = prompts;
         this.notifier = notifier;
+        this.verifier = verifier;
         this.context = context;
         this.metrics = metrics;
         this.mapper = mapper;
@@ -332,12 +336,15 @@ public class Orchestrator {
             escalate(task, "The pull request URL reported by the session could not be parsed: " + task.getPrUrl());
             return;
         }
-        GitHubDtos.CiVerdict verdict = github.ciVerdict(task.getRepo(), pullNumber);
-        task.setCiStatus(verdict.name());
+        SuccessCriteria criteria = criteriaService.fromJson(task.getCriteriaJson());
+        Verification verification = verifier.verify(task, criteria, pullNumber);
+        task.setCiStatus(verification.verdict().name());
+        task.setVerificationTier(verification.tier());
+        task.setVerificationJson(writeJson(verification));
         task = taskService.save(task);
 
-        switch (verdict) {
-            case PASSED, NONE -> {
+        switch (verification.verdict()) {
+            case PASSED -> {
                 RemediationOutcome outcome = readOutcomeJson(task.getOutcomeJson());
                 if (outcome != null && !outcome.allCriteriaSatisfied()) {
                     failOrRetry(task, "The session did not assert every acceptance criterion as satisfied.");
@@ -346,26 +353,43 @@ public class Orchestrator {
                 task.setLastError(null);
                 task = taskService.save(task);
                 task = taskService.transition(
-                        task,
-                        IssueState.SUCCEEDED,
-                        verdict == GitHubDtos.CiVerdict.PASSED ? "CI green" : "no CI configured; criteria asserted",
-                        ACTOR);
+                        task, IssueState.SUCCEEDED, "verified by " + verification.provenance(), ACTOR);
+                notifier.verification(task, verification);
                 notifier.succeeded(task, outcome);
             }
             case FAILED -> {
                 if (task.getAttempts() >= props.getEngine().getMaxAttempts()) {
-                    escalate(task, "CI is red and the attempt budget (%d) is exhausted."
+                    escalate(task, "Verification is red and the attempt budget (%d) is exhausted."
                             .formatted(props.getEngine().getMaxAttempts()));
                     return;
                 }
                 task.setAttempts(task.getAttempts() + 1);
                 task = taskService.save(task);
-                devin.sendMessage(
-                        task.getSessionId(),
-                        prompts.ciFailureNudge(task.getPrUrl(), "The check runs on the head commit are failing."));
-                task = taskService.transition(task, IssueState.RUNNING, "CI red; session asked to fix it", ACTOR);
+                notifier.verification(task, verification);
+                devin.sendMessage(task.getSessionId(), prompts.ciFailureNudge(task.getPrUrl(), verification.summary()));
+                task = taskService.transition(task, IssueState.RUNNING, "verification red; session asked to fix it", ACTOR);
             }
-            case PENDING -> log.debug("CI still running for {}", task.key());
+            case UNAVAILABLE -> {
+                RemediationOutcome outcome = readOutcomeJson(task.getOutcomeJson());
+                if (outcome != null && !outcome.allCriteriaSatisfied()) {
+                    failOrRetry(task, "The session did not assert every acceptance criterion as satisfied.");
+                    return;
+                }
+                task.setLastError(null);
+                task = taskService.save(task);
+                task = taskService.transition(task, IssueState.UNVERIFIED, verification.summary(), ACTOR);
+                notifier.unverified(task, verification, outcome);
+            }
+            case PENDING -> log.debug("verification still pending for {} at tier {}", task.key(), verification.tier());
+        }
+    }
+
+    private String writeJson(Verification verification) {
+        try {
+            return mapper.writeValueAsString(verification);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("could not serialise the verification record", e);
+            return null;
         }
     }
 

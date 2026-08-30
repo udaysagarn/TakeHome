@@ -121,6 +121,37 @@ public class PromptBuilder {
                         issueNumber);
     }
 
+    /**
+     * Prompt for the last-resort verifier session. It is deliberately hostile to the change it is
+     * checking and is forbidden from touching the code, so its verdict is worth something.
+     */
+    public String verifierPrompt(String repo, String prUrl, SuccessCriteria criteria) {
+        return """
+               You are independently verifying someone else's pull request. You did NOT write this change
+               and you must not modify it: do not edit files, do not push, do not comment on GitHub, do not
+               open or update a pull request. Your only job is to run commands and report what happened.
+
+               Repository: %s
+               Pull request: %s
+
+               Check out the pull request's head commit in a clean working tree, then run exactly these
+               commands from the repository root and capture each exit code:
+               %s
+
+               These are the acceptance criteria the change claims to meet:
+               %s
+
+               Rules:
+               - Report the real exit codes. Do not fix, retry differently, or work around a failure.
+               - If a command cannot run at all (missing toolchain, needs credentials), report exit code -1
+                 and say why in its output.
+               - Judging the change as failing is a perfectly good outcome; do not try to make it pass.
+
+               Return only the structured output.
+               """
+                .formatted(repo, prUrl, bullets(criteria.verificationCommands()), bullets(criteria.acceptanceCriteria()));
+    }
+
     public String ciFailureNudge(String prUrl, String failureSummary) {
         return """
                CI is failing on your pull request %s.

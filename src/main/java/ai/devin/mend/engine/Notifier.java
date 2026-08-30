@@ -4,6 +4,7 @@ import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.RemediationOutcome;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.SuccessCriteria;
+import ai.devin.mend.domain.Verification;
 import ai.devin.mend.github.GitHubClient;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,6 +43,11 @@ public class Notifier {
                 "Not automatable: success criteria could not be established");
         github.ensureLabel(
                 repo, cfg.getNeedsHumanLabel(), "d93f0b", "Escalated from autonomous remediation to a human");
+        github.ensureLabel(
+                repo,
+                cfg.getUnverifiedLabel(),
+                "8b6914",
+                "Fix proposed but nothing independent could prove it; needs a human verdict");
     }
 
     public void criteriaAccepted(RemediationTask task, SuccessCriteria criteria) {
@@ -150,6 +156,79 @@ public class Notifier {
                 task,
                 List.of(props.getGithub().getDoneLabel()),
                 List.of(props.getGithub().getPrOpenLabel(), props.getGithub().getInProgressLabel()));
+    }
+
+    /**
+     * Posts the verification evidence on the pull request itself, where a reviewer is already looking,
+     * naming what produced the verdict so nobody has to take menD's word for it.
+     */
+    public void verification(RemediationTask task, Verification verification) {
+        Integer pull = GitHubClient.pullNumberFromUrl(task.getPrUrl());
+        if (pull == null) {
+            return;
+        }
+        String body =
+                """
+                ### Verification: %s
+
+                Checked by %s.
+
+                %s
+
+                %s%s"""
+                        .formatted(
+                                verification.verdict(),
+                                verification.provenance(),
+                                verification.summary() == null ? "" : verification.summary(),
+                                commandTable(verification),
+                                FOOTER);
+        try {
+            github.comment(task.getRepo(), pull, body);
+        } catch (RuntimeException e) {
+            log.warn("failed to comment verification on {}: {}", task.getPrUrl(), e.getMessage());
+        }
+    }
+
+    /** The honest outcome: a pull request exists, but menD will not call it a success. */
+    public void unverified(RemediationTask task, Verification verification, RemediationOutcome outcome) {
+        comment(
+                task,
+                """
+                ### Fix proposed, not independently verified
+
+                %s is open and the session asserts the acceptance criteria are met, but %s.
+
+                menD deliberately does not count this as remediated. To close the gap, either add the
+                repository's own CI to this pull request, or merge the menD verification contract workflow
+                so the agreed commands run inside your CI:
+
+                %s
+
+                **Tests** — %s%s"""
+                        .formatted(
+                                task.getPrUrl(),
+                                verification.summary() == null
+                                        ? "nothing independent could prove it"
+                                        : verification.summary(),
+                                code(
+                                        outcome == null || outcome.commandsRun().isEmpty()
+                                                ? List.of("# no verification command was run")
+                                                : outcome.commandsRun()),
+                                testEvidence(outcome),
+                                FOOTER));
+        swapLabels(
+                task,
+                List.of(props.getGithub().getUnverifiedLabel()),
+                List.of(props.getGithub().getInProgressLabel(), props.getGithub().getTriggerLabel()));
+    }
+
+    private static String commandTable(Verification verification) {
+        if (verification.commands().isEmpty()) {
+            return verification.checkUrl() == null ? "" : "Evidence: " + verification.checkUrl();
+        }
+        return verification.commands().stream()
+                .map(c -> "- %s `%s` → exit %d".formatted(c.passed() ? "✔" : "✘", c.command(), c.exitCode()))
+                .collect(Collectors.joining("\n"));
     }
 
     public void escalated(RemediationTask task, String reason) {
