@@ -20,6 +20,11 @@
         <span class="note mono" th:if="${engine.since() != null}"
               th:text="'by ' + (${engine.actor()} ?: 'unknown') + ' at ' + ${engine.since()}">by whom</span>
       </div>
+      <!--/* menD pauses itself when a credential is missing or refused, and the reason is the only
+             thing that says which one. */-->
+      <ul class="alarm-list" th:if="${engine.reason() != null}">
+        <li th:text="${engine.reason()}">why it is paused</li>
+      </ul>
     </section>
 
     <!--/* The credential alarm. Renders nothing while menD can do its job. */-->

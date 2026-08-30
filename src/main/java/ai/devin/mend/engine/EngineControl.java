@@ -26,6 +26,9 @@ public class EngineControl {
 
     private static final Logger log = LoggerFactory.getLogger(EngineControl.class);
 
+    /** The actor recorded when menD pauses itself rather than an operator doing it. */
+    public static final String SELF = "menD";
+
     /** What the engine is doing, as the dashboard and the API report it. */
     public record Status(boolean paused, boolean off, String reason, String actor, Instant since) {
 
@@ -71,6 +74,39 @@ public class EngineControl {
             log.info("engine paused by {}{}", actor, reason == null ? "" : ": " + reason);
         }
         return statusOf(pauses.saveAndFlush(row));
+    }
+
+    /**
+     * Pauses menD because it cannot work: a credential is missing or has been refused, so every
+     * dispatch from here spends the operator's attention rather than achieving anything.
+     *
+     * <p>Acts once per distinct problem. An operator who resumes while the key is still broken is
+     * not overruled fifteen seconds later — the same {@code trigger} is already recorded — but a
+     * different failure, or the same one after it cleared, pauses menD again.
+     */
+    @Transactional
+    public Status pauseBecause(String trigger, String reason) {
+        EnginePause row = row();
+        if (trigger.equals(row.getAutoTrigger())) {
+            return statusOf(row);
+        }
+        row.setAutoTrigger(trigger);
+        if (!row.isPaused()) {
+            row.pause(SELF, reason);
+            log.warn("menD paused itself: {}", reason);
+        }
+        return statusOf(pauses.saveAndFlush(row));
+    }
+
+    /** Forgets the problem menD paused itself for, so a recurrence of it pauses menD again. */
+    @Transactional
+    public void problemCleared() {
+        EnginePause row = row();
+        if (row.getAutoTrigger() == null) {
+            return;
+        }
+        row.setAutoTrigger(null);
+        pauses.saveAndFlush(row);
     }
 
     @Transactional

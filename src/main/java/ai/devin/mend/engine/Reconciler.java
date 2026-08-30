@@ -53,6 +53,7 @@ public class Reconciler {
     private final Orchestrator orchestrator;
     private final LeaseManager leases;
     private final EngineControl control;
+    private final CredentialGuard credentials;
     private final MendProperties props;
 
     public Reconciler(
@@ -60,11 +61,13 @@ public class Reconciler {
             Orchestrator orchestrator,
             LeaseManager leases,
             EngineControl control,
+            CredentialGuard credentials,
             MendProperties props) {
         this.tasks = tasks;
         this.orchestrator = orchestrator;
         this.leases = leases;
         this.control = control;
+        this.credentials = credentials;
         this.props = props;
     }
 
@@ -73,6 +76,8 @@ public class Reconciler {
         if (control.off()) {
             return;
         }
+        // A credential menD cannot use pauses it here rather than one dispatch at a time.
+        credentials.enforce();
         boolean holdNewSpend = control.paused();
         List<RemediationTask> claimable = leases.claimable(DRIVEN).stream()
                 .filter(task -> !holdNewSpend || !BEGINS_NEW_SPEND.contains(task.getState()))

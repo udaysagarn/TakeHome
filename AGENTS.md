@@ -86,7 +86,7 @@ Spring Boot 3.3 / Java 21 / Maven. Thymeleaf + htmx for the UI, no build step fo
 | Package | What lives there |
 |---|---|
 | `domain` | JPA entities and the state machine. `IssueState.canTransitionTo` is the single authority on legal transitions |
-| `engine` | `Orchestrator` (drives one task), `Reconciler` (the loop), `TaskService` (**the only writer**), `LeaseManager`, `EngineControl` (the pause switch), `PromptBuilder`, `Verifier`, `Notifier` |
+| `engine` | `Orchestrator` (drives one task), `Reconciler` (the loop), `TaskService` (**the only writer**), `LeaseManager`, `EngineControl` (the pause switch), `CredentialGuard`, `PromptBuilder`, `Verifier`, `Notifier` |
 | `triage` | `PreFilter` (free, deterministic) and `SuccessCriteriaService` (the criteria contract + scoping session) |
 | `devin` | `DevinApiClient` — session create/poll/message, structured output, ACU limits; `DevinCredentialMonitor` turns a refused call into the verdict the alarm reads |
 | `github` | `GitHubClient`, `GitHubCredentials` (App JWT → installation token), DTOs |
@@ -157,6 +157,10 @@ API and contracts written from the controllers).
   and it holds only the states whose next step creates a Devin session (`DISCOVERED`, `READY`,
   `FAILED`, and starting a repository profile). Anything already dispatched keeps being polled: a
   session frozen mid-run still spends and nobody reads the result.
+- **A broken credential pauses menD**, it does not just raise the alarm: `CredentialGuard` runs on
+  each tick and pauses on a missing or refused key, recording the trigger so an operator who resumes
+  with the key still broken is not overruled fifteen seconds later. Nothing resumes automatically —
+  menD only learns a key works by spending on it.
 - **`TaskService` is the only writer.** Anything else mutating a task is a bug.
 - **Terminal labels**: `settleLabel(...)` removes stale lifecycle labels before applying the terminal
   one, so an issue never carries `menD:changes-requested` *and* `menD:done`.

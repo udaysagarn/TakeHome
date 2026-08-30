@@ -46,6 +46,13 @@ public class EnginePause {
     @Column(name = "changed_at")
     private Instant changedAt;
 
+    /**
+     * The problem menD last paused itself for, kept after a resume so the same broken credential
+     * does not pause the engine again on the next tick and make the button look ignored.
+     */
+    @Column(name = "auto_trigger", length = 1024)
+    private String autoTrigger;
+
     public void pause(String actor, String reason) {
         this.paused = true;
         this.actor = actor;
@@ -78,5 +85,13 @@ public class EnginePause {
 
     public Instant getChangedAt() {
         return changedAt;
+    }
+
+    public String getAutoTrigger() {
+        return autoTrigger;
+    }
+
+    public void setAutoTrigger(String autoTrigger) {
+        this.autoTrigger = autoTrigger;
     }
 }
