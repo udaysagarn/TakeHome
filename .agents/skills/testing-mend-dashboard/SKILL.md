@@ -176,8 +176,9 @@ the banner on the first swap. Confirm the polls really happened via
 - `src/main/java/ai/devin/mend/web/DashboardService.java` — the `BOARD` map defines the board
   columns (currently eight: Triage, Ready, Devin working, Verifying, In review, Done, Unverified,
   Excluded / escalated) and the `Kpis` record defines every number the UI and `/api/report` show.
-- `src/main/resources/templates/deck.html` — the `/deck` pitch, 12 fragment-addressed slides. The
-  live-numbers slide (currently 7) holds the recent-finished-tasks table and, when nothing has
+- `src/main/resources/templates/deck.html` — the `/deck` pitch, 14 fragment-addressed slides in
+  seven acts (Problem, Why now, Product, Demo, Architecture, Why Devin, Extend). The
+  live-numbers slide (currently 9) holds the recent-finished-tasks table and, when nothing has
   finished, the "Label an issue `menD:fix`" empty-state callout.
 
 ## Non-mutating verification surface
@@ -245,8 +246,8 @@ binds port 8080 and the same H2 data dir.
 Chrome's omnibox drops the `:` when `localhost:8080` is typed in one go; type the full
 `http://127.0.0.1:8080/...` instead. It also drops a trailing `#N` fragment (typing
 `http://127.0.0.1:8083/deck#7` navigates to `/deck7`, a 404). Load `/deck` and page through the
-slides with `Page_Down`/`Page_Up` (click the slide body first so it has focus); the header shows
-`n / 12` and the URL fragment follows.
+slides with `Page_Down`/`Page_Up` or the arrow keys (click the slide body first so it has focus —
+that click itself advances one slide); the header shows `n / 14` and the URL fragment follows.
 
 ## Bind-mounted H2 data directories
 
