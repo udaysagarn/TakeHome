@@ -19,12 +19,15 @@
       .t  { font-size: 16px; fill: #1c1c1c; }
       .h  { font-size: 17px; font-weight: 700; fill: #101010; }
       .s  { font-size: 13px; fill: #4a4a4a; }
-      .lbl{ font-size: 13px; fill: #4a4a4a; }
+      .lbl{ font-size: 13px; fill: #3a3a3a; paint-order: stroke; stroke: #fbfaf7; stroke-width: 6px;
+            stroke-linejoin: round; }
       .flow { fill: none; stroke: #4a4a4a; stroke-width: 2; marker-end: url(#arrow); filter: url(#rough); }
       .dash { stroke-dasharray: 7 6; }
       .zone { fill: none; stroke: #b9b9b9; stroke-width: 1.5; stroke-dasharray: 3 7; }
     </style>
   </defs>
+
+  <rect x="0" y="0" width="1240" height="720" fill="#fbfaf7"/>
 
   <text x="34" y="44" class="h" font-size="24">menD — how an issue becomes a verified pull request</text>
   <text x="34" y="68" class="s" font-size="14">Devin is the executor. menD decides what is worth executing, what “done” means, and whether to believe the result.</text>
@@ -141,12 +144,12 @@
   <path class="flow" d="M438 356 V 382"/>
   <path class="flow" d="M438 484 V 510"/>
   <path class="flow" d="M250 505 C 285 505, 292 545, 318 552"/>
-  <path class="flow" d="M552 300 C 700 300, 830 250, 942 215"/>
-  <text x="700" y="272" class="lbl">POST /v3/.../sessions</text>
-  <path class="flow" d="M942 240 C 830 275, 700 330, 556 330" />
-  <text x="700" y="316" class="lbl">structured contract</text>
-  <path class="flow" d="M552 430 C 760 430, 860 390, 944 370"/>
-  <text x="672" y="424" class="lbl">dispatch on accepted contract</text>
+  <path class="flow" d="M552 300 C 700 240, 830 210, 942 200"/>
+  <text x="690" y="232" class="lbl">POST /v3/.../sessions</text>
+  <path class="flow" d="M942 258 C 830 268, 700 282, 556 300" />
+  <text x="706" y="290" class="lbl">structured contract</text>
+  <path class="flow" d="M552 430 C 760 452, 860 400, 944 372"/>
+  <text x="640" y="460" class="lbl">dispatch on accepted contract</text>
   <path class="flow dash" d="M944 400 C 800 420, 700 470, 556 470"/>
   <path class="flow dash" d="M948 520 C 820 540, 700 560, 556 566"/>
   <path class="flow" d="M552 200 H 590"/>
@@ -155,8 +158,8 @@
   <path class="flow" d="M552 590 H 590"/>
   <path class="flow" d="M330 596 C 300 596, 270 620, 254 614"/>
   <path class="flow dash" d="M330 560 C 290 560, 262 520, 252 500"/>
-  <path class="flow" d="M948 380 C 700 660, 420 690, 254 420"/>
-  <text x="560" y="686" class="lbl">Devin opens the pull request in your repository</text>
+  <path class="flow" d="M948 380 C 720 700, 420 704, 254 420"/>
+  <text x="584" y="706" class="lbl">Devin opens the pull request in your repository</text>
 
   <!-- outcome badges -->
   <rect x="286" y="228" width="26" height="26" rx="8" class="box bad"/>

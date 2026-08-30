@@ -91,6 +91,81 @@
         </tbody>
       </table>
 
+      <h2 class="section">Verification evidence</h2>
+      <div class="empty" th:if="${detail.verification == null}">
+        Nothing independent has reported on this change yet.
+        <span th:if="${t.state.name() == 'UNVERIFIED'}">
+          menD could not find any evidence outside the session that wrote the code, so this is
+          <strong>UNVERIFIED</strong> rather than remediated.
+        </span>
+      </div>
+      <table class="grid kv" th:if="${detail.verification != null}" th:with="v=${detail.verification}">
+        <tbody>
+          <tr>
+            <th>Tier</th>
+            <td>
+              <span class="pill" th:classappend="${v.tier.name() == 'NONE'} ? 'orange' : 'blue'"
+                    th:text="${v.tier}">TIER</span>
+            </td>
+            <th>Verdict</th>
+            <td>
+              <span class="pill"
+                    th:classappend="${v.verdict.name() == 'PASSED'} ? 'green'
+                          : (${v.verdict.name() == 'FAILED'} ? 'red' : 'orange')"
+                    th:text="${v.verdict}">VERDICT</span>
+            </td>
+          </tr>
+          <tr>
+            <th>Evidence came from</th>
+            <td colspan="3" th:text="${v.provenance()}">—</td>
+          </tr>
+          <tr th:if="${v.summary}">
+            <th>Summary</th>
+            <td colspan="3" class="note" th:text="${v.summary}"></td>
+          </tr>
+          <tr th:if="${v.checkUrl}">
+            <th>Check</th>
+            <td colspan="3"><a th:href="${v.checkUrl}" target="_blank" th:text="${v.checkUrl}">check</a></td>
+          </tr>
+          <tr th:if="${detail.verifierSessionUrl}">
+            <th>Verifier session</th>
+            <td colspan="3">
+              <a th:href="${detail.verifierSessionUrl}" target="_blank" class="mono"
+                 th:text="${detail.verifierSessionUrl}">session</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <table class="grid" th:if="${detail.verification != null and !detail.verification.commands.isEmpty()}">
+        <thead>
+          <tr><th>Command</th><th>Exit</th><th>Output</th></tr>
+        </thead>
+        <tbody>
+          <tr th:each="cmd : ${detail.verification.commands}">
+            <td class="mono" th:text="${cmd.command}">cmd</td>
+            <td>
+              <span class="pill" th:classappend="${cmd.passed()} ? 'green' : 'red'"
+                    th:text="${cmd.exitCode}">0</span>
+            </td>
+            <td class="note mono" th:text="${cmd.output}"></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section" th:if="${detail.reviewRounds > 0}">Human review</h2>
+      <table class="grid kv" th:if="${detail.reviewRounds > 0}">
+        <tbody>
+          <tr>
+            <th>Rounds answered</th>
+            <td th:text="${detail.reviewRounds}">0</td>
+          </tr>
+          <tr th:if="${detail.reviewerFeedbackJson}">
+            <th>Latest feedback</th>
+            <td><pre class="json" th:text="${detail.reviewerFeedbackJson}"></pre></td>
+          </tr>
+        </tbody>
+      </table>
+
       <h2 class="section">Criteria contract</h2>
       <div class="empty" th:if="${c == null}">
         No criteria were established — this issue was never sent to a remediation session.

@@ -28,14 +28,15 @@ public class ReportService {
 
         StringBuilder md = new StringBuilder();
         md.append("# Autonomous remediation report\n\n")
-                .append("Repository: `").append(props.getGithub().getRepo()).append("`  \n")
+                .append("Repositories: ").append(repositoryList(view)).append("  \n")
                 .append("Generated: ").append(Instant.now()).append("\n\n")
                 .append("## Outcomes\n\n")
                 .append("| Metric | Value |\n|---|---|\n")
                 .append(row("Issues ingested", k.total()))
                 .append(row("In flight", k.inFlight()))
                 .append(row("Pull requests opened", k.prsOpened()))
-                .append(row("Remediated (green CI)", k.succeeded()))
+                .append(row("Remediated (independently verified)", k.succeeded()))
+                .append(row("Unverified (fix opened, no independent evidence)", k.unverified()))
                 .append(row("Excluded by the criteria gate", k.excluded()))
                 .append(row("Escalated to a human", k.escalated()))
                 .append(row("Success rate", pct(k.successRatePct())))
@@ -61,10 +62,30 @@ public class ReportService {
                     .formatted(
                             r.issueNumber(),
                             r.issueUrl(),
-                            r.title(),
+                            cell(r.title()),
                             r.prUrl() == null ? "—" : r.prUrl(),
                             r.minutesToPr() == null ? "—" : r.minutesToPr() + " min",
                             r.attempts())));
+            md.append("\n");
+        }
+
+        md.append("## Unverified\n\n")
+                .append("menD opened a fix for these, but nothing independent of the session that wrote ")
+                .append("the code could prove it works, so they are **not** counted as remediated.\n\n");
+        List<DashboardService.TaskRow> unverified = view.rows().stream()
+                .filter(r -> r.state() == IssueState.UNVERIFIED)
+                .toList();
+        if (unverified.isEmpty()) {
+            md.append("_None._\n\n");
+        } else {
+            md.append("| Issue | Pull request | Why |\n|---|---|---|\n");
+            unverified.forEach(r -> md.append("| [#%d](%s) %s | %s | %s |\n"
+                    .formatted(
+                            r.issueNumber(),
+                            r.issueUrl(),
+                            cell(r.title()),
+                            r.prUrl() == null ? "—" : r.prUrl(),
+                            cell(r.note()))));
             md.append("\n");
         }
 
@@ -76,7 +97,7 @@ public class ReportService {
         } else {
             md.append("| Issue | State | Reason |\n|---|---|---|\n");
             view.exclusions().forEach(r -> md.append("| [#%d](%s) %s | %s | %s |\n"
-                    .formatted(r.issueNumber(), r.issueUrl(), r.title(), r.state(), oneLine(r.note()))));
+                    .formatted(r.issueNumber(), r.issueUrl(), cell(r.title()), r.state(), cell(r.note()))));
             md.append("\n");
         }
 
@@ -103,7 +124,17 @@ public class ReportService {
         return value == null ? "n/a" : "%.0f%%".formatted(value);
     }
 
-    private static String oneLine(String text) {
-        return text == null ? "" : text.replaceAll("\\s+", " ").trim();
+    /** Collapses whitespace and escapes pipes so a long reason cannot break the markdown table. */
+    private static String cell(String text) {
+        return text == null ? "" : text.replaceAll("\\s+", " ").replace("|", "\\|").trim();
+    }
+
+    private String repositoryList(DashboardService.DashboardView view) {
+        if (view.repositories().isEmpty()) {
+            return "`" + props.getGithub().getRepo() + "`";
+        }
+        return view.repositories().stream()
+                .map(r -> "`" + r.slug() + "`")
+                .collect(Collectors.joining(", "));
     }
 }

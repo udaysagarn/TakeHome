@@ -7,6 +7,7 @@ import ai.devin.mend.domain.SuccessCriteria;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.domain.Verification;
 import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,7 +40,9 @@ public class DashboardService {
         BOARD.put("Ready", List.of(IssueState.READY));
         BOARD.put("Devin working", List.of(IssueState.DISPATCHED, IssueState.RUNNING, IssueState.BLOCKED));
         BOARD.put("Verifying", List.of(IssueState.PR_OPEN, IssueState.VERIFYING));
+        BOARD.put("In review", List.of(IssueState.CHANGES_REQUESTED));
         BOARD.put("Done", List.of(IssueState.SUCCEEDED));
+        BOARD.put("Unverified", List.of(IssueState.UNVERIFIED));
         BOARD.put("Excluded / escalated", List.of(
                 IssueState.NOT_A_CANDIDATE, IssueState.NEEDS_HUMAN, IssueState.FAILED, IssueState.CANCELLED));
     }
@@ -127,7 +130,8 @@ public class DashboardService {
         long prsOpened = all.stream().filter(t -> t.getPrUrl() != null).count();
         long excluded = count(all, IssueState.NOT_A_CANDIDATE);
         long escalated = count(all, IssueState.NEEDS_HUMAN) + count(all, IssueState.FAILED);
-        long attempted = succeeded + escalated;
+        long unverified = count(all, IssueState.UNVERIFIED);
+        long attempted = succeeded + escalated + unverified;
 
         Double successRate = attempted == 0 ? null : (100.0 * succeeded) / attempted;
         Long medianToPr = median(all.stream()
@@ -142,8 +146,8 @@ public class DashboardService {
         Double exclusionRate = gated == 0 ? null : (100.0 * excluded) / gated;
 
         return new Kpis(
-                all.size(), inFlight, prsOpened, succeeded, excluded, escalated, successRate, medianToPr,
-                acu, acuPerSuccess, exclusionRate, succeeded * ENGINEER_HOURS_PER_FIX);
+                all.size(), inFlight, prsOpened, succeeded, unverified, excluded, escalated, successRate,
+                medianToPr, acu, acuPerSuccess, exclusionRate, succeeded * ENGINEER_HOURS_PER_FIX);
     }
 
     public List<BoardColumn> board(List<RemediationTask> all) {
@@ -223,8 +227,24 @@ public class DashboardService {
                     t.getPrOpenedAt(),
                     t.getCompletedAt(),
                     lease(t, now),
+                    verification(t),
+                    t.getVerificationTier(),
+                    t.getVerifierSessionUrl(),
+                    t.getReviewRounds(),
+                    t.getFeedbackJson(),
                     timeline(taskId));
         });
+    }
+
+    private Verification verification(RemediationTask t) {
+        if (t.getVerificationJson() == null || t.getVerificationJson().isBlank()) {
+            return null;
+        }
+        try {
+            return json.readValue(t.getVerificationJson(), Verification.class);
+        } catch (JsonProcessingException e) {
+            return null;
+        }
     }
 
     private SuccessCriteria criteria(RemediationTask t) {
@@ -332,6 +352,7 @@ public class DashboardService {
             long inFlight,
             long prsOpened,
             long succeeded,
+            long unverified,
             long excluded,
             long escalated,
             Double successRatePct,
@@ -369,6 +390,11 @@ public class DashboardService {
             Instant prOpenedAt,
             Instant completedAt,
             Lease lease,
+            Verification verification,
+            Verification.Tier verificationTier,
+            String verifierSessionUrl,
+            int reviewRounds,
+            String reviewerFeedbackJson,
             List<TaskEvent> timeline) {}
 
     public record BoardColumn(String name, int count, List<TaskRow> tasks) {}

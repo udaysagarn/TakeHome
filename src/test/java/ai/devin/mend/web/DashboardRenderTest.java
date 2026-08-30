@@ -14,6 +14,7 @@ import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.RepositoryRegistry;
 import ai.devin.mend.domain.Retrospective;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.domain.Verification;
 import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.learning.LearningService;
 import java.util.List;
@@ -78,6 +79,24 @@ class DashboardRenderTest {
         RemediationTask excluded = task(102, "Rethink the chart picker");
         excluded.setExclusionReason("No verification commands could be derived, so a fix could not be proven.");
         taskService.transition(taskService.save(excluded), IssueState.NOT_A_CANDIDATE, "gate failed", "test");
+
+        RemediationTask unverified = task(104, "fix(charts): guard against a null time grain");
+        unverified.setPrUrl("https://github.com/acme/superset/pull/11");
+        unverified.setCiStatus("UNAVAILABLE");
+        unverified.setVerificationTier(Verification.Tier.NONE);
+        unverified.setVerificationJson(
+                """
+                {"tier":"NONE","verdict":"UNAVAILABLE",\
+                "summary":"The repository has no required checks and the contract workflow is not merged.",\
+                "commands":[],"check_url":null}""");
+        unverified.setReviewRounds(1);
+        unverified.setFeedbackJson("{\"body\":\"please add a regression test\"}");
+        unverified = taskService.save(unverified);
+        unverified = taskService.transition(unverified, IssueState.READY, "criteria", "test");
+        unverified = taskService.transition(unverified, IssueState.DISPATCHED, "session", "test");
+        unverified = taskService.transition(unverified, IssueState.PR_OPEN, "pr", "test");
+        unverified = taskService.transition(unverified, IssueState.VERIFYING, "verifying", "test");
+        taskService.transition(unverified, IssueState.UNVERIFIED, "no independent evidence", "test");
 
         RemediationTask running = task(103, "fix(sqllab): stop swallowing driver errors");
         running.setSessionUrl("https://app.devin.ai/sessions/def");
@@ -201,6 +220,102 @@ class DashboardRenderTest {
                 .andReturn()
                 .getResponse()
                 .getContentAsString();
-        assertThat(report).contains("# Autonomous remediation report", "Remediated (green CI)", "issues/101");
+        assertThat(report)
+                .contains(
+                        "# Autonomous remediation report",
+                        "Remediated (independently verified)",
+                        "issues/101");
+    }
+
+    @Test
+    void anUnverifiedTaskIsOnTheBoardAndCountedApartFromRemediated() throws Exception {
+        String html = mvc.perform(get("/pipeline"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Unverified")
+                .contains("fix(charts): guard against a null time grain")
+                .contains("UNVERIFIED");
+
+        // one succeeded, one unverified, nothing escalated: honest rate is 50%, not 100%.
+        mvc.perform(get("/api/summary"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"unverified\":1")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"successRatePct\":50.0")));
+    }
+
+    @Test
+    void theBoardHasAColumnForEveryStateAnIssueCanRestIn() throws Exception {
+        String html = mvc.perform(get("/pipeline"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).contains("In review", "Unverified", "Excluded / escalated");
+    }
+
+    @Test
+    void theTaskPageShowsWhyAFixIsUnverifiedAndWhatTheReviewerSaid() throws Exception {
+        long id = tasks.findAll().stream()
+                .filter(t -> t.getIssueNumber() == 104)
+                .findFirst()
+                .orElseThrow()
+                .getId();
+        String html = mvc.perform(get("/tasks/" + id))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Verification evidence")
+                .contains("NONE")
+                .contains("UNAVAILABLE")
+                .contains("nothing independent of the session that wrote the code")
+                .contains("The repository has no required checks")
+                .contains("Human review")
+                .contains("please add a regression test");
+    }
+
+    @Test
+    void theReportNamesEveryRegisteredRepositoryAndListsUnverifiedWorkSeparately() throws Exception {
+        String report = mvc.perform(get("/api/report"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(report)
+                .contains("`acme/superset`", "`acme/airflow`")
+                .contains("## Unverified")
+                .contains("pull/11");
+    }
+
+    @Test
+    void aReasonContainingAPipeCannotBreakTheReportTable() throws Exception {
+        RemediationTask piped = task(105, "Investigate flaky test");
+        piped.setExclusionReason("Needs a human | the acceptance bar is a judgement call");
+        taskService.transition(taskService.save(piped), IssueState.NOT_A_CANDIDATE, "gate", "test");
+
+        String report = mvc.perform(get("/api/report"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(report).contains("Needs a human \\| the acceptance bar");
+    }
+
+    @Test
+    void anUnknownTaskGetsTheProductsOwn404RatherThanWhitelabel() throws Exception {
+        mvc.perform(get("/tasks/999999")).andExpect(status().isNotFound());
+
+        // MockMvc resolves the 404 without the container's error dispatch, so render what a real
+        // servlet container would forward to next.
+        String html = mvc.perform(get("/error")
+                        .requestAttr("jakarta.servlet.error.status_code", 404)
+                        .requestAttr("jakarta.servlet.error.request_uri", "/tasks/999999"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html)
+                .contains("Nothing here")
+                .contains("/css/devin.css")
+                .doesNotContain("Whitelabel Error Page");
     }
 }
