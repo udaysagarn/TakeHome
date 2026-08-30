@@ -273,8 +273,9 @@ slides with `Page_Down`/`Page_Up` (click the slide body first so it has focus); 
 
 If you bind-mount a host directory for H2 (handy when you want to seed with the H2 Shell from the
 host) the container user may not be able to write it — the container exits with
-`AccessDeniedException: /app/data/mend.lock.db`. `chmod 777 <hostdir>` before starting, or use a
-named docker volume instead.
+`AccessDeniedException: /app/data/mend.lock.db`. Give the directory to the image's own user —
+`sudo chown 10001 <hostdir>` (uid 10001 is `mend` in the Dockerfile) — or use a named docker volume
+instead. Do not `chmod 777` it: every local user could then rewrite the database under the test.
 
 ## Seeding gotcha: enum values inside JSON columns
 
