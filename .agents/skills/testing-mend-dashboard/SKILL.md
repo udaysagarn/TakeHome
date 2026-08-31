@@ -125,6 +125,49 @@ arrow keys/PageUp/PageDown/Home/End all work, and a **click anywhere in the righ
 slide advances it** — so clicking the slide "to give it focus" silently moves you on; press `Home`
 after clicking. Keyboard navigation needs no focus at all (the listener is on `document`).
 
+Slide order changes as the deck grows, so resolve a slide by heading, not by number: read
+`templates/deck.html` (`grep -n 'class="slide\|<h2'`) and count the sections, then confirm with the
+header `n / N` after paging there. Chrome's omnibox eats a trailing `#N`, so `Page_Down` from slide 1
+is the reliable way in.
+
+### Diagram width and the full-bleed breakout rule
+
+`deck.css` has `.slide { max-width: 1240px; margin: 0 auto; padding: 40px clamp(24px,6vw,96px) … }`
+and a `@media (max-width:1400px)` rule that lets `.deck .diagram` break out of that column
+(`width: calc(100vw - 40px); margin-left: calc(50% - 50vw + 20px)`). Two things to test every time
+that rule is touched:
+
+- **Horizontal overflow.** A negative `margin-left` *without a matching negative `margin-right`*
+  leaves the slide's `padding-right` after the child's right edge, so the slide's `scrollWidth`
+  exceeds its `clientWidth` by exactly `|margin-left|` = `clamp(24,6vw,96) - 20` px — 28px at a
+  800px viewport, 40.5px at 1008px, 64px at 1400px. Symptom: a horizontal scrollbar along the
+  bottom of the window (it belongs to `.slide`, which is `overflow-y:auto`, not to the diagram card,
+  whose own `overflow-x:auto` never fires because the SVG is scaled to 100%), and the card's left
+  edge clipping once you scroll right. Prove it is the breakout and not the SVG by comparing a
+  text-only slide at the same width — it must have no scrollbar. Likely fix to suggest: symmetric
+  `margin-left`/`margin-right: calc(50% - 50vw + 20px)` with `width: auto`, or `overflow-x: hidden`
+  on `.slide`.
+- **The ≥1401px fallback.** Above the breakpoint the diagram must sit centred inside the 1240px
+  column. Resize the window with `wmctrl -r :ACTIVE: -e 0,0,0,<w>,<h>` (exact widths; maximise only
+  for the wide case) and re-check both diagram slides.
+
+### Judging an SVG polish change: compare old vs new at the rendered width
+
+The scaled-down `<object>` makes browser-scale screenshots useless for caption-overflow claims, and
+"looks fine now" proves nothing on its own. Extract both revisions and render them side by side at
+the width the deck actually gives them (~950px in a 1024px window):
+
+```
+git show HEAD~1:src/main/resources/static/img/flywheel.svg > /tmp/cmp/old.svg
+git show HEAD:src/main/resources/static/img/flywheel.svg   > /tmp/cmp/new.svg
+# one throwaway HTML with two <object … width="950"> and open file:///tmp/cmp/index.html
+```
+
+Then `zoom` at full resolution on each box. Pair it with a source-side geometry check, which is
+cheaper and exact — parse the `<rect>`s and each `class="spin"` arc's endpoints and print the gap to
+the nearest rect (a healthy clockwise wheel is a uniform 2–3px on all 12 endpoints and radius 265;
+a mix of `0.00` and `28.00`/`42.90` means arrowheads touching some boxes and floating off others).
+
 ## Seeding demo data into H2 directly
 
 This is the only way to get task rows without dispatching real work, so every board, task-page and
