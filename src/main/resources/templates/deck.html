@@ -26,85 +26,70 @@
       <section class="slide title-slide">
         <span class="act">Problem</span>
         <h1>Every engineering team carries a backlog of work that is too small to schedule and too real to close.</h1>
-        <p class="lede">
-          menD is an event-driven control plane that watches your repositories, decides which of that
-          work has a definition of done a machine can check, and uses Devin to do it — with the
-          evidence attached, or with the honest admission that nothing could prove it.
-        </p>
-        <p class="byline">
-          Every number and every link in this deck is read from the instance serving it, so the pitch
-          cannot drift from what the board says.
-        </p>
-      </section>
-
-      <section class="slide">
-        <span class="act">Problem</span>
-        <h2>The problem is not that the work is hard. It is that the work never gets picked.</h2>
-        <div class="two-col">
-          <div>
-            <h3>What actually happens today</h3>
-            <ul class="tight">
-              <li>A flaky lockfile pin, a deprecated call, a missing test — each an hour of work.</li>
+        <ul class="tight">
+              <li>A flaky lockfile pin, a deprecated call, a missing test — each a few hours of work.</li>
               <li>Each still costs a context switch, a review, a CI wait, a merge.</li>
               <li>So it waits behind the roadmap, and the backlog only grows.</li>
-              <li>When it is finally picked up, the person doing it is your most expensive engineer
-                  on their least valuable day.</li>
+              <li>When it is finally picked up, the person doing it is your most expensive engineer on their least impactful day.</li>
             </ul>
-          </div>
-          <div>
-            <h3>Why generic automation has not solved it</h3>
-            <ul class="tight">
-              <li>Bots that only open PRs move the work, they do not finish it.</li>
-              <li>Rules-based tooling cannot tell a bounded issue from one that needs a product decision.</li>
-              <li>Nothing in the usual stack can read the issue, write the fix, run the tests and
-                  answer the reviewer.</li>
-            </ul>
-            <p class="callout">
-              The hard part was never the code. It is the <em>judgement</em> about which issues are safe
-              to automate, and the <em>proof</em> that the fix is real.
-            </p>
-          </div>
-        </div>
       </section>
+
 
       <!-- ACT 2 — WHY NOW -->
       <section class="slide">
         <span class="act">Why now</span>
         <h2>The backlog just stopped being cosmetic.</h2>
         <ul class="tight big">
-          <li>Frontier models are finding real vulnerabilities in code people have read for decades — in
+          <li>Frontier models are finding real vulnerabilities in code people have used for decades — in
               April 2026 a frontier model autonomously found and exploited an RCE in FreeBSD's NFS server, a
               DoS in OpenBSD, a flaw in FFmpeg, and a 23-year-old heap overflow in the Linux kernel.</li>
-          <li>Disclosures are climbing faster than human review scales.</li>
+          <li>ZeroDays and Disclosures are climbing faster than human review scales.</li>
           <li>The fixes are small, well understood — and never scheduled.</li>
           <li>That gap is what menD closes.</li>
         </ul>
       </section>
 
+      <section class="slide">
+        <span class="act">Hasn't this been solved?</span>
+        <h2>What's missing?</h2>
+         <ul class="tight">
+              <li>Bots that only open PRs move the work, they do not finish it.</li>
+              <li>Rules-based tooling cannot tell a bounded issue from one that needs a product decision.</li>
+              <li>Nothing in the usual stack can read the issue, write the fix, run the tests and
+                  answer the reviewer.</li>
+            </ul>
+            <p class="callout">
+              The hard part was never the code. It was prioritization and <em>judgement</em> about which issues are safe
+              to automate, and the <em>proof</em> that the fix is real.
+            </p>
+
+      </section>
+  
       <!-- ACT 3 — PRODUCT -->
       <section class="slide">
         <span class="act">Product</span>
-        <h2>What menD is.</h2>
+        <h2>menD</h2>
         <p class="lede">
-          An event-driven control plane that turns a GitHub label into a verified pull request.
+          menD is an event-driven control plane powered by Devin that watches your repositories, identifies which of that work has a machine verifiable definition of done, and uses Devin to raise the PR, leverages CI tests and Devin Review to validate the change, escalates to human when required, provides visibility throughout and leverages feedback loops to improve.
         </p>
         <div class="two-col">
           <div>
-            <h3>Devin is the engineer</h3>
-            <ul class="tight">
-              <li>Reads the issue against the repository and decides whether it is finishable.</li>
-              <li>Writes the fix and the test, and opens the pull request.</li>
-              <li>Answers the reviewer, in the session that wrote the change.</li>
-            </ul>
-          </div>
-          <div>
-            <h3>menD is everything around the engineer</h3>
+            <h3>menD is Orchestrator and Oversight</h3>
             <ul class="tight">
               <li>Candidacy, ACU budgets, leases with deadlines, bounded retries.</li>
               <li>Independent verification, review response, and an append-only audit trail.</li>
-              <li>One durable row per issue — the database is the system of record, not the labels.</li>
+              <li>Visibility into the process from issue to resolution.</li>
             </ul>
           </div>
+          <div>
+            <h3>Devin is the engineer and reviewer</h3>
+            <ul class="tight">
+              <li>Reads the issue against the repository and decides whether it is finishable.</li>
+              <li>Writes the fix and the test, and opens the pull request.</li>
+              <li>Reviews the PR independently if required.</li>
+              <li>Answers the reviewer, in the session that wrote the change.</li>
+            </ul>
+          </div>          
         </div>
       </section>
 
@@ -133,7 +118,7 @@
           </div>
         </div>
         <p class="callout wide">
-          Those two principles are what make the rest of it safe to leave running.
+          Those two principles are what make it safe.
         </p>
       </section>
 
@@ -211,14 +196,15 @@
 
       <section class="slide">
         <span class="act">Architecture</span>
-        <h2>Four decisions your senior engineers will ask about.</h2>
-        <div class="cards four">
+        <h2>Key Decisions</h2>
+        <div class="cards three">
           <div class="card">
-            <h3>The database is the system of record — not GitHub labels</h3>
+            <h3>Repositories are indexed once, not re-read per issue</h3>
             <p>
-              Labels are not transactional, are rate-limited, and hold no history. They are a
-              human-visible <em>projection</em> of state. The truth is a row: state, contract, session
-              ids, attempts, evidence, plus an append-only event per transition.
+              At registration menD validates access and builds a profile — stack, commands, layout,
+              tests, CI, PR conventions, plus <code>AGENTS.md</code>, <code>CLAUDE.md</code>,
+              <code>codex.md</code> and <code>.cursor/rules</code>. Pushes refresh only the slices the
+              changed paths touch.
             </p>
           </div>
           <div class="card">
@@ -228,15 +214,6 @@
               <code>lease_expires_at</code>, <code>eta_at</code> — and renews by heartbeat. Two workers
               can never hold one issue; a worker that dies has its lease expire and any other stateless
               worker resumes from the persisted state.
-            </p>
-          </div>
-          <div class="card">
-            <h3>Repositories are indexed once, not re-read per issue</h3>
-            <p>
-              At registration menD validates access and builds a profile — stack, commands, layout,
-              tests, CI, PR conventions, plus <code>AGENTS.md</code>, <code>CLAUDE.md</code>,
-              <code>codex.md</code> and <code>.cursor/rules</code>. Pushes refresh only the slices the
-              changed paths touch.
             </p>
           </div>
           <div class="card">
@@ -366,25 +343,10 @@
       <!-- ACT 7 — WHAT'S NEXT -->
       <section class="slide">
         <span class="act">What's next</span>
-        <h2>What this is not, yet.</h2>
-        <ul class="tight big">
-          <li>Single-node by deployment, not by design — the leases are already the hard part; running
-              replicas needs Postgres and nothing else.</li>
-          <li>The contract workflow has to be merged into each target repository before it can be the
-              verification tier, which is deliberate: the harness is auditable in your repo, not hidden
-              in ours.</li>
-          <li>Promotion of a general lesson into org-wide Devin knowledge is a recommendation for a
-              human to accept. Nothing writes to your organisation's knowledge automatically.</li>
-          <li>Cost control is a per-task ACU budget and bounded attempts — real, but blunt.</li>
-        </ul>
-      </section>
-
-      <section class="slide">
-        <span class="act">What's next</span>
-        <h2>How I would extend this in a real engagement.</h2>
+        <h2>Where do we go from here?</h2>
         <div class="cards">
           <div class="card">
-            <h3>Weeks 1–2 · Prove it on one repository</h3>
+            <h3>Month 1 · Prove it on one repository</h3>
             <p>
               Register the repository, merge the contract workflow, and run in shadow mode: menD scopes
               and declines, but a human dispatches every remediation. The output is a candidacy
@@ -392,20 +354,20 @@
             </p>
           </div>
           <div class="card">
-            <h3>Weeks 3–6 · Widen the intake</h3>
+            <h3>Month 2 · Expand Issue Coverage</h3>
+            <p>
+              Leverage the lessons learned to expand to mission critical systems and security patches.
+            </p>
+          </div>
+          <div class="card">
+            <h3>Month 3 · Open the Gates</h3>
             <p>
               Beyond labelled issues: failing flaky tests, dependency advisories, deprecation warnings,
               lint debt with an owner. Each becomes an issue source with its own gate and its own
               budget.
             </p>
           </div>
-          <div class="card">
-            <h3>Quarter 2 · Make it a platform surface</h3>
-            <p>
-              Postgres and replicas, per-team budgets and quotas, SSO on the board, and the leadership
-              report piped into whatever your VPs already read on Monday morning.
-            </p>
-          </div>
+
           <div class="card">
             <h3>Quarter 2 · Lessons become playbooks</h3>
             <p>
@@ -427,7 +389,7 @@
 
       <section class="slide title-slide">
         <span class="act">What's next</span>
-        <h1>The pitch, in one sentence.</h1>
+        <h1>Thank You</h1>
         <p class="lede">
           Give menD the work your team keeps deferring, and it will either return a pull request with
           evidence attached, or tell you plainly that a human is needed — and it gets cheaper at both
@@ -438,13 +400,9 @@
           <a class="btn" th:href="@{/learnings}">See what reviewers have taught it</a>
           <a class="btn" th:href="@{/repositories/new}">Connect a repository</a>
         </div>
-      </section>
-
-      <section class="slide title-slide">
-        <span class="act">What's next</span>
-        <h1>Thank You</h1>
         <p class="lede">Built with ❤️ using Devin</p>
       </section>
+
     </main>
 
     <script th:src="@{/js/deck.js}"></script>
