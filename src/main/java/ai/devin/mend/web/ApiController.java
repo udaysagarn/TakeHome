@@ -36,6 +36,7 @@ public class ApiController {
     private final Orchestrator orchestrator;
     private final GitHubClient github;
     private final RepositoryService registry;
+    private final RegisterRepositoryCommand registration;
     private final LearningService learnings;
     private final EngineControl engine;
 
@@ -47,10 +48,12 @@ public class ApiController {
             Orchestrator orchestrator,
             GitHubClient github,
             RepositoryService registry,
+            RegisterRepositoryCommand registration,
             LearningService learnings,
             EngineControl engine) {
         this.engine = engine;
         this.registry = registry;
+        this.registration = registration;
         this.learnings = learnings;
         this.dashboard = dashboard;
         this.report = report;
@@ -142,10 +145,16 @@ public class ApiController {
         return registry.all();
     }
 
-    /** Registers a repository and returns the validation verdict, successful or not. */
+    /**
+     * Registers a repository and returns the validation verdict, successful or not: a {@link
+     * Repository} when the slug was accepted, an {@link ApiError} with {@code 400} when it was not.
+     */
     @PostMapping("/repositories")
-    public Repository registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
-        return registry.register(request.repo());
+    public ResponseEntity<Object> registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
+        return switch (registration.execute(request.repo())) {
+            case RegisterRepositoryCommand.Registered ok -> ResponseEntity.ok(ok.repository());
+            case RegisterRepositoryCommand.Rejected no -> ResponseEntity.badRequest().body(new ApiError(no.reason()));
+        };
     }
 
     /** Re-runs access validation, for retrying after a permission is granted. */
