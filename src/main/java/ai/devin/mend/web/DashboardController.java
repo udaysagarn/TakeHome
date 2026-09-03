@@ -42,6 +42,7 @@ public class DashboardController {
 
     private final DashboardService dashboard;
     private final RepositoryService registry;
+    private final RegisterRepositoryCommand registration;
     private final LearningService learnings;
     private final CredentialHealth credentials;
     private final EngineControl engine;
@@ -50,12 +51,14 @@ public class DashboardController {
     public DashboardController(
             DashboardService dashboard,
             RepositoryService registry,
+            RegisterRepositoryCommand registration,
             LearningService learnings,
             CredentialHealth credentials,
             EngineControl engine,
             MendProperties props) {
         this.dashboard = dashboard;
         this.registry = registry;
+        this.registration = registration;
         this.learnings = learnings;
         this.credentials = credentials;
         this.engine = engine;
@@ -138,11 +141,9 @@ public class DashboardController {
     /** Registers from the form, then shows the same page with the validation verdict. */
     @PostMapping("/repositories")
     public String register(@RequestParam String repo, Model model) {
-        try {
-            Repository registered = registry.register(repo);
-            model.addAttribute("registered", registered);
-        } catch (IllegalArgumentException e) {
-            model.addAttribute("error", e.getMessage());
+        switch (registration.execute(repo)) {
+            case RegisterRepositoryCommand.Registered ok -> model.addAttribute("registered", ok.repository());
+            case RegisterRepositoryCommand.Rejected no -> model.addAttribute("error", no.reason());
         }
         // The alarm was computed before this handler ran, so a repository that just validated would
         // still be announced as failing on the page reporting its success.

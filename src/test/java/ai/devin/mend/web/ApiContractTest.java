@@ -1,5 +1,6 @@
 package ai.devin.mend.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -201,6 +202,35 @@ class ApiContractTest {
                         .content("{\"repo\":\"notaslug\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("expected owner/name, got: notaslug"));
+    }
+
+    @Test
+    void registrationWithoutASlugIsABadRequestNotAServerError() throws Exception {
+        mvc.perform(post("/api/repositories").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("repo: repo is required"));
+        mvc.perform(post("/api/repositories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"repo\":\"   \"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("repo: repo is required"));
+        mvc.perform(post("/api/repositories").contentType(MediaType.APPLICATION_JSON).content("{not json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("request body is not valid JSON"));
+        mvc.perform(get("/api/repositories")).andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void cancellingAFinishedTaskIsAConflictWithAReasonNotAServerError() throws Exception {
+        RemediationTask done = new RemediationTask(SLUG, 109, "t", "https://github.com/acme/superset/issues/109", "menD:fix");
+        done.setState(IssueState.SUCCEEDED);
+        done = tasks.save(done);
+
+        mvc.perform(post("/api/tasks/" + done.getId() + "/cancel"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value(
+                        "illegal transition for " + SLUG + "#109: SUCCEEDED -> CANCELLED"));
+        assertThat(tasks.findById(done.getId()).orElseThrow().getState()).isEqualTo(IssueState.SUCCEEDED);
     }
 
     @Test

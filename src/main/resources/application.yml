@@ -51,7 +51,7 @@ logging:
   level:
     ai.devin.mend: INFO
   pattern:
-    console: "%d{HH:mm:ss.SSS} %-5level [%logger{20}] %msg%n"
+    console: "%d{HH:mm:ss.SSS} %-5level [%logger{20}] [%X{taskKey:-}] %msg%n"
 
 mend:
   devin:

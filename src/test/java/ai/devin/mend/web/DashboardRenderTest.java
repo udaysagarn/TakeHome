@@ -2,6 +2,7 @@ package ai.devin.mend.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -223,6 +224,17 @@ class DashboardRenderTest {
                 .getResponse()
                 .getContentAsString();
         assertThat(html).contains("Issues", "Pull requests", "Contents", "Checks", "Metadata", "menD:fix");
+    }
+
+    @Test
+    void theRegistrationFormRejectsAMalformedSlugWithTheSameReasonTheApiGives() throws Exception {
+        String html = mvc.perform(post("/repositories").param("repo", "notaslug"))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        assertThat(html).contains("expected owner/name, got: notaslug");
+        assertThat(repositories.count()).isEqualTo(2);
     }
 
     @Test

@@ -19,6 +19,9 @@ import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -27,6 +30,8 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -98,6 +103,44 @@ class OrchestratorFailureTest {
         orchestrator.advance(reload(task));
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.CANCELLED);
+    }
+
+    @Test
+    void everyLogLineWrittenWhileAdvancingCarriesTheTaskKeyAndTheMdcIsClearedAfterwards() {
+        RemediationTask task = discover(30);
+        when(github.getIssue(REPO, 30)).thenReturn(Optional.empty());
+        Logger orchestratorLog = (Logger) LoggerFactory.getLogger(Orchestrator.class);
+        Logger taskServiceLog = (Logger) LoggerFactory.getLogger(TaskService.class);
+        ListAppender<ILoggingEvent> captured = new ListAppender<>();
+        captured.start();
+        orchestratorLog.addAppender(captured);
+        taskServiceLog.addAppender(captured);
+        try {
+            orchestrator.advance(reload(task));
+        } finally {
+            orchestratorLog.detachAppender(captured);
+            taskServiceLog.detachAppender(captured);
+        }
+
+        assertThat(captured.list)
+                .isNotEmpty()
+                .allSatisfy(event -> assertThat(event.getMDCPropertyMap())
+                        .containsEntry(Orchestrator.MDC_TASK_KEY, REPO + "#30")
+                        .containsEntry(Orchestrator.MDC_REPO, REPO));
+        assertThat(MDC.get(Orchestrator.MDC_TASK_KEY)).isNull();
+        assertThat(MDC.get(Orchestrator.MDC_REPO)).isNull();
+    }
+
+    @Test
+    void theMdcIsClearedEvenWhenAdvancingFails() {
+        RemediationTask task = discover(29);
+        when(github.getIssue(REPO, 29)).thenThrow(new IllegalStateException("github down"));
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getLastError()).contains("github down");
+        assertThat(MDC.get(Orchestrator.MDC_TASK_KEY)).isNull();
+        assertThat(MDC.get(Orchestrator.MDC_REPO)).isNull();
     }
 
     @Test

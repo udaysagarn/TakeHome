@@ -1,6 +1,7 @@
 package ai.devin.mend.devin;
 
 import ai.devin.mend.config.MendProperties;
+import ai.devin.mend.exception.DevinApiException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -152,12 +153,6 @@ public class DevinApiClient {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new DevinApiException("interrupted while backing off", e);
-        }
-    }
-
-    public static class DevinApiException extends RuntimeException {
-        public DevinApiException(String message, Throwable cause) {
-            super(message, cause);
         }
     }
 }

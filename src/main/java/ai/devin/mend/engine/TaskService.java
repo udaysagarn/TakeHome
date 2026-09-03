@@ -5,6 +5,7 @@ import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
+import ai.devin.mend.exception.IllegalStateTransitionException;
 import ai.devin.mend.metrics.MendMetrics;
 import java.time.Clock;
 import java.time.Instant;
@@ -108,11 +109,5 @@ public class TaskService {
     @Transactional
     public RemediationTask save(RemediationTask task) {
         return tasks.save(task);
-    }
-
-    public static class IllegalStateTransitionException extends RuntimeException {
-        public IllegalStateTransitionException(String key, IssueState from, IssueState to) {
-            super("illegal transition for " + key + ": " + from + " -> " + to);
-        }
     }
 }
