@@ -78,11 +78,6 @@ public enum IssueState {
         return !isTerminal();
     }
 
-    /** True when a Devin session is expected to be alive in this state. */
-    public boolean holdsSession() {
-        return this == CRITERIA_PENDING || this == DISPATCHED || this == RUNNING || this == BLOCKED;
-    }
-
     public boolean canTransitionTo(IssueState next) {
         if (next == CANCELLED) {
             return isActive();

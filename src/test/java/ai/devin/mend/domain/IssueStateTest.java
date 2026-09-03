@@ -37,6 +37,14 @@ class IssueStateTest {
     }
 
     @Test
+    void activeIsTheComplementOfTerminal() {
+        Arrays.stream(IssueState.values())
+                .forEach(state -> assertThat(state.isActive())
+                        .as("%s", state)
+                        .isEqualTo(!state.isTerminal()));
+    }
+
+    @Test
     void happyPathIsReachable() {
         assertThat(IssueState.DISCOVERED.canTransitionTo(IssueState.CRITERIA_PENDING)).isTrue();
         assertThat(IssueState.CRITERIA_PENDING.canTransitionTo(IssueState.READY)).isTrue();
