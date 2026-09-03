@@ -2,6 +2,7 @@ package ai.devin.mend.triage;
 
 import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.SuccessCriteria;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -51,7 +52,7 @@ public class SuccessCriteriaService {
         }
         try {
             return Optional.of(mapper.readValue(matcher.group(1).strip(), SuccessCriteria.class));
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             log.warn("issue contains a devin-criteria block that failed to parse: {}", e.getMessage());
             return Optional.empty();
         }
@@ -101,7 +102,7 @@ public class SuccessCriteriaService {
     public String toJson(SuccessCriteria criteria) {
         try {
             return mapper.writeValueAsString(criteria);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("failed to serialise criteria", e);
         }
     }
@@ -109,7 +110,7 @@ public class SuccessCriteriaService {
     public SuccessCriteria fromJson(String json) {
         try {
             return mapper.readValue(json, SuccessCriteria.class);
-        } catch (Exception e) {
+        } catch (JsonProcessingException e) {
             throw new IllegalStateException("failed to deserialise criteria", e);
         }
     }

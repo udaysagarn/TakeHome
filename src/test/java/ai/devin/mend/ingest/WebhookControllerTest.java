@@ -107,6 +107,17 @@ class WebhookControllerTest {
     }
 
     @Test
+    void aPayloadSignedWithTheWrongSecretIsRejected() throws Exception {
+        mvc.perform(post("/webhooks/github")
+                        .header("X-GitHub-Event", "issues")
+                        .header("X-Hub-Signature-256", sign(LABELED + " "))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(LABELED))
+                .andExpect(status().isUnauthorized());
+        verify(orchestrator, never()).onTriggerLabel(anyString(), any());
+    }
+
+    @Test
     void aSignedTriggerLabelEventIsQueued() throws Exception {
         mvc.perform(post("/webhooks/github")
                         .header("X-GitHub-Event", "issues")

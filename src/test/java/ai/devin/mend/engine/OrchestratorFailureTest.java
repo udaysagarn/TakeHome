@@ -21,6 +21,7 @@ import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -265,6 +266,20 @@ class OrchestratorFailureTest {
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.UNVERIFIED);
         assertThat(lastTransitionReason(task)).contains("nothing asserted the acceptance criteria");
+    }
+
+    @Test
+    void aScopingVerdictLongerThanTheColumnIsTrimmedToItsWidthRatherThanFailingTheInsert() {
+        RemediationTask task = toCriteriaPending(50);
+        ObjectNode criteria =
+                (ObjectNode) criteriaJson(0.92, List.of("npm audit reports no high advisory"), List.of("npm audit"));
+        criteria.set("blocking_unknowns", mapper.valueToTree(List.of("x".repeat(RemediationTask.REASON_LENGTH + 500))));
+        stubSession("devin-scope-50", "finished", null, criteria);
+
+        orchestrator.advance(reload(task));
+
+        assertThat(reload(task).getState()).isEqualTo(IssueState.NOT_A_CANDIDATE);
+        assertThat(reload(task).getExclusionReason()).hasSize(RemediationTask.REASON_LENGTH);
     }
 
     @Test
