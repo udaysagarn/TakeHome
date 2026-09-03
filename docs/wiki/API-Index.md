@@ -56,5 +56,5 @@ Every route menD serves, on one page.
   `id`.
 - Write routes return `202` when the work is queued and `200` when a verdict was recorded
   synchronously.
-- `404` bodies are empty. Only `POST /api/repositories` returns `{"error": …}`.
+- `404` bodies are empty. Every other `/api` error is `{"error": …}` — see [Errors and limits](Errors-and-Limits).
 - No pagination, no filter parameters on the JSON API today. `GET /api/tasks` returns everything.

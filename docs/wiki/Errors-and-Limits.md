@@ -6,13 +6,15 @@
 |---|---|---|
 | `200` | Reads, `POST /api/repositories`, `POST /api/repositories/{id}/validate`, `POST /api/tasks/{id}/cancel` | Verdict recorded. On registration this does **not** mean access is good — read `accessState` |
 | `202` | `POST /api/issues/{n}/ingest`, most webhook deliveries | Durably queued. Never "done" |
-| `400` | `POST /api/repositories` | `{"error":"expected owner/name, got: notaslug"}` |
+| `400` | `POST /api/repositories` | `{"error":"expected owner/name, got: notaslug"}`, `{"error":"repo: repo is required"}` for a missing/blank slug, `{"error":"request body is not valid JSON"}` |
 | `401` | `POST /webhooks/github` | `invalid signature` |
 | `404` | `GET /api/tasks/{id}`, `POST /api/tasks/{id}/cancel`, `POST /api/repositories/{id}/validate`, `POST /api/issues/{n}/ingest` | Unknown id, or GitHub has no such issue. Body is empty |
+| `409` | `POST /api/tasks/{id}/cancel` | `{"error":"illegal transition for owner/repo#n: SUCCEEDED -> CANCELLED"}` — the task is already terminal; nothing changed |
+| `502` | `POST /api/issues/{n}/ingest` | `{"error":"Devin API ... failed after 3 attempts"}` — Devin refused or timed out; the cause is in the log, never in the body |
 | `500` | Anywhere | Logged with a stack trace; the webhook returns the literal body `error` |
 
-Only `POST /api/repositories` returns a structured `{"error": …}` body. Everything else signals
-failure with the status code alone, so check the status, not the body.
+Every `4xx`/`5xx` an `/api` handler raises itself carries the one error shape, `{"error": …}`. A
+`404` for an unknown id is answered by the framework and has an empty body, so check the status first.
 
 ## Failure modes that are not HTTP errors
 

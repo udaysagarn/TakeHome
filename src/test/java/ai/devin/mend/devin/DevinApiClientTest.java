@@ -18,6 +18,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.SuccessCriteria;
+import ai.devin.mend.exception.DevinApiException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -146,7 +147,7 @@ class DevinApiClientTest {
         }
 
         assertThatThrownBy(() -> client.createSession("fix it", "t", List.of(), 10, null))
-                .isInstanceOf(DevinApiClient.DevinApiException.class);
+                .isInstanceOf(DevinApiException.class);
 
         verify(credentials, never()).refused(any(), any());
     }

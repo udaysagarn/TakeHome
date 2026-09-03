@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -147,11 +146,6 @@ public class ApiController {
     @PostMapping("/repositories")
     public Repository registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
         return registry.register(request.repo());
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiError> rejected(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
     }
 
     /** Re-runs access validation, for retrying after a permission is granted. */
