@@ -252,55 +252,6 @@ public class GitHubClient {
         return runs == null || runs.checkRuns() == null ? List.of() : runs.checkRuns();
     }
 
-    /**
-     * Aggregate CI verdict for the head commit of a pull request, combining check runs and legacy
-     * commit statuses.
-     */
-    public GitHubDtos.CiVerdict ciVerdict(String repo, int pullNumber) {
-        Optional<GitHubDtos.PullRequest> pr = getPullRequest(repo, pullNumber);
-        if (pr.isEmpty() || pr.get().head() == null) {
-            return GitHubDtos.CiVerdict.NONE;
-        }
-        String sha = pr.get().head().sha();
-        GitHubDtos.CheckRuns runs = http.get()
-                .uri("/repos/{owner}/{name}/commits/{sha}/check-runs", owner(repo), name(repo), sha)
-                .retrieve()
-                .body(GitHubDtos.CheckRuns.class);
-        GitHubDtos.CombinedStatus status = http.get()
-                .uri("/repos/{owner}/{name}/commits/{sha}/status", owner(repo), name(repo), sha)
-                .retrieve()
-                .body(GitHubDtos.CombinedStatus.class);
-
-        boolean anyPending = false;
-        boolean anyFailed = false;
-        boolean any = false;
-        if (runs != null && runs.checkRuns() != null) {
-            for (GitHubDtos.CheckRun run : runs.checkRuns()) {
-                any = true;
-                if (!"completed".equals(run.status())) {
-                    anyPending = true;
-                } else if (!List.of("success", "neutral", "skipped").contains(String.valueOf(run.conclusion()))) {
-                    anyFailed = true;
-                }
-            }
-        }
-        if (status != null && status.totalCount() > 0) {
-            any = true;
-            switch (status.state()) {
-                case "pending" -> anyPending = true;
-                case "failure", "error" -> anyFailed = true;
-                default -> {}
-            }
-        }
-        if (!any) {
-            return GitHubDtos.CiVerdict.NONE;
-        }
-        if (anyFailed) {
-            return GitHubDtos.CiVerdict.FAILED;
-        }
-        return anyPending ? GitHubDtos.CiVerdict.PENDING : GitHubDtos.CiVerdict.PASSED;
-    }
-
     public static Integer pullNumberFromUrl(String prUrl) {
         if (prUrl == null || prUrl.isBlank()) {
             return null;

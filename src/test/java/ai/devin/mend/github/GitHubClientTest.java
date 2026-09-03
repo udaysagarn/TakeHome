@@ -156,75 +156,6 @@ class GitHubClientTest {
     }
 
     @Test
-    void ciIsPendingWhileAnyCheckIsStillRunning() {
-        stubPullRequest();
-        stubCheckRuns(
-                """
-                {"total_count":2,"check_runs":[
-                  {"name":"python","status":"completed","conclusion":"success"},
-                  {"name":"frontend","status":"in_progress","conclusion":null}]}
-                """);
-        stubCombinedStatus("""
-                {"state":"success","total_count":1}""");
-
-        assertThat(github.ciVerdict(REPO, 7)).isEqualTo(GitHubDtos.CiVerdict.PENDING);
-        server.verify();
-    }
-
-    @Test
-    void ciFailsWhenAnyCompletedCheckFailed() {
-        stubPullRequest();
-        stubCheckRuns(
-                """
-                {"total_count":2,"check_runs":[
-                  {"name":"python","status":"completed","conclusion":"success"},
-                  {"name":"frontend","status":"completed","conclusion":"failure"}]}
-                """);
-        stubCombinedStatus("""
-                {"state":"success","total_count":1}""");
-
-        assertThat(github.ciVerdict(REPO, 7)).isEqualTo(GitHubDtos.CiVerdict.FAILED);
-        server.verify();
-    }
-
-    @Test
-    void skippedAndNeutralChecksStillCountAsGreen() {
-        stubPullRequest();
-        stubCheckRuns(
-                """
-                {"total_count":2,"check_runs":[
-                  {"name":"python","status":"completed","conclusion":"skipped"},
-                  {"name":"frontend","status":"completed","conclusion":"neutral"}]}
-                """);
-        stubCombinedStatus("""
-                {"state":"success","total_count":0}""");
-
-        assertThat(github.ciVerdict(REPO, 7)).isEqualTo(GitHubDtos.CiVerdict.PASSED);
-        server.verify();
-    }
-
-    @Test
-    void aRepositoryWithNoChecksAtAllReportsNoneRatherThanGreen() {
-        stubPullRequest();
-        stubCheckRuns("""
-                {"total_count":0,"check_runs":[]}""");
-        stubCombinedStatus("""
-                {"state":"pending","total_count":0}""");
-
-        assertThat(github.ciVerdict(REPO, 7)).isEqualTo(GitHubDtos.CiVerdict.NONE);
-        server.verify();
-    }
-
-    @Test
-    void ciOnAPullRequestThatDoesNotExistIsNoneRatherThanAnError() {
-        expect("https://api.github.test/repos/acme/superset/pulls/7", HttpMethod.GET)
-                .andRespond(withResourceNotFound());
-
-        assertThat(github.ciVerdict(REPO, 7)).isEqualTo(GitHubDtos.CiVerdict.NONE);
-        server.verify();
-    }
-
-    @Test
     void checkRunsAreReadFromTheHeadCommitOfThePullRequest() {
         stubPullRequest();
         stubCheckRuns(
@@ -322,11 +253,6 @@ class GitHubClientTest {
 
     private void stubCheckRuns(String body) {
         expect("https://api.github.test/repos/acme/superset/commits/deadbeef/check-runs", HttpMethod.GET)
-                .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
-    }
-
-    private void stubCombinedStatus(String body) {
-        expect("https://api.github.test/repos/acme/superset/commits/deadbeef/status", HttpMethod.GET)
                 .andRespond(withSuccess(body, MediaType.APPLICATION_JSON));
     }
 }

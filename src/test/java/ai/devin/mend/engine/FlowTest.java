@@ -136,7 +136,9 @@ class FlowTest {
         assertThat(reload(task).getPrUrl()).endsWith("/pull/9");
 
         orchestrator.advance(reload(task)); // -> VERIFYING
-        when(github.ciVerdict(REPO, 9)).thenReturn(GitHubDtos.CiVerdict.PASSED);
+        when(github.checkRuns(REPO, 9))
+                .thenReturn(List.of(new GitHubDtos.CheckRun(
+                        "frontend-build", "completed", "success", "https://github.com/acme/superset/runs/9")));
         orchestrator.advance(reload(task)); // -> SUCCEEDED
 
         RemediationTask done = reload(task);
@@ -165,7 +167,9 @@ class FlowTest {
         orchestrator.advance(reload(task));
         orchestrator.advance(reload(task)); // -> VERIFYING
 
-        when(github.ciVerdict(REPO, 10)).thenReturn(GitHubDtos.CiVerdict.FAILED);
+        when(github.checkRuns(REPO, 10))
+                .thenReturn(List.of(new GitHubDtos.CheckRun(
+                        "frontend-build", "completed", "failure", "https://github.com/acme/superset/runs/10")));
         orchestrator.advance(reload(task));
 
         assertThat(reload(task).getState()).isEqualTo(IssueState.RUNNING);
@@ -177,7 +181,6 @@ class FlowTest {
         RemediationTask task = runToVerifying(11, 11);
 
         when(github.checkRuns(REPO, 11)).thenReturn(List.of());
-        when(github.ciVerdict(REPO, 11)).thenReturn(GitHubDtos.CiVerdict.NONE);
         when(devin.isConfigured()).thenReturn(false);
         orchestrator.advance(reload(task));
 
@@ -192,7 +195,6 @@ class FlowTest {
         RemediationTask task = runToVerifying(12, 12);
 
         when(github.checkRuns(REPO, 12)).thenReturn(List.of());
-        when(github.ciVerdict(REPO, 12)).thenReturn(GitHubDtos.CiVerdict.NONE);
         when(devin.isConfigured()).thenReturn(true);
         stubCreateSession("devin-verify");
         orchestrator.advance(reload(task));
@@ -214,7 +216,6 @@ class FlowTest {
         RemediationTask task = runToVerifying(13, 13);
 
         when(github.checkRuns(REPO, 13)).thenReturn(List.of());
-        when(github.ciVerdict(REPO, 13)).thenReturn(GitHubDtos.CiVerdict.NONE);
         when(devin.isConfigured()).thenReturn(true);
         stubCreateSession("devin-verify");
         orchestrator.advance(reload(task));

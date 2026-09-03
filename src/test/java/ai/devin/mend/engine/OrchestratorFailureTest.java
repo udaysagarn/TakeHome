@@ -286,7 +286,6 @@ class OrchestratorFailureTest {
         task.setCriteriaJson(null);
         tasks.saveAndFlush(task);
         when(github.checkRuns(REPO, 48)).thenReturn(List.of());
-        when(github.ciVerdict(REPO, 48)).thenReturn(GitHubDtos.CiVerdict.NONE);
 
         orchestrator.advance(reload(task));
 
@@ -306,7 +305,6 @@ class OrchestratorFailureTest {
                 .toString());
         task.setAttempts(2);
         tasks.saveAndFlush(task);
-        when(github.ciVerdict(REPO, 42)).thenReturn(GitHubDtos.CiVerdict.FAILED);
         when(github.checkRuns(REPO, 42))
                 .thenReturn(List.of(new GitHubDtos.CheckRun(
                         "frontend-build", "completed", "failure", "https://github.com/acme/superset/runs/2")));
@@ -429,7 +427,6 @@ class OrchestratorFailureTest {
     void noVerifierSessionIsStartedWhilePausedAndTheTaskWaitsInVerifyingRatherThanSettlingUnverified() {
         RemediationTask task = verifying(47, outcomeJson(true).toString());
         when(github.checkRuns(REPO, 47)).thenReturn(List.of());
-        when(github.ciVerdict(REPO, 47)).thenReturn(GitHubDtos.CiVerdict.NONE);
         when(devin.isConfigured()).thenReturn(true);
         control.pause("operator", "the demo is over");
         clearInvocations(devin);

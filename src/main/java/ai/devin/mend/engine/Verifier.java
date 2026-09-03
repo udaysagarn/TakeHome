@@ -12,7 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -61,22 +63,16 @@ public class Verifier {
     public Verification verify(RemediationTask task, SuccessCriteria criteria, int pullNumber) {
         List<GitHubDtos.CheckRun> runs = github.checkRuns(task.getRepo(), pullNumber);
         String prefix = props.getVerify().getContractCheckPrefix();
-        List<GitHubDtos.CheckRun> contract = runs.stream()
-                .filter(r -> r.name() != null && r.name().startsWith(prefix))
-                .toList();
-        List<GitHubDtos.CheckRun> repoChecks =
-                runs.stream().filter(r -> !contract.contains(r)).toList();
+        Map<Boolean, List<GitHubDtos.CheckRun>> byTier = runs.stream()
+                .collect(Collectors.partitioningBy(r -> r.name() != null && r.name().startsWith(prefix)));
+        List<GitHubDtos.CheckRun> contract = byTier.get(true);
+        List<GitHubDtos.CheckRun> repoChecks = byTier.get(false);
 
         if (!repoChecks.isEmpty()) {
             return fromChecks(Verification.Tier.REPO_CI, repoChecks);
         }
         if (!contract.isEmpty()) {
             return fromChecks(Verification.Tier.CONTRACT_WORKFLOW, contract);
-        }
-        GitHubDtos.CiVerdict legacy = github.ciVerdict(task.getRepo(), pullNumber);
-        if (legacy != GitHubDtos.CiVerdict.NONE) {
-            return new Verification(
-                    Verification.Tier.REPO_CI, verdictOf(legacy), "commit status: " + legacy, List.of(), task.getPrUrl());
         }
 
         Verification dispatched = tryContractWorkflow(task, criteria, pullNumber);
@@ -225,15 +221,6 @@ public class Verifier {
                         + " passed on the pull request head",
                 List.of(),
                 url);
-    }
-
-    private static Verification.Verdict verdictOf(GitHubDtos.CiVerdict verdict) {
-        return switch (verdict) {
-            case PASSED -> Verification.Verdict.PASSED;
-            case FAILED -> Verification.Verdict.FAILED;
-            case PENDING -> Verification.Verdict.PENDING;
-            case NONE -> Verification.Verdict.UNAVAILABLE;
-        };
     }
 
     private Verification.VerifierReport read(DevinDtos.SessionDetails details) {
