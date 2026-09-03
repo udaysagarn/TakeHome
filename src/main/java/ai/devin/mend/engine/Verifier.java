@@ -73,11 +73,6 @@ public class Verifier {
         if (!contract.isEmpty()) {
             return fromChecks(Verification.Tier.CONTRACT_WORKFLOW, contract);
         }
-        GitHubDtos.CiVerdict legacy = github.ciVerdict(task.getRepo(), pullNumber);
-        if (legacy != GitHubDtos.CiVerdict.NONE) {
-            return new Verification(
-                    Verification.Tier.REPO_CI, verdictOf(legacy), "commit status: " + legacy, List.of(), task.getPrUrl());
-        }
 
         Verification dispatched = tryContractWorkflow(task, criteria, pullNumber);
         if (dispatched != null) {
@@ -225,15 +220,6 @@ public class Verifier {
                         + " passed on the pull request head",
                 List.of(),
                 url);
-    }
-
-    private static Verification.Verdict verdictOf(GitHubDtos.CiVerdict verdict) {
-        return switch (verdict) {
-            case PASSED -> Verification.Verdict.PASSED;
-            case FAILED -> Verification.Verdict.FAILED;
-            case PENDING -> Verification.Verdict.PENDING;
-            case NONE -> Verification.Verdict.UNAVAILABLE;
-        };
     }
 
     private Verification.VerifierReport read(DevinDtos.SessionDetails details) {

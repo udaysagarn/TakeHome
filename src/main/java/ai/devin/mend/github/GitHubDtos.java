@@ -59,10 +59,6 @@ public final class GitHubDtos {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-    public record CombinedStatus(String state, int totalCount) {}
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record Repo(
             long id,
             String name,
@@ -113,12 +109,4 @@ public final class GitHubDtos {
     @JsonIgnoreProperties(ignoreUnknown = true)
     @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
     public record PrFile(String filename, String status, int additions, int deletions, int changes) {}
-
-    /** Aggregate CI verdict for a pull request. */
-    public enum CiVerdict {
-        PENDING,
-        PASSED,
-        FAILED,
-        NONE
-    }
 }

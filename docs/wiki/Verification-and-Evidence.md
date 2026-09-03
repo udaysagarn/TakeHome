@@ -15,8 +15,8 @@ counted separately.
 
 The verifier stops at the first tier that can answer. Repository checks are matched first; check
 runs whose name starts with `mend.verify.contract-check-prefix` (default `menD`) count as the
-contract tier, everything else as repository CI. A commit status is accepted as repository CI when
-there are no check runs at all.
+contract tier, everything else as repository CI. Legacy commit statuses are not consulted: every
+supported target repository reports through check runs.
 
 **What menD deliberately does not do:** run arbitrary repository test suites inside its own
 container. One image cannot hold every toolchain, and executing untrusted repository code would be a

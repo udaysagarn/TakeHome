@@ -154,7 +154,7 @@ contract that holds at that point.
 |---|---|---|---|
 | `DevinApiClient` | Session create / poll / message | `createSession(prompt, title, tags, maxAcuLimit, structuredOutputSchema, repo)`, `getSession(id)`, `sendMessage(id, text)` | `POST/GET /v3/organizations/{org}/sessions[/{id}[/messages]]`, bearer auth; retries 429/5xx/resource-access up to 3 times with exponential backoff; every call counted in `mend.api.calls` |
 | `DevinDtos.SessionDetails` | The polled session view | `isBlocked()`, `isFinished()`, `isExpired()`, `hasStructuredOutput()`, `pullRequestUrl()` | `waiting_for_user`/`suspended` → blocked; `exit`/`finished` → finished; `error` → expired; structured output must be non-empty JSON to count |
-| `GitHubClient` | Every GitHub read and write | `listIssuesWithLabel`, `getIssue`, `getRepo`, `installationRepos`, `installationPermissions`, `branchHeadSha`, `comment`, `addLabels`, `removeLabel`, `ensureLabel`, `getPullRequest`, `listReviews`, `listReviewComments`, `listPullRequestFiles`, `checkRuns`, `ciVerdict`, `dispatchWorkflow` | Owner and repo name are always separate path variables, never one encoded `owner/name`; failures are surfaced as empty/absent results rather than exceptions where a caller can proceed |
+| `GitHubClient` | Every GitHub read and write | `listIssuesWithLabel`, `getIssue`, `getRepo`, `installationRepos`, `installationPermissions`, `branchHeadSha`, `comment`, `addLabels`, `removeLabel`, `ensureLabel`, `getPullRequest`, `listReviews`, `listReviewComments`, `listPullRequestFiles`, `checkRuns`, `dispatchWorkflow` | Owner and repo name are always separate path variables, never one encoded `owner/name`; failures are surfaced as empty/absent results rather than exceptions where a caller can proceed |
 | `GitHubCredentials` | Authentication | App JWT → installation token, or PAT fallback | Refreshes the installation token before expiry; converts a PKCS#1 key into a PKCS#8 envelope so a raw `.pem` works; exposes installation identity and granted permissions for registry validation |
 
 ### 4.5 Ingest (`ingest`)
@@ -257,7 +257,7 @@ Session tags are the reverse link: `["mend", <kind>, <repo>, "criteria:" + crite
 
 Precedence, first tier able to answer wins:
 
-1. `REPO_CI` — the repository's own check runs on the PR head (legacy commit statuses considered too).
+1. `REPO_CI` — the repository's own check runs on the PR head.
 2. `CONTRACT_WORKFLOW` — the menD-prefixed check run from `mend-verify.yml`; dispatched if absent and
    dispatchable.
 3. `VERIFIER_SESSION` — a fresh, command-only Devin session that runs the agreed verification commands
