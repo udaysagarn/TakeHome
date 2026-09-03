@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 
 /**
@@ -40,6 +41,11 @@ public class Orchestrator {
 
     private static final Logger log = LoggerFactory.getLogger(Orchestrator.class);
     private static final String ACTOR = "orchestrator";
+
+    /** MDC keys carried by every log line written while a task is being advanced. */
+    public static final String MDC_TASK_KEY = "taskKey";
+
+    public static final String MDC_REPO = "repo";
 
     private final TaskRepository tasks;
     private final TaskService taskService;
@@ -115,6 +121,8 @@ public class Orchestrator {
 
     /** Advances a single task by at most one meaningful step. Safe to call repeatedly. */
     public void advance(RemediationTask task) {
+        MDC.put(MDC_TASK_KEY, task.key());
+        MDC.put(MDC_REPO, task.getRepo());
         try {
             switch (task.getState()) {
                 case DISCOVERED -> triage(task);
@@ -130,6 +138,9 @@ public class Orchestrator {
         } catch (RuntimeException e) {
             log.error("advance failed for {} in state {}", task.key(), task.getState(), e);
             recordError(task.getId(), e);
+        } finally {
+            MDC.remove(MDC_TASK_KEY);
+            MDC.remove(MDC_REPO);
         }
     }
 
