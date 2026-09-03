@@ -4,7 +4,7 @@ import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.TaskRepository;
-import java.time.Instant;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -55,6 +55,7 @@ public class Reconciler {
     private final EngineControl control;
     private final CredentialGuard credentials;
     private final MendProperties props;
+    private final Clock clock;
 
     public Reconciler(
             TaskRepository tasks,
@@ -62,13 +63,15 @@ public class Reconciler {
             LeaseManager leases,
             EngineControl control,
             CredentialGuard credentials,
-            MendProperties props) {
+            MendProperties props,
+            Clock clock) {
         this.tasks = tasks;
         this.orchestrator = orchestrator;
         this.leases = leases;
         this.control = control;
         this.credentials = credentials;
         this.props = props;
+        this.clock = clock;
     }
 
     @Scheduled(fixedDelayString = "${mend.engine.reconcile-interval:PT15S}")
@@ -138,7 +141,7 @@ public class Reconciler {
             log.warn("worker {} lost the lease on {} while advancing it", leases.workerId(), fresh.key());
             return;
         }
-        if (fresh.isOverdue(Instant.now())) {
+        if (fresh.isOverdue(clock.instant())) {
             log.warn(
                     "task {} is past its predicted completion ({}) in state {}",
                     fresh.key(),

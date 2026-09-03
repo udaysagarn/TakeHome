@@ -6,6 +6,7 @@ import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskEventRepository;
 import ai.devin.mend.domain.TaskRepository;
 import ai.devin.mend.metrics.MendMetrics;
+import java.time.Clock;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,13 +26,19 @@ public class TaskService {
     private final TaskEventRepository events;
     private final MendMetrics metrics;
     private final LeaseManager leases;
+    private final Clock clock;
 
     public TaskService(
-            TaskRepository tasks, TaskEventRepository events, MendMetrics metrics, LeaseManager leases) {
+            TaskRepository tasks,
+            TaskEventRepository events,
+            MendMetrics metrics,
+            LeaseManager leases,
+            Clock clock) {
         this.tasks = tasks;
         this.events = events;
         this.metrics = metrics;
         this.leases = leases;
+        this.clock = clock;
     }
 
     @Transactional
@@ -43,12 +50,13 @@ public class TaskService {
         if (!current.canTransitionTo(next)) {
             throw new IllegalStateTransitionException(task.key(), current, next);
         }
+        Instant now = clock.instant();
         task.setState(next);
-        task.setUpdatedAt(Instant.now());
-        applyTimestamps(task, next);
+        task.setUpdatedAt(now);
+        applyTimestamps(task, next, now);
         RemediationTask saved = tasks.save(task);
         events.save(new TaskEvent(saved.getId(), saved.key(), current, next, reason, actor));
-        metrics.recordTransition(saved, current, next);
+        metrics.recordTransition(saved, current, next, now);
         log.info(
                 "state_transition task={} from={} to={} actor={} reason={}",
                 saved.key(),
@@ -59,8 +67,7 @@ public class TaskService {
         return saved;
     }
 
-    private void applyTimestamps(RemediationTask task, IssueState next) {
-        Instant now = Instant.now();
+    private void applyTimestamps(RemediationTask task, IssueState next, Instant now) {
         applyEta(task, next, now);
         switch (next) {
             case CRITERIA_PENDING -> task.setCriteriaStartedAt(now);
@@ -95,7 +102,7 @@ public class TaskService {
 
     @Transactional
     public RemediationTask save(RemediationTask task) {
-        task.setUpdatedAt(Instant.now());
+        task.setUpdatedAt(clock.instant());
         return tasks.save(task);
     }
 

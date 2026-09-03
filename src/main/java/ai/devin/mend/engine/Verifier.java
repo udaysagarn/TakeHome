@@ -9,6 +9,7 @@ import ai.devin.mend.domain.Verification;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.github.GitHubDtos;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -40,6 +41,7 @@ public class Verifier {
     private final ObjectMapper mapper;
     private final EngineControl control;
     private final MendProperties props;
+    private final Clock clock;
 
     public Verifier(
             GitHubClient github,
@@ -47,13 +49,15 @@ public class Verifier {
             PromptBuilder prompts,
             ObjectMapper mapper,
             EngineControl control,
-            MendProperties props) {
+            MendProperties props,
+            Clock clock) {
         this.github = github;
         this.devin = devin;
         this.prompts = prompts;
         this.mapper = mapper;
         this.control = control;
         this.props = props;
+        this.clock = clock;
     }
 
     /**
@@ -113,7 +117,7 @@ public class Verifier {
         if (!dispatched) {
             return null;
         }
-        task.setContractDispatchedAt(Instant.now());
+        task.setContractDispatchedAt(clock.instant());
         log.info("dispatched the verification contract workflow for {}", task.key());
         return new Verification(
                 Verification.Tier.CONTRACT_WORKFLOW,
@@ -189,7 +193,7 @@ public class Verifier {
     /** A tier that stays silent past the timeout stops blocking the flow and hands over. */
     private Verification waitingFor(Verification.Tier tier, Instant since, String why) {
         Duration timeout = props.getVerify().getTierTimeout();
-        if (since != null && Instant.now().isAfter(since.plus(timeout))) {
+        if (since != null && clock.instant().isAfter(since.plus(timeout))) {
             return Verification.unavailable(why + ", and its %d minute budget has run out".formatted(timeout.toMinutes()));
         }
         return new Verification(tier, Verification.Verdict.PENDING, why, List.of(), null);

@@ -178,8 +178,9 @@ public class RemediationTask {
         return etaAt != null && !state.isTerminal() && now.isAfter(etaAt);
     }
 
-    public Duration elapsed() {
-        Instant end = completedAt != null ? completedAt : Instant.now();
+    /** Time from discovery to completion, or to {@code now} while the task is still in flight. */
+    public Duration elapsed(Instant now) {
+        Instant end = completedAt != null ? completedAt : now;
         return Duration.between(createdAt, end);
     }
 

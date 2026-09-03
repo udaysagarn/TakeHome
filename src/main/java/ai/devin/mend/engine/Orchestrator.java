@@ -20,6 +20,7 @@ import ai.devin.mend.triage.SuccessCriteriaService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
@@ -56,6 +57,7 @@ public class Orchestrator {
     private final ObjectMapper mapper;
     private final EngineControl control;
     private final MendProperties props;
+    private final Clock clock;
 
     public Orchestrator(
             TaskRepository tasks,
@@ -73,7 +75,8 @@ public class Orchestrator {
             MendMetrics metrics,
             ObjectMapper mapper,
             EngineControl control,
-            MendProperties props) {
+            MendProperties props,
+            Clock clock) {
         this.tasks = tasks;
         this.taskService = taskService;
         this.devin = devin;
@@ -90,6 +93,7 @@ public class Orchestrator {
         this.mapper = mapper;
         this.control = control;
         this.props = props;
+        this.clock = clock;
     }
 
     /** Entry point for every trigger: webhook, poller or manual dashboard action. */
@@ -186,7 +190,7 @@ public class Orchestrator {
             return;
         }
         DevinDtos.SessionDetails session = maybe.get();
-        task.setLastPolledAt(Instant.now());
+        task.setLastPolledAt(clock.instant());
         task = taskService.save(task);
 
         if (session.isExpired()) {
@@ -289,7 +293,7 @@ public class Orchestrator {
             return;
         }
         DevinDtos.SessionDetails session = maybe.get();
-        task.setLastPolledAt(Instant.now());
+        task.setLastPolledAt(clock.instant());
         RemediationOutcome outcome = readOutcome(session);
         if (outcome != null) {
             task.setOutcomeJson(session.structuredOutput().toString());
@@ -344,7 +348,7 @@ public class Orchestrator {
             return;
         }
         task.setNudges(task.getNudges() + 1);
-        task.setLastNudgedAt(Instant.now());
+        task.setLastNudgedAt(clock.instant());
         task = taskService.save(task);
         devin.sendMessage(task.getSessionId(), prompts.stallNudge(task.getNudges(), props.getEngine().getMaxNudges()));
         log.info("nudged blocked session for {} ({}/{})", task.key(), task.getNudges(), props.getEngine().getMaxNudges());
@@ -514,8 +518,8 @@ public class Orchestrator {
         }
     }
 
-    private static boolean olderThan(Instant instant, Duration duration) {
-        return instant != null && Instant.now().isAfter(instant.plus(duration));
+    private boolean olderThan(Instant instant, Duration duration) {
+        return instant != null && clock.instant().isAfter(instant.plus(duration));
     }
 
     private static String abbreviate(String text) {

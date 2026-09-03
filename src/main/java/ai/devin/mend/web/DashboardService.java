@@ -11,6 +11,7 @@ import ai.devin.mend.domain.Verification;
 import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -57,16 +58,19 @@ public class DashboardService {
     private final TaskEventRepository events;
     private final RepositoryService repositories;
     private final ObjectMapper json;
+    private final Clock clock;
 
     public DashboardService(
             TaskRepository tasks,
             TaskEventRepository events,
             RepositoryService repositories,
-            ObjectMapper json) {
+            ObjectMapper json,
+            Clock clock) {
         this.tasks = tasks;
         this.events = events;
         this.repositories = repositories;
         this.json = json;
+        this.clock = clock;
     }
 
     public DashboardView view() {
@@ -87,7 +91,7 @@ public class DashboardService {
                 recentEvents(selected),
                 repoCards(),
                 selected,
-                Instant.now());
+                clock.instant());
     }
 
     /**
@@ -152,23 +156,26 @@ public class DashboardService {
 
     public List<BoardColumn> board(List<RemediationTask> all) {
         List<BoardColumn> columns = new ArrayList<>();
+        Instant now = clock.instant();
         BOARD.forEach((name, states) -> {
             List<RemediationTask> members =
                     all.stream().filter(t -> states.contains(t.getState())).toList();
-            columns.add(new BoardColumn(name, members.size(), members.stream().map(this::row).toList()));
+            columns.add(new BoardColumn(name, members.size(), members.stream().map(t -> row(t, now)).toList()));
         });
         return columns;
     }
 
     public List<TaskRow> rows(List<RemediationTask> all) {
-        return all.stream().map(this::row).toList();
+        Instant now = clock.instant();
+        return all.stream().map(t -> row(t, now)).toList();
     }
 
     public List<TaskRow> exclusions(List<RemediationTask> all) {
+        Instant now = clock.instant();
         return all.stream()
                 .filter(t -> t.getState() == IssueState.NOT_A_CANDIDATE || t.getState() == IssueState.NEEDS_HUMAN)
                 .sorted(Comparator.comparing(RemediationTask::getUpdatedAt).reversed())
-                .map(this::row)
+                .map(t -> row(t, now))
                 .toList();
     }
 
@@ -177,10 +184,11 @@ public class DashboardService {
      * shows these rather than prose, so the pitch can only claim what this instance really did.
      */
     public List<TaskRow> finished(int limit) {
+        Instant now = clock.instant();
         return tasks.findAllByOrderByUpdatedAtDesc().stream()
                 .filter(t -> t.getState().isTerminal() && t.getPrUrl() != null)
                 .limit(limit)
-                .map(this::row)
+                .map(t -> row(t, now))
                 .toList();
     }
 
@@ -221,9 +229,9 @@ public class DashboardService {
      */
     public Optional<TaskDetail> detail(long taskId) {
         return tasks.findById(taskId).map(t -> {
-            Instant now = Instant.now();
+            Instant now = clock.instant();
             return new TaskDetail(
-                    row(t),
+                    row(t, now),
                     criteria(t),
                     t.getCriteriaJson(),
                     t.getCriteriaHash(),
@@ -296,7 +304,7 @@ public class DashboardService {
                 t.getLeaseTakeovers());
     }
 
-    private TaskRow row(RemediationTask t) {
+    private TaskRow row(RemediationTask t, Instant now) {
         return new TaskRow(
                 t.getId(),
                 t.getRepo(),
@@ -313,20 +321,20 @@ public class DashboardService {
                 t.getAcuBudget(),
                 note(t),
                 t.timeToPr() == null ? null : t.timeToPr().toMinutes(),
-                t.elapsed().toMinutes(),
+                t.elapsed(now).toMinutes(),
                 t.getUpdatedAt(),
                 t.getOwnerId(),
                 t.getEtaAt(),
-                etaLabel(t),
-                t.isOverdue(Instant.now()));
+                etaLabel(t, now),
+                t.isOverdue(now));
     }
 
     /** "overdue by 6m" reads; "overdue since 2026-08-30T03:54:01.905221Z" does not. */
-    private static String etaLabel(RemediationTask t) {
+    private static String etaLabel(RemediationTask t, Instant now) {
         if (t.getEtaAt() == null) {
             return null;
         }
-        Duration delta = Duration.between(Instant.now(), t.getEtaAt());
+        Duration delta = Duration.between(now, t.getEtaAt());
         return delta.isNegative()
                 ? "overdue by " + humanize(delta.negated())
                 : "due in " + humanize(delta);
