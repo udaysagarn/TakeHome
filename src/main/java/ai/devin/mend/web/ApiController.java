@@ -2,7 +2,6 @@ package ai.devin.mend.web;
 
 import ai.devin.mend.domain.IssueState;
 import ai.devin.mend.domain.Learning;
-import ai.devin.mend.domain.RemediationTask;
 import ai.devin.mend.domain.Repository;
 import ai.devin.mend.domain.TaskEvent;
 import ai.devin.mend.domain.TaskRepository;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -111,16 +111,23 @@ public class ApiController {
 
     /** Manual trigger, for demos and for re-driving an issue without touching GitHub labels. */
     @PostMapping("/issues/{number}/ingest")
-    public ResponseEntity<?> ingest(@PathVariable int number, @RequestParam(required = false) String repo) {
+    public ResponseEntity<IngestResponse> ingest(
+            @PathVariable int number, @RequestParam(required = false) String repo) {
         String slug = repo != null
                 ? repo
                 : registry.primary().map(Repository::slug).orElse(github.defaultRepo());
         return github.getIssue(slug, number)
-                .<ResponseEntity<?>>map(issue -> ResponseEntity.accepted()
+                .map(issue -> ResponseEntity.accepted()
                         .contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("task", orchestrator.onTriggerLabel(slug, issue).key())))
+                        .body(new IngestResponse(orchestrator.onTriggerLabel(slug, issue).key())))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
+
+    /** {@code 202} body of {@link #ingest}: the key of the task now carrying the issue. */
+    public record IngestResponse(String task) {}
+
+    /** {@code 200} body of {@link #cancel}: the state the task is in after the transition. */
+    public record TaskStateResponse(IssueState state) {}
 
     /** Everything reviewers have taught menD, active first. */
     @GetMapping("/learnings")
@@ -138,28 +145,26 @@ public class ApiController {
 
     /** Registers a repository and returns the validation verdict, successful or not. */
     @PostMapping("/repositories")
-    public ResponseEntity<?> registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
-        try {
-            return ResponseEntity.ok(registry.register(request.repo()));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
+    public Repository registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
+        return registry.register(request.repo());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> rejected(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(new ApiError(e.getMessage()));
     }
 
     /** Re-runs access validation, for retrying after a permission is granted. */
     @PostMapping("/repositories/{id}/validate")
-    public ResponseEntity<?> validateRepository(@PathVariable long id) {
-        return ResponseEntity.of(
-                registry.byId(id).map(repository -> (Object) registry.validate(repository)));
+    public ResponseEntity<Repository> validateRepository(@PathVariable long id) {
+        return ResponseEntity.of(registry.byId(id).map(registry::validate));
     }
 
     @PostMapping("/tasks/{id}/cancel")
-    public ResponseEntity<?> cancel(@PathVariable long id) {
-        RemediationTask task = tasks.findById(id).orElse(null);
-        if (task == null) {
-            return ResponseEntity.notFound().build();
-        }
-        taskService.transition(task, IssueState.CANCELLED, "cancelled from the dashboard", "operator");
-        return ResponseEntity.ok(Map.of("state", task.getState()));
+    public ResponseEntity<TaskStateResponse> cancel(@PathVariable long id) {
+        return ResponseEntity.of(tasks.findById(id)
+                .map(task -> taskService.transition(
+                        task, IssueState.CANCELLED, "cancelled from the dashboard", "operator"))
+                .map(cancelled -> new TaskStateResponse(cancelled.getState())));
     }
 }
