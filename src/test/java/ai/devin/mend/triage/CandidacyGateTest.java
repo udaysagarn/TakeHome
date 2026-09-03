@@ -1,6 +1,7 @@
 package ai.devin.mend.triage;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ai.devin.mend.config.MendProperties;
 import ai.devin.mend.domain.SuccessCriteria;
@@ -137,5 +138,12 @@ class CandidacyGateTest {
     @Test
     void anUnparseableCriteriaBlockFallsBackToScoping() {
         assertThat(criteria.embeddedCriteria(REAL_BODY + "\n```devin-criteria\nnot json\n```")).isEmpty();
+    }
+
+    @Test
+    void aCorruptStoredContractFailsLoudlyRatherThanAsANullCriteria() {
+        assertThatThrownBy(() -> criteria.fromJson("not json"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("deserialise");
     }
 }
