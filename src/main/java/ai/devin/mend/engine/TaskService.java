@@ -52,7 +52,6 @@ public class TaskService {
         }
         Instant now = clock.instant();
         task.setState(next);
-        task.setUpdatedAt(now);
         applyTimestamps(task, next, now);
         RemediationTask saved = tasks.save(task);
         events.save(new TaskEvent(saved.getId(), saved.key(), current, next, reason, actor));
@@ -102,7 +101,6 @@ public class TaskService {
 
     @Transactional
     public RemediationTask save(RemediationTask task) {
-        task.setUpdatedAt(clock.instant());
         return tasks.save(task);
     }
 

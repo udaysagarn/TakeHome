@@ -8,7 +8,9 @@ import ai.devin.mend.domain.TaskRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,12 +35,30 @@ class TaskServiceClockTest {
 
     static final Instant NOW = Instant.parse("2026-09-03T12:00:00Z");
 
+    /** A clock the test moves by hand; it starts, and is reset to, {@link #NOW}. */
+    static final AtomicReference<Instant> ticking = new AtomicReference<>(NOW);
+
     @TestConfiguration
     static class FrozenClock {
         @Bean
         @Primary
         Clock frozenClock() {
-            return Clock.fixed(NOW, ZoneOffset.UTC);
+            return new Clock() {
+                @Override
+                public ZoneId getZone() {
+                    return ZoneOffset.UTC;
+                }
+
+                @Override
+                public Clock withZone(ZoneId zone) {
+                    return this;
+                }
+
+                @Override
+                public Instant instant() {
+                    return ticking.get();
+                }
+            };
         }
     }
 
@@ -53,6 +73,7 @@ class TaskServiceClockTest {
 
     @BeforeEach
     void setUp() {
+        ticking.set(NOW);
         tasks.deleteAll();
     }
 
@@ -82,9 +103,27 @@ class TaskServiceClockTest {
     }
 
     @Test
-    void savingRefreshesUpdatedAtFromTheClock() {
+    void persistingStampsCreationAndUpdateFromTheClock() {
         RemediationTask task = new RemediationTask("acme/superset", 3, "t", "https://x/3", "menD");
+        assertThat(task.getCreatedAt()).isNull();
 
-        assertThat(taskService.save(task).getUpdatedAt()).isEqualTo(NOW);
+        RemediationTask saved = taskService.save(task);
+
+        assertThat(saved.getCreatedAt()).isEqualTo(NOW);
+        assertThat(saved.getUpdatedAt()).isEqualTo(NOW);
+        assertThat(tasks.findById(saved.getId()).orElseThrow().getCreatedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void anyWriteThroughTheRepositoryRefreshesUpdatedAtWithoutTouchingCreatedAt() {
+        RemediationTask task = tasks.save(new RemediationTask("acme/superset", 4, "t", "https://x/4", "menD"));
+        Instant later = NOW.plus(Duration.ofMinutes(5));
+        ticking.set(later);
+
+        task.setAttempts(1);
+        RemediationTask saved = tasks.saveAndFlush(task);
+
+        assertThat(saved.getCreatedAt()).isEqualTo(NOW);
+        assertThat(saved.getUpdatedAt()).isEqualTo(later);
     }
 }

@@ -2,6 +2,7 @@ package ai.devin.mend.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -17,6 +18,9 @@ import java.time.Instant;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 /** One remediation attempt lifecycle for one GitHub issue. */
 @Entity
@@ -24,6 +28,7 @@ import org.hibernate.type.SqlTypes;
         name = "remediation_task",
         uniqueConstraints = @UniqueConstraint(columnNames = {"repo", "issue_number"}),
         indexes = @Index(name = "idx_task_state", columnList = "state"))
+@EntityListeners(AuditingEntityListener.class)
 public class RemediationTask {
 
     /** Width of the {@code varchar} columns that hold a human-readable reason. */
@@ -136,11 +141,13 @@ public class RemediationTask {
     @Column(name = "lease_takeovers", nullable = false)
     private int leaseTakeovers;
 
-    @Column(nullable = false)
-    private Instant createdAt = Instant.now();
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt;
 
+    @LastModifiedDate
     @Column(nullable = false)
-    private Instant updatedAt = Instant.now();
+    private Instant updatedAt;
 
     private Instant criteriaStartedAt;
     private Instant readyAt;
@@ -434,10 +441,6 @@ public class RemediationTask {
 
     public Instant getUpdatedAt() {
         return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
     }
 
     public Instant getCriteriaStartedAt() {
