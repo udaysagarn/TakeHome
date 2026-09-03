@@ -103,6 +103,41 @@ class TaskServiceClockTest {
     }
 
     @Test
+    void aTerminalTransitionReleasesTheLeaseEntirely() {
+        RemediationTask task = new RemediationTask("acme/superset", 5, "t", "https://x/5", "menD");
+        task.setState(IssueState.VERIFYING);
+        task.setOwnerId("worker-a");
+        task.setLeaseAcquiredAt(NOW.minusSeconds(60));
+        task.setLeaseExpiresAt(NOW.plusSeconds(60));
+        task.setEtaAt(NOW.plusSeconds(600));
+        task = tasks.save(task);
+
+        RemediationTask done = taskService.transition(task, IssueState.UNVERIFIED, "no evidence", "test");
+
+        assertThat(done.getOwnerId()).isNull();
+        assertThat(done.getLeaseAcquiredAt()).isNull();
+        assertThat(done.getLeaseExpiresAt()).isNull();
+        assertThat(done.getEtaAt()).isNull();
+    }
+
+    @Test
+    void aNonTerminalTransitionKeepsTheLeaseAndRenewsOnlyThePromise() {
+        RemediationTask task = new RemediationTask("acme/superset", 6, "t", "https://x/6", "menD");
+        task.setState(IssueState.DISPATCHED);
+        task.setOwnerId("worker-a");
+        task.setLeaseAcquiredAt(NOW.minusSeconds(60));
+        task.setLeaseExpiresAt(NOW.plusSeconds(60));
+        task = tasks.save(task);
+
+        RemediationTask running = taskService.transition(task, IssueState.RUNNING, "working", "test");
+
+        assertThat(running.getOwnerId()).isEqualTo("worker-a");
+        assertThat(running.getLeaseAcquiredAt()).isEqualTo(NOW.minusSeconds(60));
+        assertThat(running.getLeaseExpiresAt()).isEqualTo(NOW.plusSeconds(60));
+        assertThat(running.getEtaAt()).isEqualTo(NOW.plus(leases.estimatedRemaining(IssueState.RUNNING)));
+    }
+
+    @Test
     void persistingStampsCreationAndUpdateFromTheClock() {
         RemediationTask task = new RemediationTask("acme/superset", 3, "t", "https://x/3", "menD");
         assertThat(task.getCreatedAt()).isNull();

@@ -53,6 +53,11 @@ public class TaskService {
         Instant now = clock.instant();
         task.setState(next);
         applyTimestamps(task, next, now);
+        if (next.isTerminal()) {
+            releaseLease(task);
+        } else {
+            applyEta(task, next, now);
+        }
         RemediationTask saved = tasks.save(task);
         events.save(new TaskEvent(saved.getId(), saved.key(), current, next, reason, actor));
         metrics.recordTransition(saved, current, next, now);
@@ -67,7 +72,6 @@ public class TaskService {
     }
 
     private void applyTimestamps(RemediationTask task, IssueState next, Instant now) {
-        applyEta(task, next, now);
         switch (next) {
             case CRITERIA_PENDING -> task.setCriteriaStartedAt(now);
             case READY -> task.setReadyAt(now);
@@ -87,16 +91,18 @@ public class TaskService {
 
     /**
      * Re-predicts completion whenever the task changes phase, so the lease carries a fresh promise
-     * rather than the one made when the task was first claimed. A terminal task owes nothing.
+     * rather than the one made when the task was first claimed.
      */
     private void applyEta(RemediationTask task, IssueState next, Instant now) {
-        if (next.isTerminal()) {
-            task.setEtaAt(null);
-            task.setOwnerId(null);
-            task.setLeaseExpiresAt(null);
-            return;
-        }
         task.setEtaAt(now.plus(leases.estimatedRemaining(next)));
+    }
+
+    /** A terminal task owes nothing: no owner, no lease, no promised completion. */
+    private static void releaseLease(RemediationTask task) {
+        task.setOwnerId(null);
+        task.setLeaseExpiresAt(null);
+        task.setLeaseAcquiredAt(null);
+        task.setEtaAt(null);
     }
 
     @Transactional
