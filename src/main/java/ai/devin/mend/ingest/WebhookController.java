@@ -10,7 +10,9 @@ import ai.devin.mend.registry.RepositoryService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -161,7 +163,7 @@ public class WebhookController {
             String expected = "sha256=" + HexFormat.of().formatHex(mac.doFinal(payload));
             return MessageDigest.isEqual(
                     expected.getBytes(StandardCharsets.UTF_8), signature.getBytes(StandardCharsets.UTF_8));
-        } catch (Exception e) {
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             log.error("signature verification failed", e);
             return false;
         }
