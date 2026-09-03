@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Component;
@@ -44,7 +45,7 @@ public class MendMetrics {
                         IssueState.CRITERIA_PENDING, IssueState.DISPATCHED, IssueState.RUNNING, IssueState.BLOCKED)));
     }
 
-    public void recordTransition(RemediationTask task, IssueState from, IssueState to) {
+    public void recordTransition(RemediationTask task, IssueState from, IssueState to, Instant now) {
         Counter.builder("mend.transitions")
                 .tag("from", from.name())
                 .tag("to", to.name())
@@ -58,7 +59,7 @@ public class MendMetrics {
             }
         }
         if (to.isTerminal()) {
-            timeToOutcome.record(task.elapsed().toMillis(), TimeUnit.MILLISECONDS);
+            timeToOutcome.record(task.elapsed(now).toMillis(), TimeUnit.MILLISECONDS);
             Counter.builder("mend.outcomes").tag("outcome", to.name()).register(registry).increment();
         }
     }
