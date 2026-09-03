@@ -12,7 +12,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -61,11 +63,10 @@ public class Verifier {
     public Verification verify(RemediationTask task, SuccessCriteria criteria, int pullNumber) {
         List<GitHubDtos.CheckRun> runs = github.checkRuns(task.getRepo(), pullNumber);
         String prefix = props.getVerify().getContractCheckPrefix();
-        List<GitHubDtos.CheckRun> contract = runs.stream()
-                .filter(r -> r.name() != null && r.name().startsWith(prefix))
-                .toList();
-        List<GitHubDtos.CheckRun> repoChecks =
-                runs.stream().filter(r -> !contract.contains(r)).toList();
+        Map<Boolean, List<GitHubDtos.CheckRun>> byTier = runs.stream()
+                .collect(Collectors.partitioningBy(r -> r.name() != null && r.name().startsWith(prefix)));
+        List<GitHubDtos.CheckRun> contract = byTier.get(true);
+        List<GitHubDtos.CheckRun> repoChecks = byTier.get(false);
 
         if (!repoChecks.isEmpty()) {
             return fromChecks(Verification.Tier.REPO_CI, repoChecks);
