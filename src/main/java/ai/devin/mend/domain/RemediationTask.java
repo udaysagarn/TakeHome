@@ -26,6 +26,9 @@ import org.hibernate.type.SqlTypes;
         indexes = @Index(name = "idx_task_state", columnList = "state"))
 public class RemediationTask {
 
+    /** Width of the {@code varchar} columns that hold a human-readable reason. */
+    public static final int REASON_LENGTH = 2048;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -60,7 +63,7 @@ public class RemediationTask {
 
     private Double confidence;
 
-    @Column(length = 2048)
+    @Column(length = REASON_LENGTH)
     private String exclusionReason;
 
     private String criteriaSessionId;
@@ -70,7 +73,7 @@ public class RemediationTask {
     private String prUrl;
     private String ciStatus;
 
-    @Column(length = 2048)
+    @Column(length = REASON_LENGTH)
     private String lastError;
 
     @Lob

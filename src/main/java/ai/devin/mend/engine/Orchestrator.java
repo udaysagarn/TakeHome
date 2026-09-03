@@ -17,6 +17,8 @@ import ai.devin.mend.metrics.MendMetrics;
 import ai.devin.mend.registry.ContextService;
 import ai.devin.mend.triage.PreFilter;
 import ai.devin.mend.triage.SuccessCriteriaService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
@@ -424,7 +426,7 @@ public class Orchestrator {
     private String writeJson(Verification verification) {
         try {
             return mapper.writeValueAsString(verification);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             log.warn("could not serialise the verification record", e);
             return null;
         }
@@ -487,13 +489,7 @@ public class Orchestrator {
         if (!session.hasStructuredOutput()) {
             return null;
         }
-        try {
-            return mapper.convertValue(session.structuredOutput(), RemediationOutcome.class);
-        } catch (IllegalArgumentException e) {
-            log.warn("session {} returned structured output that does not match the schema: {}",
-                    session.sessionId(), e.getMessage());
-            return null;
-        }
+        return readOutcome(session.structuredOutput(), "session " + session.sessionId());
     }
 
     private RemediationOutcome readOutcomeJson(String json) {
@@ -501,9 +497,19 @@ public class Orchestrator {
             return null;
         }
         try {
-            return mapper.readValue(json, RemediationOutcome.class);
-        } catch (Exception e) {
-            log.warn("stored remediation outcome could not be read back: {}", e.getMessage());
+            return readOutcome(mapper.readTree(json), "the stored outcome");
+        } catch (JsonProcessingException e) {
+            log.warn("the stored remediation outcome is not JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /** An outcome that does not match the schema is treated as absent rather than trusted in part. */
+    private RemediationOutcome readOutcome(JsonNode node, String origin) {
+        try {
+            return mapper.treeToValue(node, RemediationOutcome.class);
+        } catch (JsonProcessingException e) {
+            log.warn("{} returned an outcome that does not match the schema: {}", origin, e.getMessage());
             return null;
         }
     }
@@ -516,6 +522,6 @@ public class Orchestrator {
         if (text == null) {
             return null;
         }
-        return text.length() <= 2000 ? text : text.substring(0, 2000);
+        return text.length() <= RemediationTask.REASON_LENGTH ? text : text.substring(0, RemediationTask.REASON_LENGTH);
     }
 }
