@@ -12,6 +12,7 @@ import ai.devin.mend.engine.TaskService;
 import ai.devin.mend.github.GitHubClient;
 import ai.devin.mend.learning.LearningService;
 import ai.devin.mend.registry.RepositoryService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
@@ -137,10 +138,9 @@ public class ApiController {
 
     /** Registers a repository and returns the validation verdict, successful or not. */
     @PostMapping("/repositories")
-    public ResponseEntity<?> registerRepository(@RequestBody Map<String, String> body) {
-        String slug = body.get("repo");
+    public ResponseEntity<?> registerRepository(@Valid @RequestBody RegisterRepositoryRequest request) {
         try {
-            return ResponseEntity.ok(registry.register(slug));
+            return ResponseEntity.ok(registry.register(request.repo()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

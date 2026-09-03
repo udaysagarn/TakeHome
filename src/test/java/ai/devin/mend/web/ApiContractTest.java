@@ -204,6 +204,17 @@ class ApiContractTest {
     }
 
     @Test
+    void registrationWithoutASlugIsABadRequestNotAServerError() throws Exception {
+        mvc.perform(post("/api/repositories").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/repositories")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"repo\":\"   \"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/repositories")).andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
     void registrationIsIdempotentAndReturnsTheAccessVerdict() throws Exception {
         mvc.perform(post("/api/repositories")
                         .contentType(MediaType.APPLICATION_JSON)
